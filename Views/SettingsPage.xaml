@@ -111,6 +111,7 @@
         <Grid Grid.Column="2" Margin="24,0,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -120,7 +121,15 @@
                 <TextBlock x:Name="DetailCategorySubtitle" Text="自定义主题风格、背景材质与界面显示细节" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <InfoBar Grid.Row="1"
+                     IsOpen="{x:Bind MainViewModel.UpdateBadgeVisibility, Mode=OneWay, Converter={StaticResource VisibilityToBoolConverter}}"
+                     Severity="Success"
+                     Title="Swell Proxy"
+                     Message="{x:Bind MainViewModel.UpdateBannerText, Mode=OneWay}"
+                     IsClosable="True"
+                     Margin="0,0,0,16" />
+
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                 <Grid Width="620" HorizontalAlignment="Left" Padding="0,0,12,24">
                     
                     <!-- Panel 1: 个性化外观 -->
@@ -586,6 +595,14 @@
                                             <FontIcon Glyph="&#xE8E5;" FontSize="15" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Button>
                                         <Button x:Name="CheckUpdateButton" Grid.Column="2" Content="检查更新" Padding="12,5" CornerRadius="4" Click="CheckUpdateButton_Click" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="*,Auto,Auto" Padding="16,16" ColumnSpacing="12">
+                                        <StackPanel Spacing="4" VerticalAlignment="Center">
+                                            <TextBlock Text="客户端自动更新" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            <TextBlock Text="检查是否有新版客户端发布" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button x:Name="CheckAppUpdateButton" Grid.Column="2" Content="检查更新" Padding="12,5" CornerRadius="4" Click="CheckAppUpdateButton_Click" VerticalAlignment="Center"/>
                                     </Grid>
 
                                     <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="16,0"/>

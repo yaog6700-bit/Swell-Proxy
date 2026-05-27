@@ -57,10 +57,21 @@ jobs:
           -p:CopyOutputSymbolsToPublishDirectory=false
           -p:Version=${{ steps.ver.outputs.version }}
 
+      - name: Publish Updater (${{ matrix.rid }})
+        run: >
+          dotnet publish AnywhereWinUI.Updater/AnywhereWinUI.Updater.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          -p:Version=${{ steps.ver.outputs.version }}
+
       - name: Verify exe produced
         shell: pwsh
         run: |
-          $publishDir = "bin/Release/net10.0-windows10.0.19041.0/${{ matrix.rid }}/publish"
+          $publishDir = (Get-ChildItem -Path "bin" -Filter "publish" -Recurse -Directory | Where-Object { $_.FullName -match "${{ matrix.rid }}" } | Select-Object -First 1).FullName
+          if (-not $publishDir) {
+            Write-Host "::error::Could not find publish directory"
+            exit 1
+          }
           $exe = "$publishDir/Swell Proxy.exe"
           if (-not (Test-Path $exe)) {
             Write-Host "::error::Publish did not produce $exe"
@@ -71,7 +82,11 @@ jobs:
       - name: Pack zip
         shell: pwsh
         run: |
-          $publishDir = "bin/Release/net10.0-windows10.0.19041.0/${{ matrix.rid }}/publish"
+          $publishDir = (Get-ChildItem -Path "bin" -Filter "publish" -Recurse -Directory | Where-Object { $_.FullName -match "${{ matrix.rid }}" -and $_.FullName -notmatch "Updater" } | Select-Object -First 1).FullName
+          $updaterPublishDir = (Get-ChildItem -Path "AnywhereWinUI.Updater/bin" -Filter "publish" -Recurse -Directory | Where-Object { $_.FullName -match "${{ matrix.rid }}" } | Select-Object -First 1).FullName
+          $updaterExe = "$updaterPublishDir/Swell.Updater.exe"
+          Copy-Item $updaterExe -Destination $publishDir
+          
           $zipName = "Swell-${{ matrix.rid }}.zip"
           Compress-Archive -Path "$publishDir/*" -DestinationPath $zipName -CompressionLevel Optimal
           Write-Host "Created $zipName ($((Get-Item $zipName).Length) bytes)"

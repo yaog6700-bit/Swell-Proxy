@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Controls;
 using Windows.UI;
 using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Services;
+using AnywhereWinUI.ViewModels;
 using Windows.Storage.Pickers;
 using System.Collections.Generic;
 
@@ -17,6 +18,7 @@ namespace AnywhereWinUI.Views
     public sealed partial class SettingsPage : Page
     {
         public ViewModels.SettingsViewModel ViewModel { get; }
+        public ViewModels.MainViewModel MainViewModel { get; }
 
         private bool _isLoaded;
 
@@ -60,6 +62,7 @@ namespace AnywhereWinUI.Views
         public SettingsPage()
         {
             ViewModel = ((App)Application.Current).Services.GetService(typeof(ViewModels.SettingsViewModel)) as ViewModels.SettingsViewModel;
+            MainViewModel = ((App)Application.Current).Services.GetService(typeof(ViewModels.MainViewModel)) as ViewModels.MainViewModel;
             this.InitializeComponent();
             InitializeSettings();
             _isLoaded = true;
@@ -417,6 +420,125 @@ namespace AnywhereWinUI.Views
             {
                 CheckUpdateButton.IsEnabled = true;
                 CheckUpdateButton.Content = "检查更新";
+            }
+        }
+
+        private async void CheckAppUpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            CheckAppUpdateButton.IsEnabled = false;
+            CheckAppUpdateButton.Content = "正在检查...";
+
+            try
+            {
+                var updater = new AppUpdateService();
+                var proxyUrl = CoreManager.Instance.IsRunning ? "socks5://127.0.0.1:2080" : null;
+                var info = await updater.CheckAsync(proxyUrl, CancellationToken.None);
+
+                if (info == null)
+                {
+                    var dialog = new ContentDialog
+                    {
+                        Title = "客户端检查更新",
+                        Content = $"当前客户端已是最新版本或网络无法访问。",
+                        CloseButtonText = "确定",
+                        XamlRoot = this.XamlRoot
+                    };
+                    await dialog.ShowAsync();
+                    return;
+                }
+
+                var confirmDialog = new ContentDialog
+                {
+                    Title = "发现新版本",
+                    Content = $"是否将客户端更新至 {info.TagName}？\n这将会下载最新版本并自动重启应用。",
+                    PrimaryButtonText = "确认更新",
+                    CloseButtonText = "取消",
+                    XamlRoot = this.XamlRoot
+                };
+
+                if (await confirmDialog.ShowAsync() != ContentDialogResult.Primary)
+                {
+                    return;
+                }
+
+                var progressText = new TextBlock { Text = "准备下载...", Margin = new Thickness(0, 0, 0, 10) };
+                var progressBar = new ProgressBar { IsIndeterminate = true, Width = 300 };
+                var stackPanel = new StackPanel { Children = { progressText, progressBar } };
+
+                var progressDialog = new ContentDialog
+                {
+                    Title = "正在更新客户端",
+                    Content = stackPanel,
+                    XamlRoot = this.XamlRoot
+                };
+
+                var progress = new Progress<AnywhereWinUI.Models.ProgressDialogUpdate>(msg =>
+                {
+                    DispatcherQueue.TryEnqueue(() => {
+                        progressText.Text = msg.StatusText;
+                        if (msg.PercentComplete.HasValue)
+                        {
+                            progressBar.IsIndeterminate = false;
+                            progressBar.Value = msg.PercentComplete.Value;
+                        }
+                    });
+                });
+
+                var updateTask = updater.DownloadVerifyAndExtractAsync(info, proxyUrl, progress, CancellationToken.None);
+                
+                _ = progressDialog.ShowAsync();
+                
+                try
+                {
+                    var staging = await updateTask;
+                    progressDialog.Hide();
+
+                    var successDialog = new ContentDialog
+                    {
+                        Title = "更新准备就绪",
+                        Content = $"新版本 {info.TagName} 下载并校验成功！\n\n点击“立即重启”后，当前应用将关闭并完成更新覆盖。",
+                        PrimaryButtonText = "立即重启",
+                        XamlRoot = this.XamlRoot
+                    };
+                    
+                    if (await successDialog.ShowAsync() == ContentDialogResult.Primary)
+                    {
+                        if (CoreManager.Instance.IsRunning)
+                        {
+                            await CoreManager.Instance.StopAsync();
+                        }
+                        updater.LaunchUpdater(staging);
+                        Application.Current.Exit();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    progressDialog.Hide();
+                    var errDialog = new ContentDialog
+                    {
+                        Title = "更新失败",
+                        Content = ex.Message,
+                        CloseButtonText = "确定",
+                        XamlRoot = this.XamlRoot
+                    };
+                    await errDialog.ShowAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = "检查更新失败",
+                    Content = $"错误信息: {ex.Message}",
+                    CloseButtonText = "确定",
+                    XamlRoot = this.XamlRoot
+                };
+                await dialog.ShowAsync();
+            }
+            finally
+            {
+                CheckAppUpdateButton.IsEnabled = true;
+                CheckAppUpdateButton.Content = "检查更新";
             }
         }
 
