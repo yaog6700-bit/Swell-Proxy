@@ -590,6 +590,12 @@ namespace AnywhereWinUI
                 {
                     AppWindow.SetIcon(iconPath);
                 }
+                
+                // Update title bar logo
+                if (TitleBarLogo != null)
+                {
+                    TitleBarLogo.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri($"ms-appx:///Assets/{iconName}"));
+                }
             }
             catch (Exception ex)
             {

@@ -82,7 +82,7 @@
                                         PointerEntered="TrafficNavItem_PointerEntered" 
                                         PointerExited="TrafficNavItem_PointerExited">
                         <NavigationViewItem.Icon>
-                            <ImageIcon x:Name="TrafficNavIcon" Source="ms-appx:///Assets/ArrowTrendingLinesColor.svg" Width="18" Height="18" />
+                            <PathIcon x:Name="TrafficNavIcon" Data="M 4.25 3.5 C 4.25 3.08579 3.91421 2.75 3.5 2.75 C 3.08579 2.75 2.75 3.08579 2.75 3.5 V 19.25 C 2.75 20.3546 3.64543 21.25 4.75 21.25 H 20.5 C 20.9142 21.25 21.25 20.9142 21.25 20.5 C 21.25 20.0858 20.9142 19.75 20.5 19.75 H 4.75 C 4.47386 19.75 4.25 19.5261 4.25 19.25 V 3.5 Z M 20.5 7.25 C 20.9142 7.25 21.25 7.58579 21.25 8 V 11.5 C 21.25 11.9142 20.9142 12.25 20.5 12.25 C 20.0858 12.25 19.75 11.9142 19.75 11.5 V 9.81066 L 15.0303 14.5303 C 14.7374 14.8232 14.2626 14.8232 13.9697 14.5303 L 10.5 11.0607 L 7.03033 14.5303 C 6.73744 14.8232 6.26256 14.8232 5.96967 14.5303 C 5.67678 14.2374 5.67678 13.7626 5.96967 13.4697 L 9.96967 9.46967 C 10.2626 9.17678 10.7374 9.17678 11.0303 9.46967 L 14.5 12.9393 L 18.6893 8.75 H 17 C 16.5858 8.75 16.25 8.41421 16.25 8 C 16.25 7.58579 16.5858 7.25 17 7.25 H 20.5 Z" />
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
 
@@ -125,6 +125,7 @@
             </NavigationView>
 
             <StackPanel x:Name="LogoStackPanel" Orientation="Horizontal" VerticalAlignment="Top" Margin="48,0,0,0" Height="48" Spacing="8" HorizontalAlignment="Left" IsHitTestVisible="False">
+                <Image x:Name="TitleBarLogo" Source="ms-appx:///Assets/output_grey.ico" Width="18" Height="18" VerticalAlignment="Center" Stretch="Uniform"/>
                 <TextBlock Text="Swell Proxy" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
             </StackPanel>
 

@@ -564,7 +564,7 @@
                                     <TextBlock Text="Swell Proxy" FontSize="16" FontWeight="Bold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                     <TextBlock Text="版本 v1.0.0 (自适应 Fluent 原生版)" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <Image Grid.Column="1" Source="ms-appx:///Assets/logo_ui.png" Width="40" Height="40" VerticalAlignment="Center" Stretch="Uniform" />
+                                <Image Grid.Column="1" Source="ms-appx:///Assets/logo_about.png" Width="96" Height="96" VerticalAlignment="Center" Stretch="Uniform" />
                             </Grid>
                         </Border>
 
