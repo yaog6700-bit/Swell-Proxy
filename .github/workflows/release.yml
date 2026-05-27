@@ -1,0 +1,95 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: publish ${{ matrix.rid }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            platform: x64
+          - rid: win-arm64
+            platform: ARM64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Compute version from tag
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $ver = $tag -replace '^v',''
+          if ($ver -notmatch '^\d+(\.\d+){0,3}$') { $ver = '1.0.0' }
+          "version=$ver" | Out-File $env:GITHUB_OUTPUT -Append
+          Write-Host "Resolved version: $ver (from tag $tag)"
+
+      - name: Publish App (${{ matrix.rid }})
+        run: >
+          dotnet publish AnywhereWinUI.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          -p:Platform=${{ matrix.platform }}
+          -p:SelfContained=true
+          -p:PublishSingleFile=true
+          -p:EnableCompressionInSingleFile=true
+          -p:PublishTrimmed=true
+          -p:PublishReadyToRun=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:WindowsAppSDKSelfContained=true
+          -p:CopyOutputSymbolsToPublishDirectory=false
+          -p:Version=${{ steps.ver.outputs.version }}
+
+      - name: Verify exe produced
+        shell: pwsh
+        run: |
+          $publishDir = "bin/Release/net10.0-windows10.0.19041.0/${{ matrix.rid }}/publish"
+          $exe = "$publishDir/Swell Proxy.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Host "::error::Publish did not produce $exe"
+            exit 1
+          }
+          Write-Host "OK: exe found at $exe ($((Get-Item $exe).Length) bytes)"
+
+      - name: Pack zip
+        shell: pwsh
+        run: |
+          $publishDir = "bin/Release/net10.0-windows10.0.19041.0/${{ matrix.rid }}/publish"
+          $zipName = "Swell-${{ matrix.rid }}.zip"
+          Compress-Archive -Path "$publishDir/*" -DestinationPath $zipName -CompressionLevel Optimal
+          Write-Host "Created $zipName ($((Get-Item $zipName).Length) bytes)"
+
+      - name: Generate SHA256
+        shell: pwsh
+        run: |
+          $zip = "Swell-${{ matrix.rid }}.zip"
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          [System.IO.File]::WriteAllText("$zip.sha256", "$hash  $zip", [System.Text.Encoding]::ASCII)
+          Write-Host "Wrote $zip.sha256 = $hash"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: |
+            Swell-${{ matrix.rid }}.zip
+            Swell-${{ matrix.rid }}.zip.sha256
+          generate_release_notes: true
