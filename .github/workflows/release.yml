@@ -49,11 +49,8 @@ jobs:
           -r ${{ matrix.rid }}
           -p:Platform=${{ matrix.platform }}
           -p:SelfContained=true
-          -p:PublishSingleFile=true
-          -p:EnableCompressionInSingleFile=true
+          -p:PublishAot=true
           -p:PublishTrimmed=true
-          -p:PublishReadyToRun=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
           -p:WindowsAppSDKSelfContained=true
           -p:CopyOutputSymbolsToPublishDirectory=false
           -p:Version=${{ steps.ver.outputs.version }}
