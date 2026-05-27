@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="AnywhereWinUI.Views.CustomRulesDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="自定义路由规则"
+    PrimaryButtonText="保存"
+    CloseButtonText="取消"
+    DefaultButton="Primary"
+    MinWidth="480">
+
+    <!--
+        ⚠ ContentDialog.Content 是单值属性，只允许一个直接子元素。
+          用 Grid 包裹两个面板，通过 Visibility 互斥切换。
+          不要在子 StackPanel 上设置固定 Width——ContentDialog 内容区有
+          自身左右 Padding，固定宽超出会导致右侧按钮被截断。
+    -->
+    <Grid HorizontalAlignment="Stretch">
+
+        <!-- ══ 面板 A：规则列表 ══════════════════════════════════════════ -->
+        <StackPanel x:Name="ListPanel"
+                    Spacing="12"
+                    HorizontalAlignment="Stretch">
+
+        <!-- 非 Smart 模式提示条 -->
+        <InfoBar x:Name="NonSmartModeBanner"
+                 IsOpen="False"
+                 Severity="Warning"
+                 IsClosable="False"
+                 Title="当前模式下规则不生效"
+                 Message="您处于全局/直连模式，切回智能分流后规则自动生效。"/>
+
+        <!-- 工具栏 -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock x:Name="RuleCountText"
+                       Grid.Column="0"
+                       VerticalAlignment="Center"
+                       FontSize="12"
+                       Text="共 0 条规则"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+            <Button x:Name="AddRuleButton"
+                    Grid.Column="1"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Click="AddRuleButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE710;" FontSize="12"/>
+                    <TextBlock Text="添加规则"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- 规则列表卡片 -->
+        <Border x:Name="ListBorder"
+                Height="260"
+                CornerRadius="8"
+                BorderThickness="1"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid>
+                <!-- 空状态 -->
+                <StackPanel x:Name="EmptyState"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8"
+                            Visibility="Visible">
+                    <FontIcon Glyph="&#xE81E;"
+                              FontSize="32"
+                              Opacity="0.2"
+                              HorizontalAlignment="Center"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="还没有自定义规则"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               FontSize="13"/>
+                    <TextBlock Text="点击「添加规则」开始配置"
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- 规则 ListView -->
+                <ListView x:Name="RulesListView"
+                          Visibility="Collapsed"
+                          CanReorderItems="True"
+                          AllowDrop="True"
+                          SelectionMode="None"
+                          ContainerContentChanging="RulesListView_ContainerContentChanging"/>
+            </Grid>
+        </Border>
+
+        <!-- 提示文字 -->
+        <TextBlock FontSize="11"
+                   Opacity="0.45"
+                   TextWrapping="Wrap"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                   Text="提示：规则按列表顺序匹配，可拖拽排序。自定义规则在内置应用规则之后、Geo 绕行规则之前生效。"/>
+
+    </StackPanel>
+
+    <!-- ══ 面板 B：添加 / 编辑表单（内联，不嵌套 ContentDialog）══ -->
+    <!--
+        FormPanel 与 ListPanel 同级，通过 Visibility 互斥显示。
+        进入表单时隐藏对话框底部的「保存/取消」按钮，改用表单内嵌按钮。
+    -->
+    <StackPanel x:Name="FormPanel"
+                Spacing="16"
+                Width="360"
+                HorizontalAlignment="Center"
+                Visibility="Collapsed">
+
+        <!-- 表单标题行 -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="FormBackButton"
+                    Grid.Column="0"
+                    Style="{StaticResource SubtleButtonStyle}"
+                    Width="32" Height="32"
+                    Padding="0"
+                    VerticalAlignment="Center"
+                    Click="FormBackButton_Click"
+                    ToolTipService.ToolTip="返回列表">
+                <FontIcon Glyph="&#xE76B;" FontSize="13"/>
+            </Button>
+
+            <TextBlock x:Name="FormTitleText"
+                       Grid.Column="1"
+                       Text="添加规则"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       Margin="8,0,0,0"/>
+        </Grid>
+
+        <!-- 分隔线 -->
+        <Rectangle Height="1"
+                   HorizontalAlignment="Stretch"
+                   Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+        <!-- 规则类型 -->
+        <StackPanel Spacing="6">
+            <TextBlock Text="规则类型"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <ComboBox x:Name="FormTypeComboBox"
+                      HorizontalAlignment="Stretch"
+                      SelectedIndex="0"
+                      SelectionChanged="FormTypeComboBox_SelectionChanged">
+                <ComboBoxItem Content="域名 (Domain)" Tag="domain"/>
+                <ComboBoxItem Content="IP / CIDR"     Tag="ip"/>
+                <ComboBoxItem Content="进程 (Process)" Tag="process"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- 匹配内容 -->
+        <StackPanel Spacing="6">
+            <TextBlock Text="匹配内容"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBox x:Name="FormMatchTextBox"
+                     HorizontalAlignment="Stretch"
+                     PlaceholderText="youtube.com 或 geosite:cn"/>
+
+            <!-- 进程类型：浏览按钮 -->
+            <StackPanel x:Name="FormBrowsePanel"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        Visibility="Collapsed">
+                <Button x:Name="FormBrowseButton" Click="FormBrowseButton_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE8E5;" FontSize="12"/>
+                        <TextBlock Text="浏览 exe..."/>
+                    </StackPanel>
+                </Button>
+                <ComboBox x:Name="FormBrowseFormatComboBox"
+                          SelectedIndex="0"
+                          MinWidth="120">
+                    <ComboBoxItem Content="匹配同名进程" Tag="name"/>
+                    <ComboBoxItem Content="匹配完整路径" Tag="path"/>
+                </ComboBox>
+            </StackPanel>
+
+            <TextBlock x:Name="FormHintText"
+                       FontSize="11"
+                       Opacity="0.55"
+                       TextWrapping="Wrap"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Text="支持精确匹配、regexp:、geosite: 前缀"/>
+        </StackPanel>
+
+        <!-- 出站方式 -->
+        <StackPanel Spacing="6">
+            <TextBlock Text="出站方式"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <ComboBox x:Name="FormOutboundComboBox"
+                      HorizontalAlignment="Stretch"
+                      SelectedIndex="0">
+            </ComboBox>
+        </StackPanel>
+
+        <!-- 错误提示（校验失败时显示） -->
+        <TextBlock x:Name="FormErrorText"
+                   Text="请填写匹配内容"
+                   Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                   FontSize="12"
+                   Visibility="Collapsed"/>
+
+        <!-- 表单按钮行：左侧留空，右侧 取消 + 确认 -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="FormCancelButton"
+                    Grid.Column="1"
+                    Content="取消"
+                    MinWidth="80"
+                    Click="FormCancelButton_Click"/>
+
+            <Button x:Name="FormConfirmButton"
+                    Grid.Column="2"
+                    Content="确认"
+                    MinWidth="80"
+                    Margin="8,0,0,0"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Click="FormConfirmButton_Click"/>
+        </Grid>
+
+    </StackPanel>
+
+    </Grid>
+
+</ContentDialog>

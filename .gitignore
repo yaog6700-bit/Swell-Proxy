@@ -1,0 +1,32 @@
+## .NET / C# ##
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+## Build logs ##
+*.log
+*.binlog
+msbuild.log
+build_log.txt
+
+## NuGet ##
+*.nupkg
+packages/
+project.lock.json
+
+## Runtime data files (generated at runtime, not source) ##
+latest_routing_page.json
+
+## OS ##
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+## IDE ##
+.vscode/
+.idea/
+*.DotSettings.user

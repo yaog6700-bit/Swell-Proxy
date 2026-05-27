@@ -1,0 +1,166 @@
+<UserControl
+    x:Class="AnywhereWinUI.Views.OnboardingControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    HorizontalAlignment="Stretch"
+    VerticalAlignment="Stretch">
+    <UserControl.Resources>
+        <!-- 环境光动画：让背景的两个彩色球体产生缓慢的位置偏移和呼吸感 -->
+        <Storyboard x:Name="AmbientLightStoryboard" RepeatBehavior="Forever" AutoReverse="True">
+            <DoubleAnimation Storyboard.TargetName="Blob1Transform" Storyboard.TargetProperty="X" To="-50" Duration="0:0:8" />
+            <DoubleAnimation Storyboard.TargetName="Blob1Transform" Storyboard.TargetProperty="Y" To="-30" Duration="0:0:8" />
+            <DoubleAnimation Storyboard.TargetName="Blob2Transform" Storyboard.TargetProperty="X" To="50" Duration="0:0:8" />
+            <DoubleAnimation Storyboard.TargetName="Blob2Transform" Storyboard.TargetProperty="Y" To="30" Duration="0:0:8" />
+        </Storyboard>
+    </UserControl.Resources>
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <!-- 1. 背景动态环境模糊发光效果 -->
+        <Grid Opacity="0.15" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- 紫色光源 -->
+            <Ellipse Width="400" Height="400" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-100,-100,0,0">
+                <Ellipse.Fill>
+                    <RadialGradientBrush Center="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+                        <GradientStop Color="#FF8A2BE2" Offset="0" />
+                        <GradientStop Color="Transparent" Offset="1" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+                <Ellipse.RenderTransform>
+                    <TranslateTransform x:Name="Blob1Transform" />
+                </Ellipse.RenderTransform>
+            </Ellipse>
+            <!-- 蓝色/靛蓝色光源 -->
+            <Ellipse Width="450" Height="450" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-120,-120">
+                <Ellipse.Fill>
+                    <RadialGradientBrush Center="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+                        <GradientStop Color="#FF007ACC" Offset="0" />
+                        <GradientStop Color="Transparent" Offset="1" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+                <Ellipse.RenderTransform>
+                    <TranslateTransform x:Name="Blob2Transform" />
+                </Ellipse.RenderTransform>
+            </Ellipse>
+        </Grid>
+        <!-- 2. 主引导卡片（悬浮磨砂玻璃质感） -->
+        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                Background="{ThemeResource SystemControlTransientBorderBrush}"
+                CornerRadius="16"
+                Width="540"
+                Height="500"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="36">
+            
+            <Border.Shadow>
+                <ThemeShadow />
+            </Border.Shadow>
+            <Grid RowDefinitions="Auto,*,Auto">
+                <!-- 顶部进度指示器 (Progress Dots) -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8" Margin="0,0,0,24">
+                    <Ellipse x:Name="Dot0" Width="24" Height="6" Fill="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                    <Ellipse x:Name="Dot1" Width="8" Height="6" Fill="{ThemeResource SystemControlForegroundBaseMediumLowBrush}"/>
+                    <Ellipse x:Name="Dot2" Width="8" Height="6" Fill="{ThemeResource SystemControlForegroundBaseMediumLowBrush}"/>
+                </StackPanel>
+                <!-- 中间内容区 (多页容器) -->
+                <Grid Grid.Row="1">
+                    <!-- 第一页：欢迎页面 -->
+                    <StackPanel x:Name="Page0" Visibility="Visible" Spacing="16" VerticalAlignment="Center">
+                        <!-- 图标 -->
+                        <Image Source="ms-appx:///Assets/logo.png" Width="80" Height="80" HorizontalAlignment="Center" Stretch="UniformToFill" />
+                        
+                        <TextBlock Text="欢迎开启 Swell Proxy" 
+                                   FontSize="28" 
+                                   FontWeight="Bold" 
+                                   HorizontalAlignment="Center" />
+                        
+                        <TextBlock Text="基于强劲核心的下一代透明代理客户端。&#x0a;为您提供极速、稳定、无感的智能网络体验。" 
+                                   Foreground="{ThemeResource SystemControlPageBackgroundChromeLowBrush}"
+                                   TextAlignment="Center" 
+                                   HorizontalAlignment="Center" 
+                                   LineHeight="22" />
+                        <!-- 中国大陆地区自动检测 Banner -->
+                        <Border x:Name="RegionBanner" 
+                                Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}" 
+                                CornerRadius="8" 
+                                Padding="12,8" 
+                                HorizontalAlignment="Center" 
+                                Margin="0,16,0,0">
+                            <TextBlock x:Name="RegionBannerText" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+                        </Border>
+                    </StackPanel>
+                    <!-- 第二页：智能分流选项 -->
+                    <StackPanel x:Name="Page1" Visibility="Collapsed" Spacing="16" VerticalAlignment="Center">
+                        <TextBlock Text="智能分流与过滤" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
+                        <TextBlock Text="我们已为您预设好最佳的分流策略，让您的网络更加清爽、飞速。" 
+                                   Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" 
+                                   HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                        <!-- Bypass CN 卡片 -->
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="12" Padding="16">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock Text="绕过局域网与中国大陆 (Bypass CN)" FontWeight="SemiBold"/>
+                                    <TextBlock Text="大陆流量直接连接不走代理，极大节省您的资源包。" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" x:Name="BypassChinaToggle" IsOn="True" MinWidth="0"/>
+                            </Grid>
+                        </Border>
+                        <!-- Ad Block 卡片 -->
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="12" Padding="16">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock Text="开启全局垃圾广告过滤 (Ad-Blocking)" FontWeight="SemiBold"/>
+                                    <TextBlock Text="在网络底层过滤隐私广告追踪器，提供清爽浏览环境。" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" x:Name="BlockAdsToggle" IsOn="True" MinWidth="0"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                    <!-- 第三页：一键订阅页面 -->
+                    <StackPanel x:Name="Page2" Visibility="Collapsed" Spacing="12" VerticalAlignment="Center">
+                        <TextBlock Text="一键订阅初始化" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
+                        <TextBlock Text="粘贴您的订阅链接或单个节点分享链接，起步即飞（可跳过）。" 
+                                   Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" 
+                                   HorizontalAlignment="Center"/>
+                        <TextBox x:Name="SubscriptionInput" 
+                                 Height="100" 
+                                 AcceptsReturn="True" 
+                                 TextWrapping="Wrap" 
+                                 PlaceholderText="https://... 或 vmess://..." 
+                                 Margin="0,8,0,8"/>
+                        <!-- 状态显示和进度环 -->
+                        <Grid Height="32">
+                            <TextBlock x:Name="ImportStatusText" 
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center" 
+                                       FontWeight="Medium"/>
+                            <ProgressRing x:Name="ImportProgressRing" 
+                                          IsActive="False" 
+                                          Width="20" 
+                                          Height="20" 
+                                          HorizontalAlignment="Right" />
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+                <!-- 底部导航按钮 -->
+                <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="0,24,0,0">
+                    <Button Grid.Column="0" 
+                            x:Name="PrevButton" 
+                            Content="上一步" 
+                            Click="PrevButton_Click" 
+                            Visibility="Collapsed" 
+                            Style="{StaticResource DefaultButtonStyle}"/>
+                    
+                    <Button Grid.Column="2" 
+                            x:Name="NextButton" 
+                            Content="下一步" 
+                            Click="NextButton_Click" 
+                            Style="{StaticResource AccentButtonStyle}"/>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,189 @@
+<Page
+    x:Class="AnywhereWinUI.Views.TrafficPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:WinUIEx"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header Panel -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16" Spacing="4">
+            <TextBlock Text="流量与数据" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock Text="实时监控当前会话及历史网络流量统计" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Padding="0,0,16,0" VerticalScrollBarVisibility="Auto">
+            <Grid ColumnSpacing="24" RowSpacing="24" MaxWidth="1200" HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 1. 实时速率 (Row 0, Col 0) -->
+                <Border Grid.Row="0" Grid.Column="0"
+                        Background="Transparent" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" 
+                        CornerRadius="12" 
+                        Padding="24">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Text="实时速率" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" x:Name="ActiveConnectionsText" Text="{x:Bind ViewModel.ActiveConnectionsText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" FontFamily="Consolas" FontSize="14"/>
+                    </Grid>
+                </Border>
+
+                <!-- 2. 核心运行状态 (Row 0, Col 1) -->
+                <Border Grid.Row="0" Grid.Column="1"
+                        Background="Transparent" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" 
+                        CornerRadius="12" 
+                        Padding="24">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE93E;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Text="核心连接状态" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Ellipse x:Name="StatusDot" Width="10" Height="10" Fill="{x:Bind ViewModel.StatusDotFill, Mode=OneWay}"/>
+                            <TextBlock x:Name="StatusText" Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 3. 当前会话数据卡片 (Row 1, Col 0) -->
+                <Border Grid.Row="1" Grid.Column="0"
+                        Background="Transparent" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" 
+                        CornerRadius="12" 
+                        Padding="24">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="当前会话（仅代理流量）" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <Grid ColumnDefinitions="*,*,*">
+                            <!-- 上传 -->
+                            <StackPanel Grid.Column="0" Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE898;" Foreground="#FF007ACC" FontSize="16"/>
+                                    <TextBlock Text="上传流量" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                </StackPanel>
+                                <TextBlock x:Name="SessionUploadText" Text="{x:Bind ViewModel.SessionUploadText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                            <!-- 下载 -->
+                            <StackPanel Grid.Column="1" Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE896;" Foreground="#FF107C41" FontSize="16"/>
+                                    <TextBlock Text="下载流量" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                </StackPanel>
+                                <TextBlock x:Name="SessionDownloadText" Text="{x:Bind ViewModel.SessionDownloadText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                            <!-- 总计 -->
+                            <StackPanel Grid.Column="2" Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE8D7;" Foreground="#FF8A2BE2" FontSize="16"/>
+                                    <TextBlock Text="会话总量" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                </StackPanel>
+                                <TextBlock x:Name="SessionTotalText" Text="{x:Bind ViewModel.SessionTotalText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 4. 本月累计数据 (Row 1, Col 1) -->
+                <Border Grid.Row="1" Grid.Column="1"
+                        Background="Transparent" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" 
+                        CornerRadius="12" 
+                        Padding="24">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="本月累计" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <Grid ColumnDefinitions="*,*,*">
+                            <!-- 上传 -->
+                            <StackPanel Grid.Column="0" Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE898;" Foreground="#FF007ACC" FontSize="16"/>
+                                    <TextBlock Text="本月上传" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                </StackPanel>
+                                <TextBlock x:Name="MonthUploadText" Text="{x:Bind ViewModel.MonthUploadText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                            <!-- 下载 -->
+                            <StackPanel Grid.Column="1" Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE896;" Foreground="#FF107C41" FontSize="16"/>
+                                    <TextBlock Text="本月下载" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                </StackPanel>
+                                <TextBlock x:Name="MonthDownloadText" Text="{x:Bind ViewModel.MonthDownloadText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                            <!-- 总计 -->
+                            <StackPanel Grid.Column="2" Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE8D7;" Foreground="#FF8A2BE2" FontSize="16"/>
+                                    <TextBlock Text="本月总计" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                </StackPanel>
+                                <TextBlock x:Name="MonthTotalText" Text="{x:Bind ViewModel.MonthTotalText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 5. 30天历史柱状图 (Row 2, ColSpan 2) -->
+                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                        Background="Transparent" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" 
+                        CornerRadius="12" 
+                        Padding="24">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="每日代理流量（近 30 天，单位: MB）" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled">
+                            <ItemsControl x:Name="ChartItemsControl" ItemsSource="{x:Bind ViewModel.ChartItems, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="16" Height="220" VerticalAlignment="Bottom"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Spacing="8" Width="40">
+                                            <Grid Height="150" VerticalAlignment="Bottom" Width="20">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                
+                                                <Border Grid.Row="1" Background="#FF007ACC" CornerRadius="2,2,0,0" Height="{Binding UploadHeight}" Width="8" ToolTipService.ToolTip="{Binding UploadTooltip}"/>
+                                                <Border Grid.Row="2" Background="#FF107C41" CornerRadius="0,0,2,2" Height="{Binding DownloadHeight}" Width="8" ToolTipService.ToolTip="{Binding DownloadTooltip}"/>
+                                            </Grid>
+                                            
+                                            <TextBlock Text="{Binding DayLabel}" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Page>

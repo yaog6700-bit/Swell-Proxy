@@ -1,0 +1,63 @@
+<UserControl
+    x:Class="AnywhereWinUI.Controls.TopologyGraphControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:AnywhereWinUI.Models"
+    mc:Ignorable="d"
+    SizeChanged="UserControl_SizeChanged">
+
+    <Grid>
+        <Canvas x:Name="GraphCanvas" Height="280" Background="Transparent">
+            <!-- Links -->
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Links, Mode=OneWay}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Grid />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:TopologyLink">
+                        <Path Data="{x:Bind PathGeometry, Mode=OneWay}" Fill="{x:Bind Color, Mode=OneWay}" Opacity="{x:Bind Opacity, Mode=OneWay}" HorizontalAlignment="Left" VerticalAlignment="Top" StrokeThickness="0"
+                              PointerEntered="Link_PointerEntered" PointerExited="Element_PointerExited">
+                            <Path.Transitions>
+                                <TransitionCollection>
+                                    <RepositionThemeTransition />
+                                </TransitionCollection>
+                            </Path.Transitions>
+                        </Path>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Nodes -->
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Nodes, Mode=OneWay}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Grid />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:TopologyNode">
+                        <Grid Opacity="{x:Bind Opacity, Mode=OneWay}" HorizontalAlignment="Left" VerticalAlignment="Top"
+                              PointerEntered="Node_PointerEntered" PointerExited="Element_PointerExited" Background="Transparent">
+                            <Grid.RenderTransform>
+                                <TranslateTransform X="{x:Bind X, Mode=OneWay}" Y="{x:Bind Y, Mode=OneWay}" />
+                            </Grid.RenderTransform>
+                            <!-- The Node Bar -->
+                            <Border Width="6" Height="{x:Bind Height, Mode=OneWay}" Background="{x:Bind Color, Mode=OneWay}" CornerRadius="3" VerticalAlignment="Top" HorizontalAlignment="Left" />
+                            
+                            <!-- The Label -->
+                            <TextBlock Text="{x:Bind Name, Mode=OneWay}" 
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                       FontSize="12"
+                                       VerticalAlignment="Top"
+                                       Margin="12,-4,0,0" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Canvas>
+    </Grid>
+</UserControl>

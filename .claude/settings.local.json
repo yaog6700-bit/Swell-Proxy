@@ -1,0 +1,16 @@
+{
+  "env": {
+    "ANTHROPIC_MODEL": "deepseek-v4-flash"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build *)",
+      "Bash(taskkill *)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 5752\")",
+      "Bash(tasklist //FI \"IMAGENAME eq AnywhereWinUI.exe\")",
+      "Bash(cmd.exe /c \"taskkill /F /IM AnywhereWinUI.exe 2>nul & echo done\")",
+      "Bash(start \"\" \"bin\\\\Debug\\\\net10.0-windows10.0.19041.0\\\\AnywhereWinUI.exe\")",
+      "Bash(start *)"
+    ]
+  }
+}

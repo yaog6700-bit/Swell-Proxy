@@ -1,0 +1,102 @@
+<Page
+    x:Class="AnywhereWinUI.Views.LogsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:AnywhereWinUI.Models"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16" Spacing="4">
+            <TextBlock Text="请求日志" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock Text="查看本地代理核心的实时流转日志与系统状态" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
+        <!-- Log Content Board -->
+        <Border Grid.Row="1" 
+                Background="Transparent" 
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1" 
+                CornerRadius="12">
+            <ScrollViewer x:Name="LogScrollViewer"
+                          Padding="0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{x:Bind ViewModel.LogEntries, Mode=OneWay}" Margin="0,16,0,16">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:LogEntry">
+                            <Grid Padding="16,4,16,4" ColumnSpacing="16" Background="Transparent">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" MinWidth="70"/>
+                                    <ColumnDefinition Width="Auto" MinWidth="54"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Time -->
+                                <TextBlock Grid.Column="0" 
+                                           Text="{x:Bind Time}" 
+                                           Visibility="{x:Bind TimeVisibility}"
+                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}" 
+                                           FontFamily="Cascadia Code, Consolas, Courier New" 
+                                           FontSize="12" 
+                                           VerticalAlignment="Top"
+                                           Margin="0,2,0,0"/>
+
+                                <!-- Level Badge -->
+                                <Border Grid.Column="1"
+                                        Background="{x:Bind LevelBgBrush}"
+                                        CornerRadius="6"
+                                        Padding="8,3"
+                                        VerticalAlignment="Top">
+                                    <TextBlock Text="{x:Bind Level}" 
+                                               Foreground="{x:Bind LevelTextBrush}" 
+                                               FontSize="11" 
+                                               FontWeight="Bold" 
+                                               HorizontalAlignment="Center"/>
+                                </Border>
+
+                                <!-- Message -->
+                                <TextBlock Grid.Column="2" 
+                                           Text="{x:Bind Message}" 
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                           FontFamily="Cascadia Code, Consolas, Courier New" 
+                                           FontSize="12" 
+                                           TextWrapping="Wrap"
+                                           IsTextSelectionEnabled="True"
+                                           LineHeight="20"
+                                           VerticalAlignment="Top"
+                                           Margin="0,1,0,0"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Toolbar bottom -->
+        <Grid Grid.Row="2" Margin="0,16,0,0" ColumnDefinitions="*,Auto">
+            <!-- Left status info -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <Ellipse x:Name="StatusDot" Width="8" Height="8" VerticalAlignment="Center" Fill="{x:Bind ViewModel.StatusDotFill, Mode=OneWay}"/>
+                <TextBlock x:Name="StatusText" Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource SystemControlPageTextBaseMediumBrush}"/>
+                <TextBlock x:Name="LineCountText" Text="{x:Bind ViewModel.LineCountText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource SystemControlPageTextBaseMediumBrush}"/>
+            </StackPanel>
+
+            <!-- Right controls -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <ToggleButton x:Name="AutoScrollToggle" IsChecked="{x:Bind ViewModel.AutoScroll, Mode=TwoWay}" Content="自动滚动" FontSize="12" Padding="12,6"/>
+                <Button x:Name="CopyButton" Content="复制全部" FontSize="12" Padding="12,6" Command="{x:Bind ViewModel.CopyLogsCommand}"/>
+                <Button x:Name="ClearButton" Content="清除缓存" FontSize="12" Padding="12,6" Command="{x:Bind ViewModel.ClearLogsCommand}"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>
