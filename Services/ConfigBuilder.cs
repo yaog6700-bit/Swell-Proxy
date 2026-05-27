@@ -95,15 +95,15 @@ namespace AnywhereWinUI.Services
 
             var bootstrapDnsObj = new JsonObject { ["tag"] = "bootstrap-dns", ["type"] = "udp", ["server"] = "223.5.5.5" };
 
-            var servers = new JsonArray { proxyDnsObj, localDnsObj, bootstrapDnsObj };
+            var servers = new JsonArray { (JsonNode)proxyDnsObj, (JsonNode)localDnsObj, (JsonNode)bootstrapDnsObj };
             var rules = new JsonArray();
 
-            // TUN 模式下（非纯 IPv6）拦截 AAAA 查询，防止大量代理节点对 IPv6 兼容性差导致连接超时
+            // TUN 模式下（非纯 IPv6）拦�?AAAA 查询，防止大量代理节点对 IPv6 兼容性差导致连接超时
             if (enableTun && strategy != "ipv6_only")
             {
                 rules.Add(new JsonObject
                 {
-                    ["query_type"] = new JsonArray { "AAAA" },
+                    ["query_type"] = new JsonArray { (JsonNode)"AAAA" },
                     ["action"] = "reject"
                 });
             }
@@ -111,7 +111,7 @@ namespace AnywhereWinUI.Services
             {
                 rules.Add(new JsonObject
                 {
-                    ["query_type"] = new JsonArray { "AAAA" },
+                    ["query_type"] = new JsonArray { (JsonNode)"AAAA" },
                     ["action"] = "reject"
                 });
             }
@@ -120,7 +120,7 @@ namespace AnywhereWinUI.Services
             {
                 rules.Add(new JsonObject
                 {
-                    ["rule_set"] = new JsonArray { "geosite-cn" },
+                    ["rule_set"] = new JsonArray { (JsonNode)"geosite-cn" },
                     ["server"] = "local-dns"
                 });
             }
@@ -193,13 +193,13 @@ namespace AnywhereWinUI.Services
                     ["tag"]          = "tun-in",
                     ["address"]      = new JsonArray { (JsonNode)"172.18.0.1/30" },
                     ["auto_route"]   = true,
-                    // strict_route=false: 设为 true 会触发 WFP，导致 sing-box 自身的 IPv6 outbound 被拦截 (WSAEACCES)
+                    // strict_route=false: 设为 true 会触�?WFP，导�?sing-box 自身�?IPv6 outbound 被拦�?(WSAEACCES)
                     ["strict_route"] = false,
                     ["stack"]        = "mixed",
                     ["mtu"]          = 9000
                 };
 
-                // 若服务器是 IPv6 地址，添加排除路由，避免代理出站流量回绕进 TUN
+                // 若服务器�?IPv6 地址，添加排除路由，避免代理出站流量回绕�?TUN
                 if (selectedNode != null)
                 {
                     var (host, _) = NodeLinkParser.SplitHostPort(selectedNode.Host);
@@ -298,7 +298,7 @@ namespace AnywhereWinUI.Services
                             }
                         }
                     }
-                    urlTestOutbounds.Add(node.Id);
+                    urlTestOutbounds.Add((JsonNode)node.Id);
                 }
 
                 if (urlTestOutbounds.Count > 0)
@@ -341,7 +341,7 @@ namespace AnywhereWinUI.Services
                 // 主代理出站的 detour 指向 shadow-tls-out
                 proxyOutbound["detour"] = $"{baseTag}-shadow-tls-out";
 
-                // 在被 shadow-tls 包裹时，物理连接�?shadow-tls 负责连接，主 outbound 中的 server/port 必须剔除
+                // 在被 shadow-tls 包裹时，物理连接�?shadow-tls 负责连接，主 outbound 中的 server/port 必须剔除
                 proxyOutbound.Remove("server");
                 proxyOutbound.Remove("server_port");
 
@@ -362,7 +362,7 @@ namespace AnywhereWinUI.Services
                     }
                 };
 
-                // 如果有前置代理链，shadow-tls �?detour 应该指向前置代理
+                // 如果有前置代理链，shadow-tls �?detour 应该指向前置代理
                 if (chainNode != null)
                 {
                     shadowTlsOutbound["detour"] = $"{baseTag}-chain-proxy";
@@ -554,11 +554,11 @@ namespace AnywhereWinUI.Services
                 if (!string.IsNullOrEmpty(node.Alpn))
                 {
                     foreach (var a in node.Alpn.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                        alpnArr.Add(a);
+                        alpnArr.Add((JsonNode)a);
                 }
                 else
                 {
-                    alpnArr.Add("h3");
+                    alpnArr.Add((JsonNode)"h3");
                 }
 
                 proxyOutbound["tls"] = new JsonObject
@@ -639,7 +639,7 @@ namespace AnywhereWinUI.Services
                 var addresses = new JsonArray();
                 var localAddr = !string.IsNullOrEmpty(node.WgLocalAddress) ? node.WgLocalAddress : "10.0.0.2/32";
                 foreach (var a in localAddr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                    addresses.Add(a);
+                    addresses.Add((JsonNode)a);
                 proxyOutbound["local_address"] = addresses;
 
                 proxyOutbound["private_key"] = node.WgPrivateKey ?? string.Empty;
@@ -653,7 +653,7 @@ namespace AnywhereWinUI.Services
                     ["server"]      = FormatHost(host),
                     ["server_port"] = port,
                     ["public_key"]  = node.PublicKey ?? string.Empty,
-                    ["allowed_ips"] = new JsonArray { "0.0.0.0/0", "::/0" }
+                    ["allowed_ips"] = new JsonArray { (JsonNode)"0.0.0.0/0", (JsonNode)"::/0" }
                 };
                 if (!string.IsNullOrEmpty(node.WgPreSharedKey))
                     peer["pre_shared_key"] = node.WgPreSharedKey;
@@ -729,7 +729,7 @@ namespace AnywhereWinUI.Services
                 }
                 if (!string.IsNullOrEmpty(wsHostVal))
                 {
-                    transportObj["host"] = new JsonArray { wsHostVal };
+                    transportObj["host"] = new JsonArray { (JsonNode)wsHostVal };
                 }
                 proxyOutbound["transport"] = transportObj;
             }
@@ -757,7 +757,7 @@ namespace AnywhereWinUI.Services
                 // Explicitly hijack port 53 to internal DNS for TUN mode
                 new JsonObject
                 {
-                    ["port"] = new JsonArray { 53 },
+                    ["port"] = new JsonArray { (JsonNode)53 },
                     ["action"] = "hijack-dns"
                 },
                 // Hijack DNS protocol
@@ -815,7 +815,7 @@ namespace AnywhereWinUI.Services
             {
                 rules.Add(new JsonObject
                 {
-                    ["rule_set"] = new JsonArray { "geosite-category-ads-all" },
+                    ["rule_set"] = new JsonArray { (JsonNode)"geosite-category-ads-all" },
                     ["outbound"] = "block"
                 });
 
@@ -832,7 +832,7 @@ namespace AnywhereWinUI.Services
             {
                 rules.Add(new JsonObject
                 {
-                    ["rule_set"] = new JsonArray { "geosite-cn", "geoip-cn" },
+                    ["rule_set"] = new JsonArray { (JsonNode)"geosite-cn", (JsonNode)"geoip-cn" },
                     ["outbound"] = "direct"
                 });
 
@@ -911,7 +911,7 @@ namespace AnywhereWinUI.Services
                                 string rsTag = $"geosite-{gsTag}";
                                 rules.Add(new System.Text.Json.Nodes.JsonObject
                                 {
-                                    ["rule_set"] = new System.Text.Json.Nodes.JsonArray { rsTag },
+                                    ["rule_set"] = new System.Text.Json.Nodes.JsonArray { (JsonNode)rsTag },
                                     ["outbound"] = outbound
                                 });
 
@@ -930,7 +930,7 @@ namespace AnywhereWinUI.Services
                             if (domainSuffixes.Count > 0)
                             {
                                 var arr = new System.Text.Json.Nodes.JsonArray();
-                                foreach (var d in domainSuffixes) arr.Add(d);
+                                foreach (var d in domainSuffixes) arr.Add((JsonNode)d);
                                 rules.Add(new System.Text.Json.Nodes.JsonObject
                                 {
                                     ["domain_suffix"] = arr,
@@ -941,7 +941,7 @@ namespace AnywhereWinUI.Services
                             if (domainRegexes.Count > 0)
                             {
                                 var arr = new System.Text.Json.Nodes.JsonArray();
-                                foreach (var d in domainRegexes) arr.Add(d);
+                                foreach (var d in domainRegexes) arr.Add((JsonNode)d);
                                 rules.Add(new System.Text.Json.Nodes.JsonObject
                                 {
                                     ["domain_regex"] = arr,
@@ -971,7 +971,7 @@ namespace AnywhereWinUI.Services
                                 string rsTag = $"geoip-{giTag}";
                                 rules.Add(new System.Text.Json.Nodes.JsonObject
                                 {
-                                    ["rule_set"] = new System.Text.Json.Nodes.JsonArray { rsTag },
+                                    ["rule_set"] = new System.Text.Json.Nodes.JsonArray { (JsonNode)rsTag },
                                     ["outbound"] = outbound
                                 });
 
@@ -990,7 +990,7 @@ namespace AnywhereWinUI.Services
                             if (cidrEntries.Count > 0)
                             {
                                 var arr = new System.Text.Json.Nodes.JsonArray();
-                                foreach (var c in cidrEntries) arr.Add(c);
+                                foreach (var c in cidrEntries) arr.Add((JsonNode)c);
                                 rules.Add(new System.Text.Json.Nodes.JsonObject
                                 {
                                     ["ip_cidr"]  = arr,
@@ -1014,7 +1014,7 @@ namespace AnywhereWinUI.Services
                             if (processNames.Count > 0)
                             {
                                 var arr = new System.Text.Json.Nodes.JsonArray();
-                                foreach (var n in processNames) arr.Add(n);
+                                foreach (var n in processNames) arr.Add((JsonNode)n);
                                 rules.Add(new System.Text.Json.Nodes.JsonObject
                                 {
                                     ["process_name"] = arr,
@@ -1025,7 +1025,7 @@ namespace AnywhereWinUI.Services
                             if (processPaths.Count > 0)
                             {
                                 var arr = new System.Text.Json.Nodes.JsonArray();
-                                foreach (var p in processPaths) arr.Add(p);
+                                foreach (var p in processPaths) arr.Add((JsonNode)p);
                                 rules.Add(new System.Text.Json.Nodes.JsonObject
                                 {
                                     ["process_path"] = arr,
@@ -1041,7 +1041,7 @@ namespace AnywhereWinUI.Services
                 {
                     rules.Add(new JsonObject
                     {
-                        ["domain_suffix"] = new JsonArray { "google.com", "googleapis.com", "gstatic.com", "googlevideo.com" },
+                        ["domain_suffix"] = new JsonArray { (JsonNode)"google.com", (JsonNode)"googleapis.com", (JsonNode)"gstatic.com", (JsonNode)"googlevideo.com" },
                         ["outbound"] = ResolveOutbound(AppSession.Instance.RuleGoogleAction)
                     });
                 }
@@ -1050,8 +1050,8 @@ namespace AnywhereWinUI.Services
                 {
                     rules.Add(new JsonObject
                     {
-                        ["domain_suffix"] = new JsonArray { "telegram.org", "t.me", "tdesktop.com" },
-                        ["ip_cidr"] = new JsonArray { "91.108.4.0/22", "91.108.8.0/22", "91.108.12.0/22", "91.108.16.0/22", "91.108.56.0/22", "149.154.160.0/20" },
+                        ["domain_suffix"] = new JsonArray { (JsonNode)"telegram.org", (JsonNode)"t.me", (JsonNode)"tdesktop.com" },
+                        ["ip_cidr"] = new JsonArray { (JsonNode)"91.108.4.0/22", (JsonNode)"91.108.8.0/22", (JsonNode)"91.108.12.0/22", (JsonNode)"91.108.16.0/22", (JsonNode)"91.108.56.0/22", (JsonNode)"149.154.160.0/20" },
                         ["outbound"] = ResolveOutbound(AppSession.Instance.RuleTelegramAction)
                     });
                 }
@@ -1060,7 +1060,7 @@ namespace AnywhereWinUI.Services
                 {
                     rules.Add(new JsonObject
                     {
-                        ["domain_suffix"] = new JsonArray { "netflix.com", "netflix.net", "nflximg.net", "nflxext.com", "nflxso.net", "nflxvideo.net" },
+                        ["domain_suffix"] = new JsonArray { (JsonNode)"netflix.com", (JsonNode)"netflix.net", (JsonNode)"nflximg.net", (JsonNode)"nflxext.com", (JsonNode)"nflxso.net", (JsonNode)"nflxvideo.net" },
                         ["outbound"] = ResolveOutbound(AppSession.Instance.RuleNetflixAction)
                     });
                 }
@@ -1069,7 +1069,7 @@ namespace AnywhereWinUI.Services
                 {
                     rules.Add(new JsonObject
                     {
-                        ["domain_suffix"] = new JsonArray { "youtube.com", "youtu.be", "ytimg.com", "ggpht.com" },
+                        ["domain_suffix"] = new JsonArray { (JsonNode)"youtube.com", (JsonNode)"youtu.be", (JsonNode)"ytimg.com", (JsonNode)"ggpht.com" },
                         ["outbound"] = ResolveOutbound(AppSession.Instance.RuleYouTubeAction)
                     });
                 }
@@ -1078,7 +1078,7 @@ namespace AnywhereWinUI.Services
                 {
                     rules.Add(new JsonObject
                     {
-                        ["domain_suffix"] = new JsonArray { "tiktok.com", "tiktokv.com", "tiktokcdn.com", "byteoversea.com" },
+                        ["domain_suffix"] = new JsonArray { (JsonNode)"tiktok.com", (JsonNode)"tiktokv.com", (JsonNode)"tiktokcdn.com", (JsonNode)"byteoversea.com" },
                         ["outbound"] = ResolveOutbound(AppSession.Instance.RuleTikTokAction)
                     });
                 }
@@ -1087,7 +1087,7 @@ namespace AnywhereWinUI.Services
                 {
                     rules.Add(new JsonObject
                     {
-                        ["domain_suffix"] = new JsonArray { "openai.com", "chatgpt.com", "ai.com", "oaistatic.com", "oaiusercontent.com" },
+                        ["domain_suffix"] = new JsonArray { (JsonNode)"openai.com", (JsonNode)"chatgpt.com", (JsonNode)"ai.com", (JsonNode)"oaistatic.com", (JsonNode)"oaiusercontent.com" },
                         ["outbound"] = ResolveOutbound(AppSession.Instance.RuleChatGPTAction)
                     });
                 }
@@ -1096,7 +1096,7 @@ namespace AnywhereWinUI.Services
                 {
                     rules.Add(new JsonObject
                     {
-                        ["domain_suffix"] = new JsonArray { "anthropic.com", "claude.ai" },
+                        ["domain_suffix"] = new JsonArray { (JsonNode)"anthropic.com", (JsonNode)"claude.ai" },
                         ["outbound"] = ResolveOutbound(AppSession.Instance.RuleClaudeAction)
                     });
                 }
