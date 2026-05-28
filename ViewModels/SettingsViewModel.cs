@@ -62,6 +62,9 @@ namespace AnywhereWinUI.ViewModels
         private bool _enableClassicDashboard;
 
         [ObservableProperty]
+        private bool _isPrivacyModeActive;
+
+        [ObservableProperty]
         private bool _autoStart;
 
         [ObservableProperty]
@@ -93,6 +96,7 @@ namespace AnywhereWinUI.ViewModels
             _enableDnsCache = AppSession.Instance.EnableDnsCache;
             _enableFakeDns = AppSession.Instance.EnableFakeDns;
             _enableClassicDashboard = AppSession.Instance.EnableClassicDashboard;
+            _isPrivacyModeActive = AppSession.Instance.IsPrivacyModeActive;
 
             try
             {
@@ -206,6 +210,12 @@ namespace AnywhereWinUI.ViewModels
             AppSession.Instance.EnableClassicDashboard = value;
             Helpers.LocalSettingsHelper.SetValue("enableClassicDashboard", value);
             MainWindow.Instance?.UpdateDashboardNavVisibility();
+        }
+
+        partial void OnIsPrivacyModeActiveChanged(bool value)
+        {
+            AppSession.Instance.IsPrivacyModeActive = value;
+            Helpers.LocalSettingsHelper.SetValue("isPrivacyModeActive", value);
         }
 
         partial void OnAutoStartChanged(bool value)

@@ -191,6 +191,17 @@
                                 <ToggleSwitch Grid.Column="1" VerticalAlignment="Center" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnableClassicDashboard, Mode=TwoWay}" HorizontalAlignment="Right"/>
                             </Grid>
                         </Border>
+
+                        <!-- Privacy Mode Switch -->
+                        <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,16">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel VerticalAlignment="Center" Spacing="4">
+                                    <TextBlock Text="全局隐私保护模式" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="开启后每次启动应用都需要输入密码，以防止他人查看您的节点和配置" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" VerticalAlignment="Center" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.IsPrivacyModeActive, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
 
                     <!-- Panel: 路由分流 (Routing) -->
