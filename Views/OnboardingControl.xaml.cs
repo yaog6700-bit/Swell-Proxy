@@ -31,16 +31,44 @@ namespace AnywhereWinUI.Views
             DetectUserRegion();
         }
         
-        private void DetectUserRegion()
+        private async void DetectUserRegion()
         {
             try
             {
                 var timeZoneId = TimeZoneInfo.Local.Id;
                 var cultureName = CultureInfo.CurrentCulture.Name;
-                // 判断时区或语言环境是否与中国大陆相关
-                _isUserInChina = timeZoneId.Contains("China", StringComparison.OrdinalIgnoreCase) ||
+                
+                // 初步基于时区或语言判断
+                bool isLocalChina = timeZoneId.Contains("China", StringComparison.OrdinalIgnoreCase) ||
                                  timeZoneId.Contains("Shanghai", StringComparison.OrdinalIgnoreCase) ||
                                  cultureName.EndsWith("CN", StringComparison.OrdinalIgnoreCase);
+
+                if (isLocalChina)
+                {
+                    RegionBannerText.Text = "正在基于网络检测您的物理位置...";
+                    try 
+                    {
+                        var ipService = new AnywhereWinUI.Services.IpInfoService();
+                        var ipInfo = await ipService.GetIpInfoAsync(null);
+                        if (ipInfo != null && !string.IsNullOrEmpty(ipInfo.countryCode))
+                        {
+                            _isUserInChina = ipInfo.countryCode.ToUpper() == "CN";
+                        }
+                        else
+                        {
+                            _isUserInChina = isLocalChina;
+                        }
+                    }
+                    catch
+                    {
+                        _isUserInChina = isLocalChina;
+                    }
+                }
+                else
+                {
+                    _isUserInChina = false;
+                }
+
                 if (_isUserInChina)
                 {
                     RegionBannerText.Text = "自动检测：识别到您位于 中国大陆，已自动为您预设直连绕过规则。";
