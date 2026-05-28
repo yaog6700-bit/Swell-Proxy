@@ -221,9 +221,9 @@ namespace AnywhereWinUI.Services
                     ["tag"]          = "tun-in",
                     ["address"]      = new JsonArray { (JsonNode)"172.18.0.1/30", (JsonNode)"fdfe:dcba:9876::1/126" },
                     ["auto_route"]   = true,
-                    // 使用 strict_route=true 开启 WFP 底层分流，彻底解决 sing-box direct 出站（如直连国内 IP 时）的死循环问题
-                    ["strict_route"] = true,
-                    ["stack"]        = "system",
+                    // 关闭 strict_route 避免 WFP 拦截导致 WSAEACCES 报错（我们已经在 direct 出站绑定了物理网卡防止死循环）
+                    ["strict_route"] = false,
+                    ["stack"]        = "mixed",
                     ["mtu"]          = 9000
                 };
 
