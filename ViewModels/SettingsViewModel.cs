@@ -115,7 +115,7 @@ namespace AnywhereWinUI.ViewModels
                 dispatcher?.TryEnqueue(() =>
                 {
                     CoreVersionText = $"当前核心版本: {ver}";
-                    AppVersionText = $"当前客户端版本: v{appVer.Major}.{appVer.Minor}.{appVer.Build}";
+                    AppVersionText = $"版本 v{appVer.Major}.{appVer.Minor}.{appVer.Build}";
                 });
             });
         }
