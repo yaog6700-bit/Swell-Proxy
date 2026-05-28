@@ -47,7 +47,7 @@
         <!-- 2. 主引导卡片（悬浮磨砂玻璃质感） -->
         <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
-                Background="{ThemeResource SystemControlTransientBorderBrush}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 CornerRadius="16"
                 Width="540"
                 Height="500"
@@ -70,15 +70,15 @@
                     <!-- 第一页：欢迎页面 -->
                     <StackPanel x:Name="Page0" Visibility="Visible" Spacing="16" VerticalAlignment="Center">
                         <!-- 图标 -->
-                        <Image Source="ms-appx:///Assets/logo.png" Width="80" Height="80" HorizontalAlignment="Center" Stretch="UniformToFill" />
+                        <Image Source="ms-appx:///Assets/logo_about.png" Width="80" Height="80" HorizontalAlignment="Center" Stretch="UniformToFill" />
                         
                         <TextBlock Text="欢迎开启 Swell Proxy" 
                                    FontSize="28" 
                                    FontWeight="Bold" 
                                    HorizontalAlignment="Center" />
                         
-                        <TextBlock Text="基于强劲核心的下一代透明代理客户端。&#x0a;为您提供极速、稳定、无感的智能网络体验。" 
-                                   Foreground="{ThemeResource SystemControlPageBackgroundChromeLowBrush}"
+                        <TextBlock Text="基于强劲 Sing-Box 核心的下一代透明代理客户端。&#x0a;为您提供极速、稳定、无感的智能网络体验。" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                    TextAlignment="Center" 
                                    HorizontalAlignment="Center" 
                                    LineHeight="22" />
@@ -116,6 +116,16 @@
                                     <TextBlock Text="在网络底层过滤隐私广告追踪器，提供清爽浏览环境。" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" x:Name="BlockAdsToggle" IsOn="True" MinWidth="0"/>
+                            </Grid>
+                        </Border>
+                        <!-- Advanced Routing 卡片 -->
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="12" Padding="16">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock Text="启用高级分流模块 (Enable advanced routing module)" FontWeight="SemiBold"/>
+                                    <TextBlock Text="开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则。" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" x:Name="AdvancedRoutingToggle" IsOn="False" MinWidth="0"/>
                             </Grid>
                         </Border>
                     </StackPanel>

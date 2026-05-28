@@ -102,6 +102,30 @@ namespace AnywhereWinUI
                 System.Diagnostics.Debug.WriteLine($"LocalSettings access failed: {ex.Message}");
             }
 
+            // Wire up Privacy Mode
+            ViewModel.PrivacyLocked += (_, _) =>
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    HideToTray();
+                });
+            };
+
+            if (AppPrivacyOverlay != null)
+            {
+                AppPrivacyOverlay.UnlockRequested += (_, password) =>
+                {
+                    if (ViewModel.Unlock(password))
+                    {
+                        AppPrivacyOverlay.Clear();
+                    }
+                    else
+                    {
+                        AppPrivacyOverlay.ShowError();
+                    }
+                };
+            }
+
             // Lazy-load OnboardingControl only when needed - skip XAML construction for users
             // who have already completed onboarding (saves ~10MB at startup).
             // AppOnboarding is now a ContentControl placeholder; actual content is inserted here.
@@ -554,6 +578,10 @@ namespace AnywhereWinUI
                 var openItem = new MenuFlyoutItem { Text = "显示主界面" };
                 openItem.Click += (_, _) => RestoreFromTray();
                 flyout.Items.Add(openItem);
+                
+                var privacyItem = new MenuFlyoutItem { Text = "锁定并隐藏" };
+                privacyItem.Click += async (_, _) => await ViewModel.TogglePrivacyModeAsync();
+                flyout.Items.Add(privacyItem);
 
                 flyout.Items.Add(new MenuFlyoutSeparator());
 
@@ -657,6 +685,33 @@ namespace AnywhereWinUI
                     System.Diagnostics.Debug.WriteLine($"[Tray] Failed to release UI resources: {ex.Message}");
                 }
             });
+        }
+
+        public async Task<string?> ShowSetPasswordDialogAsync()
+        {
+            var pwdBox = new PasswordBox
+            {
+                Header = "请输入隐私保护密码",
+                PlaceholderText = "设置一个用于解锁的密码",
+                Width = 300
+            };
+
+            var dialog = new ContentDialog
+            {
+                XamlRoot = this.Content.XamlRoot,
+                Title = "设置隐私密码",
+                PrimaryButtonText = "确定",
+                CloseButtonText = "取消",
+                DefaultButton = ContentDialogButton.Primary,
+                Content = new StackPanel
+                {
+                    Spacing = 12,
+                    Children = { pwdBox }
+                }
+            };
+
+            var result = await dialog.ShowAsync();
+            return result == ContentDialogResult.Primary ? pwdBox.Password : null;
         }
 
         // ── Dashboard Hover Animation (Elastic Bounce Squish & Stretch) ──────────────────
@@ -1003,6 +1058,25 @@ namespace AnywhereWinUI
             }
             else
             {
+                if (AppSession.Instance.ProxyModeIndex == 1 && !AnywhereWinUI.Helpers.AdminHelper.IsAdministrator())
+                {
+                    MiniStartStopButton.IsChecked = false;
+                    SetMiniMode(false); // Expand to full mode
+                    // Find DashboardViewModel and trigger TUN toggle
+                    var dashboardVm = ((App)Application.Current).Services.GetService(typeof(DashboardViewModel)) as DashboardViewModel;
+                    if (dashboardVm != null)
+                    {
+                        // Set the selected mode in navigation to Dashboard to show the dialog
+                        MainNav.SelectedItem = DashboardNavItem;
+                        // The ToggleCoreAsync logic in DashboardViewModel will handle the prompt
+                        if (dashboardVm.ToggleCoreCommand.CanExecute(null))
+                        {
+                            dashboardVm.ToggleCoreCommand.Execute(null);
+                        }
+                    }
+                    return;
+                }
+
                 try
                 {
                     var activeNode = AnywhereWinUI.Services.NodesManager.Instance.Nodes.Find(n => n.Id == AnywhereWinUI.Services.NodesManager.Instance.SelectedNodeId);
@@ -1078,23 +1152,46 @@ namespace AnywhereWinUI
             var activeNode = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
             var nodeName = activeNode?.Name ?? "未选择节点";
             MiniServerNameText.Text = nodeName;
+
+            string routingMode = AppSession.Instance.RoutingMode;
+            MiniProxyModeText.Text = routingMode switch
+            {
+                "global" => "全局代理",
+                "direct" => "全部直连",
+                _ => "智能分流"
+            };
             
             bool isRunning = CoreManager.Instance.IsRunning;
             MiniStartStopButton.IsChecked = isRunning;
             
-            // Try to find StateSuccessBrush, fallback to Green
-            Microsoft.UI.Xaml.Media.Brush statusBrush = null;
-            if (Application.Current.Resources.TryGetValue("StateSuccessBrush", out var resBrush) && resBrush is Microsoft.UI.Xaml.Media.Brush brush)
+            string pingText = isRunning ? "已连接" : "未连接";
+            Microsoft.UI.Xaml.Media.Brush statusBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Colors.Gray);
+
+            if (isRunning)
             {
-                statusBrush = brush;
-            }
-            else
-            {
-                statusBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Colors.Green);
+                var serversVm = ((App)Application.Current).Services.GetService(typeof(ServersViewModel)) as ServersViewModel;
+                var serverItem = serversVm?.AllServers != null ? System.Linq.Enumerable.FirstOrDefault(serversVm.AllServers, s => s.Id == NodesManager.Instance.SelectedNodeId) : null;
+                
+                if (serverItem != null && serverItem.PingText != "未测试" && serverItem.PingText != "测试中...")
+                {
+                    pingText = serverItem.PingText;
+                    statusBrush = serverItem.PingColor ?? new Microsoft.UI.Xaml.Media.SolidColorBrush(Colors.Green);
+                }
+                else
+                {
+                    if (Application.Current.Resources.TryGetValue("StateSuccessBrush", out var resBrush) && resBrush is Microsoft.UI.Xaml.Media.Brush brush)
+                    {
+                        statusBrush = brush;
+                    }
+                    else
+                    {
+                        statusBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Colors.Green);
+                    }
+                }
             }
             
-            MiniStatusDot.Fill = isRunning ? statusBrush : new Microsoft.UI.Xaml.Media.SolidColorBrush(Colors.Gray);
-            MiniStatusText.Text = isRunning ? "已连接" : "未连接";
+            MiniStatusDot.Fill = statusBrush;
+            MiniStatusText.Text = pingText;
         }
         // ── Connections Hover Animation (Scale Pulse similar to Traffic) ──────────────────
         private void ConnectionsNavItem_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)

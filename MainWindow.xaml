@@ -21,7 +21,7 @@
         </Grid>
 
         <!-- ContentWrapper: clip animation targets this to cover both nav pane AND content area -->
-        <Grid x:Name="ContentWrapper">
+        <Grid x:Name="ContentWrapper" Visibility="{x:Bind ViewModel.MainContentVisibility, Mode=OneWay}">
             <Grid x:Name="FullModeGrid">
             <NavigationView x:Name="MainNav"
                             PaneDisplayMode="LeftMinimal"
@@ -171,8 +171,9 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Margin="2,18,20,0" VerticalAlignment="Top" Spacing="6">
-                        <TextBlock x:Name="MiniServerNameText" Text="未选择节点" FontSize="16" FontWeight="SemiBold" />
+                    <StackPanel Grid.Row="0" Margin="2,18,20,0" VerticalAlignment="Top" Spacing="2">
+                        <TextBlock x:Name="MiniServerNameText" Text="未选择节点" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="150" HorizontalAlignment="Left" />
+                        <TextBlock x:Name="MiniProxyModeText" Text="智能分流" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
 
                     <Grid Grid.Row="2" Margin="0,0,0,12">
@@ -215,6 +216,9 @@
         <ContentControl x:Name="AppOnboardingHost" Visibility="Collapsed" Canvas.ZIndex="100"
                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                         HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                        
+        <!-- 隐私保护模式遮罩层：置于最顶层 -->
+        <views:PrivacyOverlay x:Name="AppPrivacyOverlay" Visibility="{x:Bind ViewModel.PrivacyOverlayVisibility, Mode=OneWay}" Canvas.ZIndex="200" />
     </Grid>
 </Window>
 

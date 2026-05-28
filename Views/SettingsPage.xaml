@@ -96,9 +96,15 @@
                 <ListViewItem Tag="About" 
                               PointerEntered="AboutItem_PointerEntered" 
                               PointerExited="AboutItem_PointerExited">
-                    <Grid ColumnDefinitions="Auto,*">
-                        <FontIcon x:Name="IconAbout" Glyph="&#xE946;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                        <FontIcon x:Name="IconAbout" Glyph="&#xE946;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Grid.Column="1" Text="关于与内核" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Visibility="{x:Bind MainViewModel.UpdateBadgeVisibility, Mode=OneWay}">
+                            <Border Background="{ThemeResource SystemFillColorCriticalBrush}" CornerRadius="4" Padding="4,1">
+                                <TextBlock Text="NEW" FontSize="9" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            </Border>
+                            <Ellipse Width="6" Height="6" Fill="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Grid>
                 </ListViewItem>
             </ListView>
@@ -120,14 +126,6 @@
                 <TextBlock x:Name="DetailCategoryTitle" Text="个性化外观" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                 <TextBlock x:Name="DetailCategorySubtitle" Text="自定义主题风格、背景材质与界面显示细节" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
-
-            <InfoBar Grid.Row="1"
-                     IsOpen="{x:Bind MainViewModel.UpdateBadgeVisibility, Mode=OneWay, Converter={StaticResource VisibilityToBoolConverter}}"
-                     Severity="Success"
-                     Title="Swell Proxy"
-                     Message="{x:Bind MainViewModel.UpdateBannerText, Mode=OneWay}"
-                     IsClosable="True"
-                     Margin="0,0,0,16" />
 
             <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                 <Grid Width="620" HorizontalAlignment="Left" Padding="0,0,12,24">
@@ -570,7 +568,14 @@
                                 Padding="16,16">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel Spacing="6" VerticalAlignment="Center">
-                                    <TextBlock Text="Swell Proxy" FontSize="16" FontWeight="Bold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <TextBlock Text="Swell Proxy" FontSize="16" FontWeight="Bold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                        <HyperlinkButton NavigateUri="https://github.com/yaog6700-bit/Swell-Proxy" ToolTipService.ToolTip="GitHub" Padding="6" CornerRadius="4" MinWidth="0" MinHeight="0" VerticalAlignment="Center">
+                                            <Viewbox Width="16" Height="16">
+                                                <PathIcon Data="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                                            </Viewbox>
+                                        </HyperlinkButton>
+                                    </StackPanel>
                                     <TextBlock Text="版本 v1.0.0 (自适应 Fluent 原生版)" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <Image Grid.Column="1" Source="ms-appx:///Assets/logo_about.png" Width="96" Height="96" VerticalAlignment="Center" Stretch="Uniform" />
@@ -579,6 +584,12 @@
 
                         <StackPanel Spacing="12">
                             <TextBlock Text="内核与引导管理" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+                            <InfoBar IsOpen="{x:Bind MainViewModel.UpdateBadgeVisibility, Mode=OneWay, Converter={StaticResource VisibilityToBoolConverter}}"
+                                     Severity="Success"
+                                     Title="发现新版本"
+                                     Message="{x:Bind MainViewModel.UpdateBannerText, Mode=OneWay}"
+                                     IsClosable="False" />
 
                             <Border Background="Transparent" 
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"

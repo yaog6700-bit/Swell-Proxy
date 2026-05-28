@@ -122,9 +122,14 @@ namespace AnywhereWinUI.Views
         {
             string inputText = SubscriptionInput.Text?.Trim() ?? string.Empty;
             
-            // 保存分流规则配置到 LocalSettings
+            // 保存分流规则配置到 LocalSettings 及内存中
+            AnywhereWinUI.Services.AppSession.Instance.BypassChina = BypassChinaToggle.IsOn;
+            AnywhereWinUI.Services.AppSession.Instance.BlockAds = BlockAdsToggle.IsOn;
+            AnywhereWinUI.Services.AppSession.Instance.EnableAdvancedRouting = AdvancedRoutingToggle.IsOn;
             AnywhereWinUI.Helpers.LocalSettingsHelper.SetValue("bypassChina", BypassChinaToggle.IsOn);
             AnywhereWinUI.Helpers.LocalSettingsHelper.SetValue("blockAds", BlockAdsToggle.IsOn);
+            AnywhereWinUI.Helpers.LocalSettingsHelper.SetValue("enableAdvancedRouting", AdvancedRoutingToggle.IsOn);
+            MainWindow.Instance?.UpdateRoutingNavVisibility();
             
             if (!string.IsNullOrEmpty(inputText))
             {
@@ -136,23 +141,53 @@ namespace AnywhereWinUI.Views
                 
                 try
                 {
+                    int importedCount = 0;
                     if (inputText.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
                         inputText.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                     {
-                        // 异步抓取订阅链接
-                        var response = await _httpClient.GetStringAsync(inputText);
-                        int importedCount = ParseAndSaveNodes(response);
+                        // 添加订阅
+                        string subName = $"订阅_{DateTime.Now:MMdd_HHmm}";
+                        AnywhereWinUI.Services.NodesManager.Instance.AddSubscription(subName, inputText);
+                        var sub = System.Linq.Enumerable.LastOrDefault(AnywhereWinUI.Services.NodesManager.Instance.Subscriptions);
                         
-                        ImportStatusText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.Green);
-                        ImportStatusText.Text = $"成功导入 {importedCount} 个节点！";
+                        if (sub != null)
+                        {
+                            int oldNodesCount = AnywhereWinUI.Services.NodesManager.Instance.Nodes.Count;
+                            await AnywhereWinUI.Services.NodesManager.Instance.UpdateSubscriptionAsync(sub.Id);
+                            importedCount = AnywhereWinUI.Services.NodesManager.Instance.Nodes.Count - oldNodesCount;
+                        }
                     }
                     else
                     {
-                        // 解析单个或多个分享链接
-                        int importedCount = ParseShareLinks(inputText);
-                        ImportStatusText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.Green);
-                        ImportStatusText.Text = $"成功导入 {importedCount} 个节点！";
+                        // 解析单条或多条分享链接
+                        var lines = inputText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var line in lines)
+                        {
+                            var parsedNode = AnywhereWinUI.Services.NodesManager.ParseShareUrl(line.Trim());
+                            if (parsedNode != null)
+                            {
+                                AnywhereWinUI.Services.NodesManager.Instance.Nodes.Add(parsedNode);
+                                importedCount++;
+                            }
+                        }
+                        
+                        if (importedCount > 0)
+                        {
+                            AnywhereWinUI.Services.NodesManager.Instance.Save();
+                        }
                     }
+                    
+                    ImportStatusText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.Green);
+                    ImportStatusText.Text = $"成功导入 {importedCount} 个节点！";
+                    
+                    // 通知 ServersViewModel 重新加载节点列表
+                    var serversViewModel = AnywhereWinUI.App.Current.Services.GetService(typeof(AnywhereWinUI.ViewModels.ServersViewModel)) as AnywhereWinUI.ViewModels.ServersViewModel;
+                    if (serversViewModel != null)
+                    {
+                        serversViewModel.LoadSubscriptions();
+                        serversViewModel.LoadServersList();
+                    }
+                    
                     await Task.Delay(1200); // 预留物理过渡动画时间
                 }
                 catch (Exception ex)
@@ -169,20 +204,6 @@ namespace AnywhereWinUI.Views
             // 完成并关闭向导界面：通过 MainWindow 公开方法隐藏宿主容器
             AnywhereWinUI.Helpers.LocalSettingsHelper.SetValue("onboardingCompleted", true);
             MainWindow.Instance?.HideOnboarding();
-        }
-        
-        private int ParseAndSaveNodes(string subscriptionContent)
-        {
-            // 在这里实现您的 Base64 订阅内容解码和解析逻辑
-            Debug.WriteLine($"Fetched subscription text size: {subscriptionContent.Length}");
-            return 12; // 模拟返回导入了 12 个节点
-        }
-        
-        private int ParseShareLinks(string shareLinksText)
-        {
-            // 在这里实现单条或多条 vmess:// vless:// ss:// 链接的解析
-            var lines = shareLinksText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            return lines.Length;
         }
     }
 }

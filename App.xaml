@@ -29,6 +29,7 @@
             <converters:ColorToBrushConverter x:Key="ColorToBrushConverter" />
             <converters:ColorToHexStringConverter x:Key="ColorToHexStringConverter" />
             <converters:ProtocolToBrushConverter x:Key="ProtocolToBrushConverter" />
+            <converters:VisibilityToBoolConverter x:Key="VisibilityToBoolConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

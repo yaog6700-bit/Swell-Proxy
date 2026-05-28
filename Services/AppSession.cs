@@ -30,6 +30,10 @@ namespace AnywhereWinUI.Services
 
         // UI Preferences
         public bool EnableClassicDashboard { get; set; } = false;
+        
+        // Privacy Mode
+        public bool IsPrivacyModeActive { get; set; } = false;
+        public string PrivacyPassword { get; set; } = string.Empty;
 
         // Application Rule Sets
         public string RuleNetflixAction { get; set; } = "proxy";
@@ -60,6 +64,8 @@ namespace AnywhereWinUI.Services
 
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("bypassChina", out var bc)) BypassChina = bc;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableClassicDashboard", out var ecd)) EnableClassicDashboard = ecd;
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>("isPrivacyModeActive", out var ipm)) IsPrivacyModeActive = ipm;
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("privacyPassword", out var pwd) && !string.IsNullOrEmpty(pwd)) PrivacyPassword = pwd;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("blockAds", out var ba)) BlockAds = ba;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("blockIPv6", out var bi)) BlockIPv6 = bi;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("flushDNS", out var fd)) FlushDNS = fd;

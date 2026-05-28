@@ -214,34 +214,71 @@ namespace AnywhereWinUI.ViewModels
 
             if (!isAdmin)
             {
-                var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
-                {
-                    Title = "需要管理员权限",
-                    Content = "开启 TUN 模式需要管理员权限以创建虚拟网卡和接管系统路由。\n即将请求 UAC 提权并以管理员身份重启客户端。",
-                    PrimaryButtonText = "确认提权",
-                    CloseButtonText = "取消",
-                    XamlRoot = MainWindow.Instance?.Content.XamlRoot
-                };
-
-                var result = await dialog.ShowAsync();
-                if (result != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+                // Ensure we run on UI thread with a short delay to let any UI transitions finish
+                var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
+                var dispatcher = MainWindow.Instance?.DispatcherQueue;
+                
+                if (dispatcher == null)
                 {
                     ProxyModeIndex = AppSession.Instance.ProxyModeIndex;
                     return;
                 }
 
-                bool wasRunning = CoreManager.Instance.IsRunning;
-                if (wasRunning)
+                dispatcher.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, async () =>
                 {
-                    await CoreManager.Instance.StopAsync();
-                }
+                    try
+                    {
+                        // Short delay to let the Segmented control animation settle
+                        await Task.Delay(150);
 
-                string arg = wasRunning ? "--tun-start" : "--tun";
-                bool restarted = AdminHelper.RestartAsAdmin(arg);
-                if (!restarted)
-                {
-                    ProxyModeIndex = AppSession.Instance.ProxyModeIndex;
-                }
+                        var xamlRoot = MainWindow.Instance?.Content?.XamlRoot;
+                        if (xamlRoot == null)
+                        {
+                            ProxyModeIndex = AppSession.Instance.ProxyModeIndex;
+                            tcs.SetResult(false);
+                            return;
+                        }
+
+                        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                        {
+                            Title = "需要管理员权限",
+                            Content = "开启 TUN 模式需要管理员权限以创建虚拟网卡和接管系统路由。\n即将请求 UAC 提权并以管理员身份重启客户端。",
+                            PrimaryButtonText = "确认提权",
+                            CloseButtonText = "取消",
+                            XamlRoot = xamlRoot
+                        };
+
+                        var result = await dialog.ShowAsync();
+                        if (result != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+                        {
+                            ProxyModeIndex = AppSession.Instance.ProxyModeIndex;
+                            tcs.SetResult(false);
+                            return;
+                        }
+
+                        bool wasRunning = CoreManager.Instance.IsRunning;
+                        if (wasRunning)
+                        {
+                            await CoreManager.Instance.StopAsync();
+                        }
+
+                        string arg = wasRunning ? "--tun-start" : "--tun";
+                        bool restarted = AdminHelper.RestartAsAdmin(arg);
+                        if (!restarted)
+                        {
+                            ProxyModeIndex = AppSession.Instance.ProxyModeIndex;
+                        }
+                        tcs.SetResult(restarted);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[TUN] Failed to show admin dialog: {ex.Message}");
+                        ProxyModeIndex = AppSession.Instance.ProxyModeIndex;
+                        tcs.SetResult(false);
+                    }
+                });
+
+                await tcs.Task;
             }
             else
             {
@@ -278,6 +315,12 @@ namespace AnywhereWinUI.ViewModels
                 {
                     NodesManager.Instance.SelectedNodeId = NodesManager.Instance.Nodes[0].Id;
                     NodesManager.Instance.Save();
+                }
+
+                if (AppSession.Instance.ProxyModeIndex == 1 && !AdminHelper.IsAdministrator())
+                {
+                    _ = HandleTunToggleAsync();
+                    return;
                 }
 
                 var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);

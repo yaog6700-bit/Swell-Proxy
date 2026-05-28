@@ -190,14 +190,7 @@ namespace AnywhereWinUI.Services
             ColorFallback = "#94A8A0";
 
             // Default mock nodes
-            Nodes = new List<PersistedNode>
-            {
-                new PersistedNode { Name = "香港 VLESS-XTLS (Premium)", Protocol = "VLESS", Host = "hk-vip.anywhere-server.com:443" },
-                new PersistedNode { Name = "日本 Hysteria 2 (High Speed)", Protocol = "Hysteria 2", Host = "jp-hy2.anywhere-server.com:8443" },
-                new PersistedNode { Name = "美国 Trojan-TLS (Standard)", Protocol = "Trojan", Host = "us-tj.anywhere-server.com:443" },
-                new PersistedNode { Name = "新加坡 Shadowsocks 2022", Protocol = "Shadowsocks", Host = "sg-ss.anywhere-server.com:1080" }
-            };
-            SelectedNodeId = Nodes[0].Id;
+            Nodes = new List<PersistedNode>();
             Save();
         }
 

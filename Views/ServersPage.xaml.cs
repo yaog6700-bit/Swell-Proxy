@@ -358,6 +358,47 @@ namespace AnywhereWinUI.Views
                         NodesManager.Instance.SelectedNodeId = NodesManager.Instance.Nodes[0].Id;
                         NodesManager.Instance.Save();
                     }
+
+                    if (AppSession.Instance.ProxyModeIndex == 1 && !Helpers.AdminHelper.IsAdministrator())
+                    {
+                        StartStopButton.IsChecked = false;
+                        var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
+                        var dispatcher = this.DispatcherQueue;
+                        
+                        dispatcher.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, async () =>
+                        {
+                            try
+                            {
+                                var dialog = new ContentDialog
+                                {
+                                    Title = "需要管理员权限",
+                                    Content = "开启 TUN 模式需要管理员权限以创建虚拟网卡和接管系统路由。\n即将请求 UAC 提权并以管理员身份重启客户端。",
+                                    PrimaryButtonText = "确认提权",
+                                    CloseButtonText = "取消",
+                                    XamlRoot = this.XamlRoot
+                                };
+
+                                var result = await dialog.ShowAsync();
+                                if (result != ContentDialogResult.Primary)
+                                {
+                                    tcs.SetResult(false);
+                                    return;
+                                }
+
+                                bool restarted = Helpers.AdminHelper.RestartAsAdmin("--tun-start");
+                                tcs.SetResult(restarted);
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[TUN] Failed to show admin dialog in ServersPage: {ex.Message}");
+                                tcs.SetResult(false);
+                            }
+                        });
+
+                        await tcs.Task;
+                        return;
+                    }
+
                     var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
                     string realConfig = ConfigBuilder.Build(node);
 
@@ -1188,8 +1229,49 @@ namespace AnywhereWinUI.Views
             if (sender is MenuFlyoutItem item && item.Tag is string mode)
             {
                 int index = mode == "tun" ? 1 : mode == "manual" ? 2 : 0;
+
+                // If switching to TUN mode without admin, show UAC dialog first
+                if (index == 1 && !Helpers.AdminHelper.IsAdministrator())
+                {
+                    var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
+                    this.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, async () =>
+                    {
+                        try
+                        {
+                            await Task.Delay(100);
+                            var dialog = new ContentDialog
+                            {
+                                Title = "需要管理员权限",
+                                Content = "开启 TUN 模式需要管理员权限以创建虚拟网卡和接管系统路由。\n即将请求 UAC 提权并以管理员身份重启客户端。",
+                                PrimaryButtonText = "确认提权",
+                                CloseButtonText = "取消",
+                                XamlRoot = this.XamlRoot
+                            };
+                            var result = await dialog.ShowAsync();
+                            if (result != ContentDialogResult.Primary)
+                            {
+                                tcs.SetResult(false);
+                                return;
+                            }
+                            bool wasRunning = CoreManager.Instance.IsRunning;
+                            if (wasRunning) await CoreManager.Instance.StopAsync();
+                            string arg = wasRunning ? "--tun-start" : "--tun";
+                            Helpers.AdminHelper.RestartAsAdmin(arg);
+                            tcs.SetResult(true);
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[TUN] SetProxyMode_Click dialog failed: {ex.Message}");
+                            tcs.SetResult(false);
+                        }
+                    });
+                    await tcs.Task;
+                    return;
+                }
+
                 AppSession.Instance.ProxyModeIndex = index;
                 Helpers.LocalSettingsHelper.SetValue("proxyModeIndex", index);
+                Helpers.LocalSettingsHelper.SetValue("enableTunMode", index == 1);
 
                 UpdateProxyModeUI();
                 UpdateRoutingModeUI();
