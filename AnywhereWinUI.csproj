@@ -57,8 +57,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Assets\**">
+    <Content Include="Assets\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Content>
   </ItemGroup>
 </Project>

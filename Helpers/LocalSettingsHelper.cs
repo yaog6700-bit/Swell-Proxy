@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace AnywhereWinUI.Helpers
 {
@@ -27,7 +28,26 @@ namespace AnywhereWinUI.Helpers
                 if (File.Exists(SettingsPath))
                 {
                     string json = File.ReadAllText(SettingsPath);
-                    _settings = JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
+                    var node = JsonNode.Parse(json) as JsonObject;
+                    if (node != null)
+                    {
+                        _settings.Clear();
+                        foreach (var kvp in node)
+                        {
+                            if (kvp.Value is JsonValue jv)
+                            {
+                                if (jv.TryGetValue<bool>(out var b)) _settings[kvp.Key] = b;
+                                else if (jv.TryGetValue<long>(out var l)) _settings[kvp.Key] = (int)l; // Use long parsing to capture integers safely
+                                else if (jv.TryGetValue<double>(out var d)) _settings[kvp.Key] = d;
+                                else if (jv.TryGetValue<string>(out var s)) _settings[kvp.Key] = s;
+                                else _settings[kvp.Key] = kvp.Value.ToJsonString();
+                            }
+                            else if (kvp.Value != null)
+                            {
+                                _settings[kvp.Key] = kvp.Value.ToJsonString();
+                            }
+                        }
+                    }
                 }
             }
             catch { }
@@ -42,7 +62,23 @@ namespace AnywhereWinUI.Helpers
                 {
                     Directory.CreateDirectory(dir);
                 }
-                string json = JsonSerializer.Serialize(_settings);
+                
+                var node = new JsonObject();
+                foreach (var kvp in _settings)
+                {
+                    if (kvp.Value is bool b) node[kvp.Key] = b;
+                    else if (kvp.Value is int i) node[kvp.Key] = i;
+                    else if (kvp.Value is long l) node[kvp.Key] = l;
+                    else if (kvp.Value is double d) node[kvp.Key] = d;
+                    else if (kvp.Value is string s)
+                    {
+                        // Some strings might be raw JSON arrays/objects from other serializers. Store them as string.
+                        node[kvp.Key] = s;
+                    }
+                    else node[kvp.Key] = kvp.Value?.ToString();
+                }
+                
+                string json = node.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(SettingsPath, json);
             }
             catch { }
@@ -60,16 +96,26 @@ namespace AnywhereWinUI.Helpers
             {
                 try
                 {
-                    if (rawVal is JsonElement je)
-                    {
-                        if (typeof(T) == typeof(bool)) value = (T)(object)je.GetBoolean();
-                        else if (typeof(T) == typeof(string)) value = (T)(object)(je.GetString() ?? string.Empty);
-                        else value = JsonSerializer.Deserialize<T>(je.GetRawText());
-                        return true;
-                    }
-                    else if (rawVal is T typedVal)
+                    if (rawVal is T typedVal)
                     {
                         value = typedVal;
+                        return true;
+                    }
+                    
+                    // Attempt fallback conversions for types stored differently (e.g. string to bool, int to long)
+                    if (typeof(T) == typeof(string))
+                    {
+                        value = (T)(object)(rawVal?.ToString() ?? string.Empty);
+                        return true;
+                    }
+                    if (typeof(T) == typeof(bool) && rawVal is string sb && bool.TryParse(sb, out var bres))
+                    {
+                        value = (T)(object)bres;
+                        return true;
+                    }
+                    if (typeof(T) == typeof(int) && rawVal is long l)
+                    {
+                        value = (T)(object)(int)l;
                         return true;
                     }
                 }
