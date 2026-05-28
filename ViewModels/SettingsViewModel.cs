@@ -70,6 +70,9 @@ namespace AnywhereWinUI.ViewModels
         [ObservableProperty]
         private string _coreVersionText = "Checking...";
 
+        [ObservableProperty]
+        private string _appVersionText = "Checking...";
+
         public SettingsViewModel()
         {
             LoadSettings();
@@ -107,9 +110,11 @@ namespace AnywhereWinUI.ViewModels
             Task.Run(() =>
             {
                 var ver = CoreUpdateService.GetLocalSingboxVersionText();
+                var appVer = AppUpdateService.CurrentVersion;
                 Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread()?.TryEnqueue(() =>
                 {
-                    CoreVersionText = $"当前版本: {ver}";
+                    CoreVersionText = $"当前核心版本: {ver}";
+                    AppVersionText = $"当前客户端版本: v{appVer.Major}.{appVer.Minor}.{appVer.Build}";
                 });
             });
         }

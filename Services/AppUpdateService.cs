@@ -19,7 +19,7 @@ namespace AnywhereWinUI.Services
         private const string AppExeName     = "Swell Proxy.exe";
         private const string UpdaterExeName = "Swell.Updater.exe";
 
-        private static Version CurrentVersion
+        public static Version CurrentVersion
         {
             get
             {

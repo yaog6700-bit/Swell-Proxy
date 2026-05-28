@@ -622,7 +622,7 @@
                                     <Grid ColumnDefinitions="*,Auto,Auto" Padding="16,16" ColumnSpacing="12">
                                         <StackPanel Spacing="4" VerticalAlignment="Center">
                                             <TextBlock Text="客户端自动更新" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                            <TextBlock Text="检查是否有新版客户端发布" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{x:Bind ViewModel.AppVersionText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <Button x:Name="CheckAppUpdateButton" Grid.Column="2" Content="检查更新" Padding="12,5" CornerRadius="4" Click="CheckAppUpdateButton_Click" VerticalAlignment="Center"/>
                                     </Grid>
