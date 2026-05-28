@@ -7,6 +7,7 @@
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
     xmlns:views="using:AnywhereWinUI.Views"
     xmlns:appcontrols="using:AnywhereWinUI.Controls"
+    xmlns:services="using:AnywhereWinUI.Services"
     mc:Ignorable="d"
     Background="Transparent">
 
@@ -591,7 +592,7 @@
                     <StackPanel x:Name="SubListFormPanel" Visibility="Collapsed" Spacing="16">
                         <ListView x:Name="SubsListView" SelectionMode="None">
                             <ListView.ItemTemplate>
-                                <DataTemplate>
+                                <DataTemplate x:DataType="services:PersistedSubscription">
                                     <Grid Padding="0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
@@ -606,15 +607,15 @@
                                         </Grid.ColumnDefinitions>
 
                                         <!-- Sub Name -->
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Name}" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Bind Name, Mode=OneWay}" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
                                         
                                         <!-- Sub URL -->
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Url}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Bind Url, Mode=OneWay}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
 
                                         <!-- Last Updated -->
                                         <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Spacing="4" Margin="0,6,0,0">
                                             <TextBlock Text="上次同步:" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            <TextBlock Text="{Binding LastUpdated}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{x:Bind LastUpdated, Mode=OneWay}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         </StackPanel>
 
                                         <!-- Actions -->

@@ -97,7 +97,7 @@ namespace AnywhereWinUI.Services
             {
                 try
                 {
-                    var rules = JsonSerializer.Deserialize<List<CustomRule>>(rulesJson);
+                    var rules = JsonSerializer.Deserialize(rulesJson, AnywhereWinUI.Models.AppJsonContext.Default.ListCustomRule);
                     if (rules != null) CustomRules = rules;
                 }
                 catch { }

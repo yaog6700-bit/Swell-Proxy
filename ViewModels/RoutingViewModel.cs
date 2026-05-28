@@ -142,7 +142,7 @@ namespace AnywhereWinUI.ViewModels
             {
                 CoreManager.Instance.AppendLog("[系统] 检测到路由分流规则更新，正在自动重启代理引擎以重新加载配置...");
                 var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
-                string realConfig = node != null ? ConfigBuilder.Build(node) : ConfigBuilder.Build();
+                string realConfig = node != null ? await ConfigBuilder.BuildAsync(node) : await ConfigBuilder.BuildAsync();
 
                 await CoreManager.Instance.StopAsync();
                 await CoreManager.Instance.StartAsync(realConfig);

@@ -228,7 +228,7 @@ namespace AnywhereWinUI.ViewModels
             {
                 try
                 {
-                    string realConfig = ConfigBuilder.Build(node);
+                    string realConfig = await ConfigBuilder.BuildAsync(node);
                     await CoreManager.Instance.StartAsync(realConfig);
                 }
                 catch (Exception ex)

@@ -443,7 +443,7 @@ namespace AnywhereWinUI.Views
             var list = _rules.ToList();
             AppSession.Instance.CustomRules = list;
 
-            var json = JsonSerializer.Serialize(list);
+            var json = JsonSerializer.Serialize(list, AnywhereWinUI.Models.AppJsonContext.Default.ListCustomRule);
             LocalSettingsHelper.SetValue("customRules", json);
         }
     }

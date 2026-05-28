@@ -9,7 +9,7 @@ namespace AnywhereWinUI.Services
     {
         private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
-        public static string Build(PersistedNode? selectedNode = null)
+        public static async System.Threading.Tasks.Task<string> BuildAsync(PersistedNode? selectedNode = null)
         {
             var session = AppSession.Instance;
             var routingMode = session.RoutingMode;
@@ -60,7 +60,7 @@ namespace AnywhereWinUI.Services
                     ["timestamp"] = true
                 },
                 ["dns"] = BuildDns(bypassChina, blockIPv6, routingMode, enableTun),
-                ["inbounds"] = BuildInbounds(enableTun, selectedNode),
+                ["inbounds"] = await BuildInboundsAsync(enableTun, selectedNode),
                 ["outbounds"] = BuildOutbounds(selectedNode, actions.ToArray()),
                 ["route"] = BuildRoute(routingMode, bypassChina, blockAds),
                 ["experimental"] = new JsonObject
@@ -93,7 +93,18 @@ namespace AnywhereWinUI.Services
             var localDnsObj = new JsonObject { ["tag"] = "local-dns", ["domain_resolver"] = "bootstrap-dns" };
             ParseAndSetDnsServer(localDnsObj, directDns);
 
-            var bootstrapDnsObj = new JsonObject { ["tag"] = "bootstrap-dns", ["type"] = "udp", ["server"] = "223.5.5.5" };
+            JsonObject bootstrapDnsObj;
+            if (enableTun)
+            {
+                // In TUN mode, type: local uses OS resolver (svchost) which gets captured by TUN causing a loop.
+                // Using an IP directly with type: tcp allows strict_route to bypass the sing-box process socket
+                // and prevents UDP DNS blocking by ISPs.
+                bootstrapDnsObj = new JsonObject { ["tag"] = "bootstrap-dns", ["type"] = "tcp", ["server"] = "223.5.5.5" };
+            }
+            else
+            {
+                bootstrapDnsObj = new JsonObject { ["tag"] = "bootstrap-dns", ["type"] = "local" };
+            }
 
             var servers = new JsonArray { (JsonNode)proxyDnsObj, (JsonNode)localDnsObj, (JsonNode)bootstrapDnsObj };
             var rules = new JsonArray();
@@ -125,6 +136,23 @@ namespace AnywhereWinUI.Services
                 });
             }
 
+            if (session.EnableFakeDns)
+            {
+                servers.Add(new JsonObject
+                {
+                    ["tag"] = "fakeip",
+                    ["type"] = "fakeip",
+                    ["inet4_range"] = "198.18.0.0/15",
+                    ["inet6_range"] = "fc00::/18"
+                });
+
+                rules.Add(new JsonObject
+                {
+                    ["query_type"] = new JsonArray { (JsonNode)"A", (JsonNode)"AAAA" },
+                    ["server"] = "fakeip"
+                });
+            }
+
             var dnsConfig = new JsonObject
             {
                 ["servers"] = servers,
@@ -137,16 +165,6 @@ namespace AnywhereWinUI.Services
             {
                 dnsConfig["disable_cache"] = true;
                 dnsConfig["disable_expire"] = true;
-            }
-
-            if (session.EnableFakeDns)
-            {
-                dnsConfig["fakeip"] = new JsonObject
-                {
-                    ["enabled"] = true,
-                    ["inet4_range"] = "198.18.0.0/15",
-                    ["inet6_range"] = "fc00::/18"
-                };
             }
 
             return dnsConfig;
@@ -181,7 +199,7 @@ namespace AnywhereWinUI.Services
             }
         }
 
-        private static JsonArray BuildInbounds(bool enableTun = false, PersistedNode? selectedNode = null)
+        private static async System.Threading.Tasks.Task<JsonArray> BuildInboundsAsync(bool enableTun = false, PersistedNode? selectedNode = null)
         {
             var list = new JsonArray();
 
@@ -191,7 +209,7 @@ namespace AnywhereWinUI.Services
                 {
                     ["type"]         = "tun",
                     ["tag"]          = "tun-in",
-                    ["address"]      = new JsonArray { (JsonNode)"172.18.0.1/30" },
+                    ["address"]      = new JsonArray { (JsonNode)"172.18.0.1/30", (JsonNode)"fdfe:dcba:9876::1/126" },
                     ["auto_route"]   = true,
                     // 使用 strict_route=true 开启 WFP 底层分流，彻底解决 sing-box direct 出站（如直连国内 IP 时）的死循环问题
                     ["strict_route"] = true,
@@ -219,6 +237,10 @@ namespace AnywhereWinUI.Services
                 excludeAddresses.Add((JsonNode)"1.1.1.1/32");
 
                 // 排除所有的代理服务器 IP，防止域名节点导致的无限环路
+                // 使用带超时保护的并行 DNS 解析，避免阻塞线程导致 TUN 模式启动失败
+                var dnsResolveTasks = new System.Collections.Generic.List<System.Threading.Tasks.Task>();
+                var excludeLock = new object();
+
                 foreach (var node in NodesManager.Instance.Nodes)
                 {
                     var (nHost, _) = NodeLinkParser.SplitHostPort(node.Host);
@@ -226,21 +248,38 @@ namespace AnywhereWinUI.Services
                     if (System.Net.IPAddress.TryParse(cleanNHost, out var ip))
                     {
                         string cidr = ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ? $"{ip}/128" : $"{ip}/32";
-                        excludeAddresses.Add((JsonNode)cidr);
+                        lock (excludeLock) { excludeAddresses.Add((JsonNode)cidr); }
                     }
                     else if (!string.IsNullOrEmpty(cleanNHost))
                     {
-                        try
+                        var capturedHost = cleanNHost;
+                        var task = System.Threading.Tasks.Task.Run(async () =>
                         {
-                            var ips = System.Net.Dns.GetHostAddresses(cleanNHost);
-                            foreach (var resolvedIp in ips)
+                            try
                             {
-                                string cidr = resolvedIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ? $"{resolvedIp}/128" : $"{resolvedIp}/32";
-                                excludeAddresses.Add((JsonNode)cidr);
+                                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+                                var ips = await System.Net.Dns.GetHostAddressesAsync(capturedHost, cts.Token).ConfigureAwait(false);
+                                lock (excludeLock)
+                                {
+                                    foreach (var resolvedIp in ips)
+                                    {
+                                        string cidr = resolvedIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ? $"{resolvedIp}/128" : $"{resolvedIp}/32";
+                                        excludeAddresses.Add((JsonNode)cidr);
+                                    }
+                                }
                             }
-                        }
-                        catch { /* 忽略解析失败的节点 */ }
+                            catch { /* DNS 解析失败或超时，跳过该节点，不影响 TUN 启动 */ }
+                        });
+                        dnsResolveTasks.Add(task);
                     }
+                }
+
+                // 最多等待 1.5 秒让所有 DNS 任务完成，超时后直接跳过剩余解析继续构建配置
+                if (dnsResolveTasks.Count > 0)
+                {
+                    await System.Threading.Tasks.Task.WhenAll(dnsResolveTasks)
+                        .WaitAsync(System.TimeSpan.FromMilliseconds(1500))
+                        .ConfigureAwait(false);
                 }
                 tunObj["route_exclude_address"] = excludeAddresses;
                 list.Add(tunObj);
@@ -255,7 +294,7 @@ namespace AnywhereWinUI.Services
                 ["listen_port"] = 2080
             });
 
-            return list;
+            return await System.Threading.Tasks.Task.FromResult(list);
         }
 
         private static JsonArray BuildOutbounds(PersistedNode selectedNode, params string[] appActions)
@@ -350,31 +389,6 @@ namespace AnywhereWinUI.Services
             // Add direct and block outbounds
             list.Add(new JsonObject { ["type"] = "direct", ["tag"] = "direct" });
             list.Add(new JsonObject { ["type"] = "block", ["tag"] = "block" });
-
-            // 终极防环路：强制将所有物理出站绑定到真实网卡，彻底绕过 WFP 的潜在失效
-            try
-            {
-                var ifName = new TunService().DetectDefaultOutboundInterfaceName();
-                if (!string.IsNullOrEmpty(ifName))
-                {
-                    var logicalTypes = new HashSet<string> { "urltest", "selector", "block", "dns" };
-                    foreach (var ob in list)
-                    {
-                        if (ob is JsonObject jsonObj && jsonObj.ContainsKey("type"))
-                        {
-                            var typeStr = jsonObj["type"]?.ToString();
-                            if (!string.IsNullOrEmpty(typeStr) && !logicalTypes.Contains(typeStr))
-                            {
-                                jsonObj["bind_interface"] = ifName;
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 绑定出站接口失败: {ex.Message}");
-            }
 
             return list;
         }

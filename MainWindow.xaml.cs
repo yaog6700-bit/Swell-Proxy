@@ -1082,7 +1082,7 @@ namespace AnywhereWinUI
                     var activeNode = AnywhereWinUI.Services.NodesManager.Instance.Nodes.Find(n => n.Id == AnywhereWinUI.Services.NodesManager.Instance.SelectedNodeId);
                     if (activeNode != null)
                     {
-                        var config = AnywhereWinUI.Services.ConfigBuilder.Build(activeNode);
+                        var config = await AnywhereWinUI.Services.ConfigBuilder.BuildAsync(activeNode);
                         bool success = await CoreManager.Instance.StartAsync(config);
                         if (!success)
                         {

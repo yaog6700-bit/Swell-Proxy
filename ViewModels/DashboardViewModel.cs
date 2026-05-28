@@ -295,7 +295,7 @@ namespace AnywhereWinUI.ViewModels
             {
                 CoreManager.Instance.AppendLog("[系统] 检测到代理模式更新，正在自动重启代理引擎...");
                 var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
-                string realConfig = node != null ? ConfigBuilder.Build(node) : ConfigBuilder.Build();
+                string realConfig = node != null ? await ConfigBuilder.BuildAsync(node) : await ConfigBuilder.BuildAsync();
                 await CoreManager.Instance.StopAsync();
                 await CoreManager.Instance.StartAsync(realConfig);
             }
@@ -324,7 +324,7 @@ namespace AnywhereWinUI.ViewModels
                 }
 
                 var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
-                string config = node != null ? ConfigBuilder.Build(node) : ConfigBuilder.Build();
+                string config = node != null ? await ConfigBuilder.BuildAsync(node) : await ConfigBuilder.BuildAsync();
                 
                 bool success = await CoreManager.Instance.StartAsync(config);
                 if (!success)

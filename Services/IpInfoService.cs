@@ -41,7 +41,7 @@ namespace AnywhereWinUI.Services
                 using (var client = new HttpClient(handler) { Timeout = Timeout })
                 {
                     var body = await client.GetStringAsync("https://my.ippure.com/v1/info", ct);
-                    return JsonSerializer.Deserialize<IpInfoResponse>(body);
+                    return JsonSerializer.Deserialize(body, AnywhereWinUI.Models.AppJsonContext.Default.IpInfoResponse);
                 }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)

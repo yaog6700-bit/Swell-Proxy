@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Net.WebSockets;
-using System.Text;
+using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -75,130 +73,103 @@ namespace AnywhereWinUI.Services
         public List<ClashConnectionNode> Connections { get; set; } = new();
     }
 
+    /// <summary>
+    /// 通过 HTTP 轮询 sing-box Clash 兼容 API 的 /connections 端点获取活动连接。
+    /// sing-box 的 Clash API 不支持 WebSocket 推送，需使用 REST 轮询方式。
+    /// </summary>
     public class SingboxApiClient : IDisposable
     {
         private static readonly Lazy<SingboxApiClient> _instance = new(() => new SingboxApiClient());
         public static SingboxApiClient Instance => _instance.Value;
 
-        private ClientWebSocket? _webSocket;
+        private static readonly HttpClient _httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(3)
+        };
+
         private CancellationTokenSource? _cts;
-        private bool _isConnecting;
+        private bool _isRunning;
 
         public event EventHandler<ClashConnectionsMessage>? ConnectionsUpdated;
         public event EventHandler<Exception>? OnError;
 
         private SingboxApiClient() { }
 
-        public async Task StartAsync()
+        public Task StartAsync()
         {
-            if (_isConnecting || (_webSocket != null && _webSocket.State == WebSocketState.Open))
-                return;
+            if (_isRunning) return Task.CompletedTask;
 
-            _isConnecting = true;
-            try
-            {
-                // Only connect if the core is actually running
-                if (!CoreManager.Instance.IsRunning)
-                    return;
+            // 仅在核心运行时才启动轮询
+            if (!CoreManager.Instance.IsRunning)
+                return Task.CompletedTask;
 
-                _cts?.Cancel();
-                _cts = new CancellationTokenSource();
-                
-                _webSocket = new ClientWebSocket();
-                Uri uri = new Uri("ws://127.0.0.1:9090/connections");
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+            _isRunning = true;
 
-                await _webSocket.ConnectAsync(uri, _cts.Token);
-                _ = Task.Run(() => ReceiveLoopAsync(_cts.Token), _cts.Token);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[SingboxApiClient] Connect error: {ex.Message}");
-                OnError?.Invoke(this, ex);
-            }
-            finally
-            {
-                _isConnecting = false;
-            }
+            _ = Task.Run(() => PollLoopAsync(_cts.Token));
+            return Task.CompletedTask;
         }
 
-        public async Task StopAsync()
+        public Task StopAsync()
         {
-            try
-            {
-                _cts?.Cancel();
-                if (_webSocket != null)
-                {
-                    if (_webSocket.State == WebSocketState.Open)
-                    {
-                        await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client closing", CancellationToken.None);
-                    }
-                    _webSocket.Dispose();
-                    _webSocket = null;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[SingboxApiClient] Stop error: {ex.Message}");
-            }
+            _isRunning = false;
+            _cts?.Cancel();
+            _cts = null;
+            return Task.CompletedTask;
         }
 
-        private async Task ReceiveLoopAsync(CancellationToken token)
+        private async Task PollLoopAsync(CancellationToken token)
         {
-            var buffer = new byte[1024 * 64]; // 64KB buffer
-            
-            try
+            const string url = "http://127.0.0.1:9090/connections";
+
+            // 等待 sing-box 完全启动后再开始轮询
+            await Task.Delay(500, token).ConfigureAwait(false);
+
+            while (!token.IsCancellationRequested && _isRunning)
             {
-                while (_webSocket != null && _webSocket.State == WebSocketState.Open && !token.IsCancellationRequested)
+                try
                 {
-                    using var ms = new MemoryStream();
-                    WebSocketReceiveResult result;
-                    do
+                    var response = await _httpClient.GetAsync(url, token).ConfigureAwait(false);
+                    if (response.IsSuccessStatusCode)
                     {
-                        result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), token);
-                        if (result.MessageType == WebSocketMessageType.Close)
+                        var json = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
+                        var message = JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.ClashConnectionsMessage);
+                        if (message != null)
                         {
-                            await StopAsync();
-                            return;
-                        }
-                        ms.Write(buffer, 0, result.Count);
-                    } while (!result.EndOfMessage);
-
-                    ms.Seek(0, SeekOrigin.Begin);
-
-                    if (result.MessageType == WebSocketMessageType.Text)
-                    {
-                        try
-                        {
-                            // Parse JSON using System.Text.Json (fast, low allocation)
-                            var message = await JsonSerializer.DeserializeAsync<ClashConnectionsMessage>(ms, cancellationToken: token);
-                            if (message != null)
-                            {
-                                ConnectionsUpdated?.Invoke(this, message);
-                            }
-                        }
-                        catch (JsonException ex)
-                        {
-                            Debug.WriteLine($"[SingboxApiClient] JSON Parse error: {ex.Message}");
+                            // 若 connections 字段为 null，补充空列表防止后续 NullReferenceException
+                            message.Connections ??= new List<ClashConnectionNode>();
+                            ConnectionsUpdated?.Invoke(this, message);
                         }
                     }
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected when stopping
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[SingboxApiClient] ReceiveLoop error: {ex.Message}");
-                OnError?.Invoke(this, ex);
-            }
-            finally
-            {
-                if (_webSocket != null && _webSocket.State != WebSocketState.Closed && _webSocket.State != WebSocketState.Aborted)
+                catch (OperationCanceledException)
                 {
-                    await StopAsync();
+                    break;
+                }
+                catch (HttpRequestException ex)
+                {
+                    // sing-box 尚未就绪或已停止，静默等待，不触发 OnError
+                    Debug.WriteLine($"[SingboxApiClient] HTTP poll error (core may not be ready): {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[SingboxApiClient] Poll error: {ex.Message}");
+                    OnError?.Invoke(this, ex);
+                }
+
+                // 每秒轮询一次
+                try
+                {
+                    await Task.Delay(1000, token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
                 }
             }
+
+            _isRunning = false;
         }
 
         public void Dispose()

@@ -112,7 +112,11 @@ namespace AnywhereWinUI
                 if (isTunRestart && isAutoStart)
                 {
                     // Auto-start proxy if it was running before UAC restart
-                    _ = CoreManager.Instance.StartAsync(ConfigBuilder.Build());
+                    _ = Task.Run(async () =>
+                    {
+                        var cfg = await ConfigBuilder.BuildAsync();
+                        await CoreManager.Instance.StartAsync(cfg);
+                    });
                 }
             }
             catch (Exception ex)

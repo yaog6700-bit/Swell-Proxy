@@ -290,8 +290,8 @@ namespace AnywhereWinUI.ViewModels
                 if (Helpers.LocalSettingsHelper.TryGetValue<string>(DailyTrafficKey, out var json)
                     && !string.IsNullOrEmpty(json))
                 {
-                    _dailyRecords = JsonSerializer.Deserialize<List<DailyTraffic>>(json)
-                                   ?? new List<DailyTraffic>();
+                    _dailyRecords = JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.ListDailyTraffic)
+                        ?? new List<DailyTraffic>();
                 }
             }
             catch
@@ -305,7 +305,7 @@ namespace AnywhereWinUI.ViewModels
             try
             {
                 Helpers.LocalSettingsHelper.SetValue(DailyTrafficKey,
-                    JsonSerializer.Serialize(_dailyRecords));
+                    JsonSerializer.Serialize(_dailyRecords, AnywhereWinUI.Models.AppJsonContext.Default.ListDailyTraffic));
             }
             catch (Exception ex)
             {

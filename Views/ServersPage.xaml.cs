@@ -400,7 +400,7 @@ namespace AnywhereWinUI.Views
                     }
 
                     var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
-                    string realConfig = ConfigBuilder.Build(node);
+                    string realConfig = await ConfigBuilder.BuildAsync(node);
 
                     bool success = await CoreManager.Instance.StartAsync(realConfig);
                     if (!success)
@@ -461,7 +461,7 @@ namespace AnywhereWinUI.Views
                     var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
                     if (node != null)
                     {
-                        string realConfig = ConfigBuilder.Build(node);
+                        string realConfig = await ConfigBuilder.BuildAsync(node);
                         await CoreManager.Instance.StartAsync(realConfig);
                     }
                 }
@@ -1282,7 +1282,7 @@ namespace AnywhereWinUI.Views
                     var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
                     if (node != null)
                     {
-                        string realConfig = ConfigBuilder.Build(node);
+                        string realConfig = await ConfigBuilder.BuildAsync(node);
                         await CoreManager.Instance.StartAsync(realConfig);
                     }
                 }

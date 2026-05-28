@@ -5,6 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="using:WinUIEx"
+    xmlns:viewmodels="using:AnywhereWinUI.ViewModels"
     mc:Ignorable="d"
     Background="Transparent">
 
@@ -161,7 +162,7 @@
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
+                                    <DataTemplate x:DataType="viewmodels:TrafficChartViewModel">
                                         <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Spacing="8" Width="40">
                                             <Grid Height="150" VerticalAlignment="Bottom" Width="20">
                                                 <Grid.RowDefinitions>
@@ -170,11 +171,11 @@
                                                     <RowDefinition Height="Auto"/>
                                                 </Grid.RowDefinitions>
                                                 
-                                                <Border Grid.Row="1" Background="#FF007ACC" CornerRadius="2,2,0,0" Height="{Binding UploadHeight}" Width="8" ToolTipService.ToolTip="{Binding UploadTooltip}"/>
-                                                <Border Grid.Row="2" Background="#FF107C41" CornerRadius="0,0,2,2" Height="{Binding DownloadHeight}" Width="8" ToolTipService.ToolTip="{Binding DownloadTooltip}"/>
+                                                <Border Grid.Row="1" Background="#FF007ACC" CornerRadius="2,2,0,0" Height="{x:Bind UploadHeight}" Width="8" ToolTipService.ToolTip="{x:Bind UploadTooltip}"/>
+                                                <Border Grid.Row="2" Background="#FF107C41" CornerRadius="0,0,2,2" Height="{x:Bind DownloadHeight}" Width="8" ToolTipService.ToolTip="{x:Bind DownloadTooltip}"/>
                                             </Grid>
                                             
-                                            <TextBlock Text="{Binding DayLabel}" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{x:Bind DayLabel}" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

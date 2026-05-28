@@ -144,7 +144,7 @@ namespace AnywhereWinUI.Services
                 if (File.Exists(ConfigPath))
                 {
                     string json = File.ReadAllText(ConfigPath, Encoding.UTF8);
-                    var config = JsonSerializer.Deserialize<NodesConfig>(json);
+                    var config = JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.NodesConfig);
                     if (config != null)
                     {
                         Nodes = config.Nodes ?? new();
@@ -217,7 +217,9 @@ namespace AnywhereWinUI.Services
                     ColorTrojan = ColorTrojan,
                     ColorFallback = ColorFallback
                 };
-                string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                var context = new AnywhereWinUI.Models.AppJsonContext(options);
+                string json = JsonSerializer.Serialize(config, context.NodesConfig);
                 File.WriteAllText(ConfigPath, json, Encoding.UTF8);
             }
             catch { }
