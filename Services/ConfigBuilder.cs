@@ -52,17 +52,27 @@ namespace AnywhereWinUI.Services
             }
 
             var enableTun = session.EnableTunMode;
+
+            // TUN 模式下探测物理出站网卡，用于 direct outbound 绑定，防止直连流量被 TUN 重新截获
+            string? outboundInterface = null;
+            if (enableTun)
+            {
+                var tunSvc = new TunService();
+                outboundInterface = tunSvc.DetectDefaultOutboundInterfaceName();
+                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] TUN 出站网卡: {outboundInterface ?? "(未探测到)"}");
+            }
+
             var config = new JsonObject
             {
                 ["log"] = new JsonObject
                 {
-                    ["level"] = "info",
+                    ["level"] = "warn",
                     ["timestamp"] = true
                 },
                 ["dns"] = BuildDns(bypassChina, blockIPv6, routingMode, enableTun),
                 ["inbounds"] = await BuildInboundsAsync(enableTun, selectedNode),
-                ["outbounds"] = BuildOutbounds(selectedNode, actions.ToArray()),
-                ["route"] = BuildRoute(routingMode, bypassChina, blockAds),
+                ["outbounds"] = BuildOutbounds(selectedNode, enableTun, outboundInterface, actions.ToArray()),
+                ["route"] = BuildRoute(routingMode, bypassChina, blockAds, enableTun, outboundInterface),
                 ["experimental"] = new JsonObject
                 {
                     ["clash_api"] = new JsonObject
@@ -297,7 +307,7 @@ namespace AnywhereWinUI.Services
             return await System.Threading.Tasks.Task.FromResult(list);
         }
 
-        private static JsonArray BuildOutbounds(PersistedNode selectedNode, params string[] appActions)
+        private static JsonArray BuildOutbounds(PersistedNode selectedNode, bool enableTun, string? outboundInterface, params string[] appActions)
         {
             var list = new JsonArray();
             var addedTags = new HashSet<string>();
@@ -387,7 +397,13 @@ namespace AnywhereWinUI.Services
             }
 
             // Add direct and block outbounds
-            list.Add(new JsonObject { ["type"] = "direct", ["tag"] = "direct" });
+            // TUN strict_route 模式下必须绑定物理网卡，否则 direct 流量被重新截获进 TUN 形成路由环路
+            var directOutbound = new JsonObject { ["type"] = "direct", ["tag"] = "direct" };
+            if (enableTun && !string.IsNullOrEmpty(outboundInterface))
+            {
+                directOutbound["bind_interface"] = outboundInterface;
+            }
+            list.Add(directOutbound);
             list.Add(new JsonObject { ["type"] = "block", ["tag"] = "block" });
 
             return list;
@@ -459,8 +475,10 @@ namespace AnywhereWinUI.Services
                 if (chainPort == 0) chainPort = 443;
 
                 var chainOutbound = BuildSingleOutbound(chainNode, chainHost, chainPort, $"{baseTag}-chain-proxy");
+
                 list.Add(chainOutbound);
             }
+
 
             return list;
         }
@@ -821,7 +839,7 @@ namespace AnywhereWinUI.Services
             return clean.Contains(':') ? $"[{clean}]" : clean;
         }
 
-        private static JsonObject BuildRoute(string routingMode, bool bypassChina, bool blockAds)
+        private static JsonObject BuildRoute(string routingMode, bool bypassChina, bool blockAds, bool enableTun = false, string? outboundInterface = null)
         {
             var rules = new JsonArray
             {
@@ -854,7 +872,7 @@ namespace AnywhereWinUI.Services
 
             if (routingMode == "global")
             {
-                return new JsonObject
+                var globalRoute = new JsonObject
                 {
                     ["rules"] = rules,
                     ["rule_set"] = ruleSets,
@@ -862,11 +880,14 @@ namespace AnywhereWinUI.Services
                     ["auto_detect_interface"] = true,
                     ["default_domain_resolver"] = "local-dns"
                 };
+                if (enableTun && !string.IsNullOrEmpty(outboundInterface))
+                    globalRoute["default_interface"] = outboundInterface;
+                return globalRoute;
             }
 
             if (routingMode == "direct")
             {
-                return new JsonObject
+                var directRoute = new JsonObject
                 {
                     ["rules"] = rules,
                     ["rule_set"] = ruleSets,
@@ -874,6 +895,9 @@ namespace AnywhereWinUI.Services
                     ["auto_detect_interface"] = true,
                     ["default_domain_resolver"] = "local-dns"
                 };
+                if (enableTun && !string.IsNullOrEmpty(outboundInterface))
+                    directRoute["default_interface"] = outboundInterface;
+                return directRoute;
             }
 
             var ruleSetDir = System.IO.Path.Combine(
@@ -1173,7 +1197,7 @@ namespace AnywhereWinUI.Services
                 }
             }
 
-            return new JsonObject
+            var smartRoute = new JsonObject
             {
                 ["rules"] = rules,
                 ["rule_set"] = ruleSets,
@@ -1181,6 +1205,10 @@ namespace AnywhereWinUI.Services
                 ["auto_detect_interface"] = true,
                 ["default_domain_resolver"] = "local-dns"
             };
+            // TUN 模式下绑定物理网卡为默认接口，确保 direct 出站流量不被 TUN 重新捕获
+            if (enableTun && !string.IsNullOrEmpty(outboundInterface))
+                smartRoute["default_interface"] = outboundInterface;
+            return smartRoute;
         }
     }
 }

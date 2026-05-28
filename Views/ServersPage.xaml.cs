@@ -1852,6 +1852,8 @@ namespace AnywhereWinUI.Views
                     "SNELL" => 11,
                     _ => 0
                 };
+                // 暂存 Encryption 到 Tag 中，以便 UpdateFormFieldsVisibility 能够读取到要恢复的值
+                ServerEncryptionInput.Tag = node.Encryption;
                 ServerProtocolInput.SelectedIndex = idx;
 
                 // Load newly supported fields
@@ -2519,7 +2521,12 @@ namespace AnywhereWinUI.Views
             if (ServerEncryptionInput == null) return;
 
             string currentSelected = "";
-            if (ServerEncryptionInput.SelectedItem is ComboBoxItem currentItem)
+            if (ServerEncryptionInput.Tag != null && !string.IsNullOrEmpty(ServerEncryptionInput.Tag.ToString()))
+            {
+                currentSelected = ServerEncryptionInput.Tag.ToString() ?? "";
+                ServerEncryptionInput.Tag = null; // Consume
+            }
+            else if (ServerEncryptionInput.SelectedItem is ComboBoxItem currentItem)
             {
                 currentSelected = currentItem.Content?.ToString() ?? "";
             }
