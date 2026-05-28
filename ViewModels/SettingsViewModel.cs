@@ -107,11 +107,12 @@ namespace AnywhereWinUI.ViewModels
             }
             catch { }
 
+            var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
             Task.Run(() =>
             {
                 var ver = CoreUpdateService.GetLocalSingboxVersionText();
                 var appVer = AppUpdateService.CurrentVersion;
-                Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread()?.TryEnqueue(() =>
+                dispatcher?.TryEnqueue(() =>
                 {
                     CoreVersionText = $"当前核心版本: {ver}";
                     AppVersionText = $"当前客户端版本: v{appVer.Major}.{appVer.Minor}.{appVer.Build}";
