@@ -741,6 +741,12 @@ namespace AnywhereWinUI.Services
         /// result can be round-tripped through SplitHostPort.
         /// </summary>
         private static string FormatHostPort(string host, int port)
+            => FormatHostPortPublic(host, port);
+
+        /// <summary>
+        /// 格式化 host:port，IPv6 地址自动加方括号。供外部调用。
+        /// </summary>
+        public static string FormatHostPortPublic(string host, int port)
         {
             return host.Contains(':') ? $"[{host}]:{port}" : $"{host}:{port}";
         }

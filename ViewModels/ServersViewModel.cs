@@ -75,7 +75,7 @@ namespace AnywhereWinUI.ViewModels
 
         public void LoadServersList()
         {
-            AllServers.Clear();
+            var newServersList = new System.Collections.Generic.List<ServerEntryItem>();
             var nodes = NodesManager.Instance.Nodes;
             string currentSelectedId = NodesManager.Instance.SelectedNodeId;
             bool isRunning = CoreManager.Instance.IsRunning;
@@ -96,8 +96,10 @@ namespace AnywhereWinUI.ViewModels
                     PingText = "未测试",
                     ActiveIndicatorVisibility = (node.Id == currentSelectedId && isRunning) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed
                 };
-                AllServers.Add(item);
+                newServersList.Add(item);
             }
+            
+            AllServers = new ObservableCollection<ServerEntryItem>(newServersList);
             ApplyFilters();
         }
 
@@ -116,11 +118,7 @@ namespace AnywhereWinUI.ViewModels
                 query = query.Where(s => s.Name.ToLower().Contains(q) || s.Host.ToLower().Contains(q));
             }
 
-            FilteredServers.Clear();
-            foreach (var item in query)
-            {
-                FilteredServers.Add(item);
-            }
+            FilteredServers = new ObservableCollection<ServerEntryItem>(query);
         }
 
         [RelayCommand]
@@ -290,8 +288,8 @@ namespace AnywhereWinUI.ViewModels
                 var item = AllServers.FirstOrDefault(s => s.Id == node.Id);
                 if (item != null) newAllServers.Add(item);
             }
-            AllServers.Clear();
-            foreach (var item in newAllServers) AllServers.Add(item);
+            AllServers = new ObservableCollection<ServerEntryItem>(newAllServers);
+            ApplyFilters(); // Ensure filters apply to the new list
         }
         [RelayCommand]
         private async Task UpdateSubscriptionAsync(PersistedSubscription sub)
@@ -331,6 +329,7 @@ namespace AnywhereWinUI.ViewModels
                 if (line.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
                     line.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
+                    // 作为订阅处理
                     string subName = $"订阅_{DateTime.Now:MMdd_HHmm}";
                     if (addedSubsCount > 0)
                     {
@@ -340,12 +339,22 @@ namespace AnywhereWinUI.ViewModels
                     
                     if (NodesManager.Instance.Subscriptions.Count > 0)
                     {
-                        await NodesManager.Instance.UpdateSubscriptionAsync(NodesManager.Instance.Subscriptions.Last().Id);
+                        var lastSubId = NodesManager.Instance.Subscriptions.Last().Id;
+                        string? err = await NodesManager.Instance.UpdateSubscriptionAsync(lastSubId);
+                        if (err != null)
+                        {
+                            // 如果导入时立即刷新失败，就把它删了，避免污染列表
+                            NodesManager.Instance.DeleteSubscription(lastSubId);
+                        }
+                        else
+                        {
+                            addedSubsCount++;
+                        }
                     }
-                    addedSubsCount++;
                 }
                 else
                 {
+                    // 尝试当作普通单节点链接解析
                     var parsedNode = NodesManager.ParseShareUrl(line);
                     if (parsedNode != null)
                     {

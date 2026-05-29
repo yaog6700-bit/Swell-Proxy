@@ -173,7 +173,7 @@ namespace AnywhereWinUI.Views
                     if (inputText.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
                         inputText.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                     {
-                        // 添加订阅
+                        // 作为订阅处理
                         string subName = $"订阅_{DateTime.Now:MMdd_HHmm}";
                         AnywhereWinUI.Services.NodesManager.Instance.AddSubscription(subName, inputText);
                         var sub = System.Linq.Enumerable.LastOrDefault(AnywhereWinUI.Services.NodesManager.Instance.Subscriptions);
@@ -181,20 +181,36 @@ namespace AnywhereWinUI.Views
                         if (sub != null)
                         {
                             int oldNodesCount = AnywhereWinUI.Services.NodesManager.Instance.Nodes.Count;
-                            await AnywhereWinUI.Services.NodesManager.Instance.UpdateSubscriptionAsync(sub.Id);
+                            string? err = await AnywhereWinUI.Services.NodesManager.Instance.UpdateSubscriptionAsync(sub.Id);
+                            if (err != null)
+                            {
+                                // 首次导入如果失败直接删除，避免产生无效订阅条目
+                                AnywhereWinUI.Services.NodesManager.Instance.DeleteSubscription(sub.Id);
+                                throw new Exception(err);
+                            }
                             importedCount = AnywhereWinUI.Services.NodesManager.Instance.Nodes.Count - oldNodesCount;
                         }
                     }
                     else
                     {
-                        // 解析单条或多条分享链接
+                        // 先尝试当作普通单节点链接解析
+                        var parsedNode = AnywhereWinUI.Services.NodesManager.ParseShareUrl(inputText);
+                        if (parsedNode != null)
+                        {
+                            AnywhereWinUI.Services.NodesManager.Instance.Nodes.Add(parsedNode);
+                            importedCount = 1;
+                            AnywhereWinUI.Services.NodesManager.Instance.Save();
+                        }
+                        else
+                        {
+                            // 解析单条或多条分享链接
                         var lines = inputText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
                         foreach (var line in lines)
                         {
-                            var parsedNode = AnywhereWinUI.Services.NodesManager.ParseShareUrl(line.Trim());
-                            if (parsedNode != null)
+                            var parsedNodeLine = AnywhereWinUI.Services.NodesManager.ParseShareUrl(line.Trim());
+                            if (parsedNodeLine != null)
                             {
-                                AnywhereWinUI.Services.NodesManager.Instance.Nodes.Add(parsedNode);
+                                AnywhereWinUI.Services.NodesManager.Instance.Nodes.Add(parsedNodeLine);
                                 importedCount++;
                             }
                         }
@@ -203,6 +219,7 @@ namespace AnywhereWinUI.Views
                         {
                             AnywhereWinUI.Services.NodesManager.Instance.Save();
                         }
+                    }
                     }
                     
                     ImportStatusText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.Green);

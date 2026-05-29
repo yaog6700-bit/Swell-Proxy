@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
@@ -275,74 +276,100 @@ namespace AnywhereWinUI.Services
             Save();
         }
 
-        public async Task<bool> UpdateSubscriptionAsync(string subId)
+        /// <summary>
+        /// 更新订阅。成功返回 null，失败返回错误描述字符串。
+        /// </summary>
+        public async Task<string?> UpdateSubscriptionAsync(string subId)
         {
             var sub = Subscriptions.Find(s => s.Id == subId);
-            if (sub == null) return false;
+            if (sub == null) return "订阅不存在";
 
             try
             {
                 using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(15);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Anywhere-Client");
-                
+
                 string content = await client.GetStringAsync(sub.Url);
                 content = content.Trim();
 
                 var newNodes = ParseSubscriptionContent(content, subId);
-                if (newNodes.Count > 0)
+                if (newNodes.Count == 0)
+                    return "订阅内容解析失败：未找到任何有效节点（支持 Base64 分享链接列表和 sing-box JSON 格式）";
+
+                // Map old nodes by endpoint to preserve ID and IsFavorite
+                var oldNodes = Nodes.FindAll(n => n.SubscriptionId == subId);
+                var oldByEndpoint = new Dictionary<string, PersistedNode>(oldNodes.Count, StringComparer.OrdinalIgnoreCase);
+                foreach (var n in oldNodes)
                 {
-                    // Map old nodes by endpoint to preserve ID and IsFavorite
-                    var oldNodes = Nodes.FindAll(n => n.SubscriptionId == subId);
-                    var oldByEndpoint = new Dictionary<string, PersistedNode>(oldNodes.Count, StringComparer.OrdinalIgnoreCase);
-                    foreach (var n in oldNodes)
-                    {
-                        var key = $"{n.Protocol}://{n.Host}";
-                        oldByEndpoint[key] = n;
-                    }
-
-                    foreach (var n in newNodes)
-                    {
-                        var key = $"{n.Protocol}://{n.Host}";
-                        if (oldByEndpoint.TryGetValue(key, out var match))
-                        {
-                            n.Id = match.Id;
-                            n.IsFavorite = match.IsFavorite;
-                        }
-                    }
-
-                    // Clear old nodes for this sub
-                    Nodes.RemoveAll(n => n.SubscriptionId == subId);
-                    Nodes.AddRange(newNodes);
-                    sub.LastUpdated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                    Save();
-                    return true;
+                    var key = $"{n.Protocol}|{n.Host}";
+                    oldByEndpoint[key] = n;
                 }
+
+                foreach (var n in newNodes)
+                {
+                    var key = $"{n.Protocol}|{n.Host}";
+                    if (oldByEndpoint.TryGetValue(key, out var match))
+                    {
+                        n.Id = match.Id;
+                        n.IsFavorite = match.IsFavorite;
+                    }
+                }
+
+                // Clear old nodes for this sub
+                Nodes.RemoveAll(n => n.SubscriptionId == subId);
+                Nodes.AddRange(newNodes);
+                sub.LastUpdated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                Save();
+                return null; // success
+            }
+            catch (HttpRequestException ex)
+            {
+                return $"网络请求失败：{ex.Message}";
+            }
+            catch (TaskCanceledException)
+            {
+                return "请求超时（15 秒），请检查网络或订阅地址是否可访问";
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to update subscription: {ex.Message}");
+                return $"更新失败：{ex.Message}";
             }
-            return false;
         }
 
         private List<PersistedNode> ParseSubscriptionContent(string content, string subId)
         {
             var list = new List<PersistedNode>();
 
-            // 1. Try Base64 decoding
-            string decoded = string.Empty;
+            // 1. 优先检测是否为 sing-box JSON 格式
+            var trimmed0 = content.TrimStart();
+            if (trimmed0.StartsWith("{") || trimmed0.StartsWith("["))
+            {
+                var singboxNodes = ParseSingboxConfig(content, subId);
+                if (singboxNodes.Count > 0)
+                    return singboxNodes;
+                // 解析到 0 个节点时继续尝试其他格式（防止误判）
+            }
+
+            // 2. 尝试整体 Base64 解码（老式订阅格式）
+            string decoded;
             try
             {
-                byte[] bytes = Convert.FromBase64String(content);
-                decoded = Encoding.UTF8.GetString(bytes);
+                // 先粗略判断：如果内容全是合法 Base64 字符才尝试解码
+                var testContent = content.Replace("\r", "").Replace("\n", "").Trim();
+                byte[] bytes = Convert.FromBase64String(
+                    testContent.PadRight((testContent.Length + 3) / 4 * 4, '='));
+                var candidate = Encoding.UTF8.GetString(bytes);
+                // 解码结果必须含有协议前缀才算有效
+                decoded = candidate.Contains("://") ? candidate : content;
             }
             catch
             {
-                // Not Base64, might be plain text sharing URLs
                 decoded = content;
             }
 
-            // 2. Try parsing as URLs line-by-line
+            // 3. 逐行解析分享链接
             var lines = decoded.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var line in lines)
             {
@@ -357,6 +384,307 @@ namespace AnywhereWinUI.Services
                 }
             }
 
+            return list;
+        }
+
+        /// <summary>
+        /// 解析 sing-box JSON 配置文件，提取 outbounds 中的代理节点。
+        /// 跳过 selector / urltest / direct / block / dns 等非节点类型。
+        /// </summary>
+        private List<PersistedNode> ParseSingboxConfig(string json, string subId)
+        {
+            var list = new List<PersistedNode>();
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                // 兼容顶层直接是数组的情况（极少见）
+                JsonElement outboundsEl;
+                if (root.ValueKind == JsonValueKind.Array)
+                    outboundsEl = root;
+                else if (!root.TryGetProperty("outbounds", out outboundsEl))
+                    return list;
+
+                if (outboundsEl.ValueKind != JsonValueKind.Array) return list;
+
+                // 不需要转换的内部出站类型
+                var skipTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "selector", "urltest", "direct", "block", "dns",
+                    "loadbalance", "fallback", "chain"
+                };
+
+                foreach (var ob in outboundsEl.EnumerateArray())
+                {
+                    if (!ob.TryGetProperty("type", out var typeProp)) continue;
+                    string type = typeProp.GetString() ?? "";
+                    if (skipTypes.Contains(type)) continue;
+
+                    string tag = ob.TryGetProperty("tag", out var tagProp) ? tagProp.GetString() ?? "" : "";
+                    string server = ob.TryGetProperty("server", out var serverProp) ? serverProp.GetString() ?? "" : "";
+                    int port = ob.TryGetProperty("server_port", out var portProp) ? portProp.GetInt32() : 0;
+
+                    var node = new PersistedNode
+                    {
+                        Name = tag,
+                        SubscriptionId = subId
+                    };
+
+                    // 提取 TLS 信息（多种协议共用）
+                    string sni = "", fingerprint = "", pbk = "", sid = "";
+                    bool allowInsecure = false;
+                    string security = "none";
+                    string alpn = "";
+
+                    if (ob.TryGetProperty("tls", out var tlsEl) && tlsEl.ValueKind == JsonValueKind.Object)
+                    {
+                        bool tlsEnabled = tlsEl.TryGetProperty("enabled", out var tlsEnabledProp) && tlsEnabledProp.GetBoolean();
+                        if (tlsEnabled)
+                        {
+                            security = "tls";
+                            sni = tlsEl.TryGetProperty("server_name", out var sniProp) ? sniProp.GetString() ?? "" : "";
+                            allowInsecure = tlsEl.TryGetProperty("insecure", out var insecureProp) && insecureProp.GetBoolean();
+
+                            if (tlsEl.TryGetProperty("utls", out var utlsEl))
+                                fingerprint = utlsEl.TryGetProperty("fingerprint", out var fpProp) ? fpProp.GetString() ?? "" : "";
+
+                            if (tlsEl.TryGetProperty("reality", out var realityEl)
+                                && realityEl.TryGetProperty("enabled", out var rEnabledProp)
+                                && rEnabledProp.GetBoolean())
+                            {
+                                security = "reality";
+                                pbk = realityEl.TryGetProperty("public_key", out var pkProp) ? pkProp.GetString() ?? "" : "";
+                                sid = realityEl.TryGetProperty("short_id", out var sidProp) ? sidProp.GetString() ?? "" : "";
+                            }
+
+                            if (tlsEl.TryGetProperty("alpn", out var alpnEl) && alpnEl.ValueKind == JsonValueKind.Array)
+                            {
+                                var parts = new List<string>();
+                                foreach (var a in alpnEl.EnumerateArray())
+                                    if (a.GetString() is string s) parts.Add(s);
+                                alpn = string.Join(",", parts);
+                            }
+                        }
+                    }
+
+                    // 提取传输层信息
+                    string network = "tcp", path = "", wsHost = "";
+                    if (ob.TryGetProperty("transport", out var transportEl) && transportEl.ValueKind == JsonValueKind.Object)
+                    {
+                        network = transportEl.TryGetProperty("type", out var netProp) ? netProp.GetString() ?? "tcp" : "tcp";
+                        path = transportEl.TryGetProperty("path", out var pathProp) ? pathProp.GetString() ?? "" : "";
+                        // grpc serviceName
+                        if (string.IsNullOrEmpty(path))
+                            path = transportEl.TryGetProperty("service_name", out var snProp) ? snProp.GetString() ?? "" : "";
+                        // ws host header
+                        if (transportEl.TryGetProperty("headers", out var headersEl))
+                            wsHost = headersEl.TryGetProperty("Host", out var hostProp) ? hostProp.GetString() ?? "" : "";
+                    }
+
+                    switch (type.ToLowerInvariant())
+                    {
+                        case "shadowsocks":
+                        {
+                            string method = ob.TryGetProperty("method", out var mProp) ? mProp.GetString() ?? "" : "";
+                            string password = ob.TryGetProperty("password", out var pwProp) ? pwProp.GetString() ?? "" : "";
+                            // 跳过带 plugin 的 SIP003 节点（目前不支持）
+                            if (ob.TryGetProperty("plugin", out _)) continue;
+                            node.Protocol = "Shadowsocks";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Encryption = method;
+                            node.Password = password;
+                            node.Network = "tcp";
+                            break;
+                        }
+                        case "vless":
+                        {
+                            string uuid = ob.TryGetProperty("uuid", out var uProp) ? uProp.GetString() ?? "" : "";
+                            string flow = ob.TryGetProperty("flow", out var fProp) ? fProp.GetString() ?? "" : "";
+                            node.Protocol = "VLESS";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Uuid = uuid;
+                            node.Flow = flow;
+                            node.Security = security;
+                            node.Sni = sni;
+                            node.Fingerprint = fingerprint;
+                            node.PublicKey = pbk;
+                            node.ShortId = sid;
+                            node.AllowInsecure = allowInsecure;
+                            node.Network = network;
+                            node.Path = path;
+                            node.WsHost = wsHost;
+                            node.Alpn = alpn;
+                            node.Encryption = "none";
+                            break;
+                        }
+                        case "vmess":
+                        {
+                            string uuid = ob.TryGetProperty("uuid", out var uProp) ? uProp.GetString() ?? "" : "";
+                            int alterId = ob.TryGetProperty("alter_id", out var aProp) ? aProp.GetInt32() : 0;
+                            string enc = ob.TryGetProperty("security", out var eProp) ? eProp.GetString() ?? "auto" : "auto";
+                            node.Protocol = "VMess";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Uuid = uuid;
+                            node.AlterId = alterId;
+                            node.Encryption = enc;
+                            node.Security = security;
+                            node.Sni = sni;
+                            node.Fingerprint = fingerprint;
+                            node.AllowInsecure = allowInsecure;
+                            node.Network = network;
+                            node.Path = path;
+                            node.WsHost = wsHost;
+                            node.Alpn = alpn;
+                            break;
+                        }
+                        case "hysteria2":
+                        {
+                            string password = ob.TryGetProperty("password", out var pwProp) ? pwProp.GetString() ?? "" : "";
+                            string obfsType = "", obfsPwd = "";
+                            if (ob.TryGetProperty("obfs", out var obfsEl) && obfsEl.ValueKind == JsonValueKind.Object)
+                            {
+                                obfsType = obfsEl.TryGetProperty("type", out var otProp) ? otProp.GetString() ?? "" : "";
+                                obfsPwd = obfsEl.TryGetProperty("password", out var opProp) ? opProp.GetString() ?? "" : "";
+                            }
+                            node.Protocol = "Hysteria 2";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Password = password;
+                            node.Security = "tls";
+                            node.Sni = sni;
+                            node.AllowInsecure = allowInsecure;
+                            node.ObfsType = string.IsNullOrEmpty(obfsType) ? "none" : obfsType;
+                            node.ObfsPassword = obfsPwd;
+                            node.Network = "udp";
+                            break;
+                        }
+                        case "trojan":
+                        {
+                            string password = ob.TryGetProperty("password", out var pwProp) ? pwProp.GetString() ?? "" : "";
+                            node.Protocol = "Trojan";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Password = password;
+                            node.Security = security;
+                            node.Sni = sni;
+                            node.Fingerprint = fingerprint;
+                            node.AllowInsecure = allowInsecure;
+                            node.Network = network;
+                            node.Path = path;
+                            node.WsHost = wsHost;
+                            node.Alpn = alpn;
+                            break;
+                        }
+                        case "tuic":
+                        {
+                            string uuid = ob.TryGetProperty("uuid", out var uProp) ? uProp.GetString() ?? "" : "";
+                            string password = ob.TryGetProperty("password", out var pwProp) ? pwProp.GetString() ?? "" : "";
+                            node.Protocol = "TUIC";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Uuid = uuid;
+                            node.Password = password;
+                            node.Security = "tls";
+                            node.Sni = sni;
+                            node.AllowInsecure = allowInsecure;
+                            node.Alpn = alpn;
+                            node.Network = "udp";
+                            break;
+                        }
+                        case "wireguard":
+                        {
+                            string privateKey = ob.TryGetProperty("private_key", out var pkProp) ? pkProp.GetString() ?? "" : "";
+                            string localAddr = "";
+                            if (ob.TryGetProperty("local_address", out var laEl) && laEl.ValueKind == JsonValueKind.Array)
+                            {
+                                var parts = new List<string>();
+                                foreach (var a in laEl.EnumerateArray()) if (a.GetString() is string s) parts.Add(s);
+                                localAddr = string.Join(",", parts);
+                            }
+                            string peerServer = server, peerPubKey = "";
+                            int peerPort = port;
+                            string preShared = "";
+                            if (ob.TryGetProperty("peers", out var peersEl) && peersEl.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var peer in peersEl.EnumerateArray())
+                                {
+                                    peerServer = peer.TryGetProperty("server", out var psProp) ? psProp.GetString() ?? server : server;
+                                    peerPort = peer.TryGetProperty("server_port", out var ppProp) ? ppProp.GetInt32() : port;
+                                    peerPubKey = peer.TryGetProperty("public_key", out var ppkProp) ? ppkProp.GetString() ?? "" : "";
+                                    preShared = peer.TryGetProperty("pre_shared_key", out var pskProp) ? pskProp.GetString() ?? "" : "";
+                                    break; // 只取第一个 peer
+                                }
+                            }
+                            node.Protocol = "WireGuard";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(peerServer, peerPort);
+                            node.WgPrivateKey = privateKey;
+                            node.WgLocalAddress = localAddr;
+                            node.WgPreSharedKey = preShared;
+                            node.PublicKey = peerPubKey;
+                            node.Network = "udp";
+                            break;
+                        }
+                        case "socks":
+                        case "socks5":
+                        {
+                            string username = ob.TryGetProperty("username", out var uProp) ? uProp.GetString() ?? "" : "";
+                            string password = ob.TryGetProperty("password", out var pwProp) ? pwProp.GetString() ?? "" : "";
+                            node.Protocol = "SOCKS5";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Username = username;
+                            node.Password = password;
+                            node.Network = "tcp";
+                            break;
+                        }
+                        case "http":
+                        {
+                            string username = ob.TryGetProperty("username", out var uProp) ? uProp.GetString() ?? "" : "";
+                            string password = ob.TryGetProperty("password", out var pwProp) ? pwProp.GetString() ?? "" : "";
+                            node.Protocol = "HTTP";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Username = username;
+                            node.Password = password;
+                            node.Security = security;
+                            node.Sni = sni;
+                            node.Network = "tcp";
+                            break;
+                        }
+                        case "naive":
+                        {
+                            string username = ob.TryGetProperty("username", out var uProp) ? uProp.GetString() ?? "" : "";
+                            string password = ob.TryGetProperty("password", out var pwProp) ? pwProp.GetString() ?? "" : "";
+                            node.Protocol = "Naive";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Username = username;
+                            node.Password = password;
+                            node.Security = "tls";
+                            node.Sni = sni;
+                            node.Network = "tcp";
+                            break;
+                        }
+                        case "anytls":
+                        {
+                            string password = ob.TryGetProperty("password", out var pwProp) ? pwProp.GetString() ?? "" : "";
+                            node.Protocol = "AnyTLS";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Password = password;
+                            node.Security = "tls";
+                            node.Sni = sni;
+                            node.Fingerprint = fingerprint;
+                            node.AllowInsecure = allowInsecure;
+                            node.Network = "tcp";
+                            break;
+                        }
+                        default:
+                            // 未知协议，跳过
+                            continue;
+                    }
+
+                    list.Add(node);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ParseSingboxConfig] failed: {ex.Message}");
+            }
             return list;
         }
 

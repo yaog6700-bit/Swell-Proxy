@@ -79,11 +79,12 @@ namespace AnywhereWinUI.Views
             string name = (NameInput?.Text ?? string.Empty).Trim();
             if (string.IsNullOrEmpty(url)) return false;
 
-            // Use URL host as fallback name (mirrors original TryGetHost)
+            // Use URL host as fallback name
             if (string.IsNullOrWhiteSpace(name))
             {
                 try { name = new Uri(url).Host; }
                 catch { name = url; }
+                if (string.IsNullOrWhiteSpace(name)) name = "未命名订阅";
             }
 
             try
@@ -91,7 +92,24 @@ namespace AnywhereWinUI.Views
                 NodesManager.Instance.AddSubscription(name, url);
                 var subs = NodesManager.Instance.Subscriptions;
                 if (subs.Count > 0)
-                    await NodesManager.Instance.UpdateSubscriptionAsync(subs[^1].Id);
+                {
+                    string? err = await NodesManager.Instance.UpdateSubscriptionAsync(subs[^1].Id);
+                    if (err != null)
+                    {
+                        // Remove the added sub if first update fails completely
+                        NodesManager.Instance.DeleteSubscription(subs[^1].Id);
+                        
+                        var errDialog = new ContentDialog
+                        {
+                            Title = "添加订阅失败",
+                            Content = err,
+                            CloseButtonText = "确定",
+                            XamlRoot = this.XamlRoot
+                        };
+                        try { await errDialog.ShowAsync(); } catch { }
+                        return false;
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -187,10 +205,24 @@ namespace AnywhereWinUI.Views
                 busyRing.Visibility       = Visibility.Visible;
                 try
                 {
-                    await NodesManager.Instance.UpdateSubscriptionAsync(sub.Id);
-                    // Refresh the updated-time label
-                    var latest = NodesManager.Instance.Subscriptions.Find(s => s.Id == sub.Id);
-                    if (latest != null) updatedBlock.Text = $"更新时间：{latest.LastUpdated}";
+                    string? err = await NodesManager.Instance.UpdateSubscriptionAsync(sub.Id);
+                    if (err != null)
+                    {
+                        var errDialog = new ContentDialog
+                        {
+                            Title = "更新订阅失败",
+                            Content = err,
+                            CloseButtonText = "确定",
+                            XamlRoot = this.XamlRoot
+                        };
+                        try { await errDialog.ShowAsync(); } catch { }
+                    }
+                    else
+                    {
+                        // Refresh the updated-time label
+                        var latest = NodesManager.Instance.Subscriptions.Find(s => s.Id == sub.Id);
+                        if (latest != null) updatedBlock.Text = $"更新时间：{latest.LastUpdated}";
+                    }
                     _onDataChanged?.Invoke();
                 }
                 catch (Exception ex)

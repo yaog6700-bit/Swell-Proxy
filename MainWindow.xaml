@@ -49,7 +49,7 @@
                                         PointerEntered="DashboardNavItem_PointerEntered" 
                                         PointerExited="DashboardNavItem_PointerExited">
                         <NavigationViewItem.Icon>
-                            <ImageIcon x:Name="DashboardNavIcon" Source="ms-appx:///Assets/HomeColor.svg" Width="20" Height="20" />
+                            <FontIcon x:Name="DashboardNavIcon" Glyph="&#xE80F;" />
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
 
