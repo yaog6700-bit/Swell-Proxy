@@ -75,14 +75,14 @@ namespace AnywhereWinUI.ViewModels
 
         public void LoadServersList()
         {
-            var newServersList = new System.Collections.Generic.List<ServerEntryItem>();
+            AllServers.Clear();
             var nodes = NodesManager.Instance.Nodes;
             string currentSelectedId = NodesManager.Instance.SelectedNodeId;
             bool isRunning = CoreManager.Instance.IsRunning;
 
             foreach (var node in nodes)
             {
-                var (hostPart, portPart) = NodeLinkParser.SplitHostPort(node.Host);
+                var (hostPart, portPart) = AnywhereWinUI.Services.NodeLinkParser.SplitHostPort(node.Host);
                 if (portPart == 0) portPart = 443;
 
                 var item = new ServerEntryItem
@@ -96,10 +96,8 @@ namespace AnywhereWinUI.ViewModels
                     PingText = "未测试",
                     ActiveIndicatorVisibility = (node.Id == currentSelectedId && isRunning) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed
                 };
-                newServersList.Add(item);
+                AllServers.Add(item);
             }
-            
-            AllServers = new ObservableCollection<ServerEntryItem>(newServersList);
             ApplyFilters();
         }
 
@@ -118,7 +116,11 @@ namespace AnywhereWinUI.ViewModels
                 query = query.Where(s => s.Name.ToLower().Contains(q) || s.Host.ToLower().Contains(q));
             }
 
-            FilteredServers = new ObservableCollection<ServerEntryItem>(query);
+            FilteredServers.Clear();
+            foreach (var item in query)
+            {
+                FilteredServers.Add(item);
+            }
         }
 
         [RelayCommand]
@@ -288,8 +290,8 @@ namespace AnywhereWinUI.ViewModels
                 var item = AllServers.FirstOrDefault(s => s.Id == node.Id);
                 if (item != null) newAllServers.Add(item);
             }
-            AllServers = new ObservableCollection<ServerEntryItem>(newAllServers);
-            ApplyFilters(); // Ensure filters apply to the new list
+            AllServers.Clear();
+            foreach (var item in newAllServers) AllServers.Add(item);
         }
         [RelayCommand]
         private async Task UpdateSubscriptionAsync(PersistedSubscription sub)
