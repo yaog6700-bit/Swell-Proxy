@@ -23,7 +23,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.0.22</Version>
+    <Version>1.0.23</Version>
   </PropertyGroup>
 
   <!-- Publish & Optimization Properties for Ultra-Low Resource Usage -->
@@ -58,6 +58,9 @@
 
   <ItemGroup>
     <Content Include="Assets\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\libcronet.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

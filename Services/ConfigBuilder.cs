@@ -661,7 +661,7 @@ namespace AnywhereWinUI.Services
             else if (protoLower.Contains("naive"))
             {
                 proxyOutbound["type"] = "naive";
-                proxyOutbound["username"] = uuidVal;
+                proxyOutbound["username"] = !string.IsNullOrEmpty(node.Username) ? node.Username : (node.Uuid ?? "");
                 proxyOutbound["password"] = passwordVal;
                 proxyOutbound["tls"] = new JsonObject
                 {
