@@ -17,7 +17,7 @@
 
 ## ✨ 简介
 
-Swell Proxy 是基于 **WinUI 3** 构建的 Windows 原生代理管理客户端，以 [sing-box](https://github.com/SagerNet/sing-box) 作为底层代理引擎。提供了精心设计的现代化界面，支持 Mica / Acrylic 窗口材质、以及丰富的路由分流和 DNS 配置能力，原生支持，占用内存低。
+Swell Proxy 是基于 **WinUI 3** 构建的 Windows 原生代理管理客户端，系统内存占用低，以 [sing-box](https://github.com/SagerNet/sing-box) 作为底层代理引擎。提供了精心设计的现代化界面，支持 Mica / Acrylic 窗口材质、以及丰富的路由分流和 DNS 配置能力。
 
 ---
 
