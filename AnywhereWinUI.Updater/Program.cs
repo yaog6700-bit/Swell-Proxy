@@ -269,7 +269,7 @@ internal static class Program
         {
             var logRoot = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "AnywhereProxy", "Updates");
+                "SwellProxy", "Updates");
             Directory.CreateDirectory(logRoot);
             var path = Path.Combine(logRoot, "updater.log");
             _log = new StreamWriter(new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read))

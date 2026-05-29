@@ -56,7 +56,7 @@ namespace AnywhereWinUI.Services
             CancellationToken ct,
             Func<Task>? onBeforeInstall = null)
         {
-            var stageDir = Path.Combine(Path.GetTempPath(), "AnywhereProxyUpdates", info.NewVersion.ToString());
+            var stageDir = Path.Combine(Path.GetTempPath(), "SwellProxyUpdates", info.NewVersion.ToString());
             var zipPath = Path.Combine(stageDir, info.ZipAssetName);
             var extractDir = Path.Combine(stageDir, "extracted");
 
@@ -144,7 +144,7 @@ namespace AnywhereWinUI.Services
             }
             var client = new HttpClient(handler) { Timeout = timeout };
             client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("AnywhereProxy/CoreUpdater");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("SwellProxy/CoreUpdater");
             return client;
         }
 

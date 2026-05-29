@@ -17,7 +17,7 @@ namespace AnywhereWinUI.Services
         public string ExePath => Path.Combine(AppContext.BaseDirectory, "Assets", "sing-box.exe");
         public string ConfigPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
-            "AnywhereProxy", 
+            "SwellProxy", 
             "singbox_config.json"
         );
 
@@ -116,7 +116,7 @@ namespace AnywhereWinUI.Services
             {
                 Directory.CreateDirectory(localDir);
                 
-                // Self-healing: Copy local binary rule-sets (*.srs) from Assets/rules to LocalAppData/AnywhereProxy
+                // Self-healing: Copy local binary rule-sets (*.srs) from Assets/rules to LocalAppData/SwellProxy
                 var sourceRulesDir = Path.Combine(AppContext.BaseDirectory, "Assets", "rules");
                 if (Directory.Exists(sourceRulesDir))
                 {

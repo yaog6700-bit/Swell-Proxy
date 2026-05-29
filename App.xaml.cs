@@ -106,6 +106,12 @@ namespace AnywhereWinUI
 
             try
             {
+                // ── One-time migration: rename AnywhereProxy folder → SwellProxy ────────
+                MigrateDataFolder();
+
+                // ── Cleanup leftover staged update packages on startup ────────────────────
+                new Services.AppUpdateService().CleanupOldStagingDirs();
+
                 _window = new MainWindow();
                 _window.Activate();
                 
@@ -135,12 +141,32 @@ namespace AnywhereWinUI
             e.Handled = true;
         }
 
+        /// <summary>
+        /// One-time migration: if the old "AnywhereProxy" data folder exists and the new
+        /// "SwellProxy" folder does not, rename it so existing users keep their settings.
+        /// </summary>
+        private static void MigrateDataFolder()
+        {
+            try
+            {
+                var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var oldDir = Path.Combine(localAppData, "AnywhereProxy");
+                var newDir = Path.Combine(localAppData, "SwellProxy");
+
+                if (Directory.Exists(oldDir) && !Directory.Exists(newDir))
+                {
+                    Directory.Move(oldDir, newDir);
+                }
+            }
+            catch { }
+        }
+
         private static void LogCrash(Exception? ex, string message)
         {
             try
             {
                 string logPath = Path.Combine(AppContext.BaseDirectory, "crash_log.txt");
-                string desktopLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "AnywhereProxy_crash.txt");
+                string desktopLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "SwellProxy_crash.txt");
                 var sb = new StringBuilder();
                 sb.AppendLine($"==================================================");
                 sb.AppendLine($"[Crash Timestamp] {DateTime.Now}");

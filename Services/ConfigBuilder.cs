@@ -902,7 +902,7 @@ namespace AnywhereWinUI.Services
 
             var ruleSetDir = System.IO.Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
-                "AnywhereProxy"
+                "SwellProxy"
             );
 
             // Smart mode

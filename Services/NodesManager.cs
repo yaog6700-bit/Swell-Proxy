@@ -103,7 +103,7 @@ namespace AnywhereWinUI.Services
     {
         private static readonly string ConfigPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "AnywhereProxy",
+            "SwellProxy",
             "nodes_config.json"
         );
 

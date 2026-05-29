@@ -35,7 +35,7 @@ namespace AnywhereWinUI.Services
             }
         }
 
-        private static string UpdatesDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AnywhereProxy", "Updates");
+        private static string UpdatesDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SwellProxy", "Updates");
 
         public async Task<UpdateInfo?> CheckAsync(string? proxyUrl, CancellationToken ct)
         {

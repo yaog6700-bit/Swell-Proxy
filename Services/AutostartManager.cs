@@ -6,7 +6,7 @@ namespace AnywhereWinUI.Services
 {
     public static class AutostartManager
     {
-        private const string RegistryKeyName = "AnywhereProxy";
+        private const string RegistryKeyName = "SwellProxy";
 
         public static bool IsAutostartEnabled()
         {

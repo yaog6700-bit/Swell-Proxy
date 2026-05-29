@@ -150,7 +150,7 @@ namespace AnywhereWinUI.Views
                     case "About":
                         if (AboutPanel != null) AboutPanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "关于与内核";
-                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "关于 Anywhere 原生客户端及代理内核管理";
+                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "关于 Swell Proxy 原生客户端及代理内核管理";
                         break;
                 }
             }
@@ -197,7 +197,7 @@ namespace AnywhereWinUI.Views
             var picker = new FileSavePicker();
             picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
             picker.FileTypeChoices.Add("Swell Proxy Backup", new List<string>() { ".zip" });
-            picker.SuggestedFileName = $"AnywhereProxy_Backup_{DateTime.Now:yyyyMMdd_HHmm}";
+            picker.SuggestedFileName = $"SwellProxy_Backup_{DateTime.Now:yyyyMMdd_HHmm}";
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
             WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
@@ -637,7 +637,7 @@ namespace AnywhereWinUI.Views
 
             try
             {
-                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AnywhereProxy");
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SwellProxy");
                 if (!Directory.Exists(dir))
                 {
                     Directory.CreateDirectory(dir);

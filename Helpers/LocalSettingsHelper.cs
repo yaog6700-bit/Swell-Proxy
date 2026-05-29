@@ -10,7 +10,7 @@ namespace AnywhereWinUI.Helpers
     {
         private static readonly string SettingsPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "AnywhereProxy",
+            "SwellProxy",
             "local_settings.json"
         );
 
