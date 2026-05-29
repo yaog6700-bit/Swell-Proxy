@@ -1858,7 +1858,12 @@ namespace AnywhereWinUI.Views
 
                 // Load newly supported fields
                 ServerPasswordInput.Password = node.Password ?? string.Empty;
-                ServerUuidInput.Text = node.Uuid ?? string.Empty;
+                string p = (node.Protocol ?? string.Empty).ToUpper();
+                if (p == "NAIVEPROXY" || p == "NAIVE" || p == "SOCKS" || p == "HTTP" || p == "HTTPS") {
+                    ServerUuidInput.Text = node.Username ?? string.Empty;
+                } else {
+                    ServerUuidInput.Text = node.Uuid ?? string.Empty;
+                }
                 ServerPathInput.Text = node.Path ?? string.Empty;
                 ServerWsHostInput.Text = node.WsHost ?? string.Empty;
                 ServerSniInput.Text = node.Sni ?? string.Empty;
@@ -2156,7 +2161,8 @@ namespace AnywhereWinUI.Views
                     Protocol = protocol,
                     Host = hostAndPort,
                     Password = proto == "SNELL" ? snellPsk : password,
-                    Uuid = uuid,
+                    Uuid = (proto == "NAIVEPROXY" || proto == "SOCKS" || proto == "HTTP") ? string.Empty : uuid,
+                    Username = (proto == "NAIVEPROXY" || proto == "SOCKS" || proto == "HTTP") ? uuid : string.Empty,
                     Encryption = encryption,
                     Network = network,
                     Path = path,
@@ -2196,7 +2202,8 @@ namespace AnywhereWinUI.Views
                     node.Protocol = protocol;
                     node.Host = hostAndPort;
                     node.Password = proto == "SNELL" ? snellPsk : password;
-                    node.Uuid = uuid;
+                    node.Uuid = (proto == "NAIVEPROXY" || proto == "SOCKS" || proto == "HTTP") ? string.Empty : uuid;
+                    node.Username = (proto == "NAIVEPROXY" || proto == "SOCKS" || proto == "HTTP") ? uuid : string.Empty;
                     node.Encryption = encryption;
                     node.Network = network;
                     node.Path = path;
