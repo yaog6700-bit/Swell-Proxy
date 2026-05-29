@@ -4,7 +4,7 @@
 
 # Swell Proxy
 
-**一个基于 sing-box 内核的现代化 Windows 原生代理客户端**
+**一款基于 sing-box 内核的现代化 Windows 原生代理客户端**
 
 [![Release](https://img.shields.io/github/v/release/yaog6700-bit/Swell-Proxy?style=flat-square&logo=github)](https://github.com/yaog6700-bit/Swell-Proxy/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/yaog6700-bit/Swell-Proxy/total?style=flat-square)](https://github.com/yaog6700-bit/Swell-Proxy/releases)
