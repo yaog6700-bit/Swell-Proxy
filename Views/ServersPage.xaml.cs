@@ -1989,6 +1989,10 @@ namespace AnywhereWinUI.Views
                 };
                 ServerShadowTlsVersionInput.SelectedIndex = stlsVersionIdx;
                 ServerShadowTlsPasswordInput.Text = node.ShadowTlsPassword ?? string.Empty;
+                // ShadowTLS SNI: only populate the dedicated field for Shadowsocks/Snell;
+                // other protocols store SNI in ServerSniInput (TlsPanel)
+                if ((node.Protocol?.ToUpper() == "SHADOWSOCKS" || node.Protocol?.ToUpper() == "SNELL") && node.IsShadowTls)
+                    ServerShadowTlsSniInput.Text = node.Sni ?? string.Empty;
 
                 int headerIdx = 0;
                 if (!string.IsNullOrEmpty(node.HeaderType))
@@ -2117,6 +2121,11 @@ namespace AnywhereWinUI.Views
                 shadowTlsVersion = stlsV;
             }
             string shadowTlsPassword = ServerShadowTlsPasswordInput.Text.Trim();
+            // For Shadowsocks/Snell, SNI is entered in the ShadowTLS sub-panel;
+            // for other protocols it comes from ServerSniInput in TlsPanel.
+            string shadowTlsSni = ServerShadowTlsSniInput.Text.Trim();
+            if ((proto == "SHADOWSOCKS" || proto == "SNELL") && isShadowTls && !string.IsNullOrEmpty(shadowTlsSni))
+                sni = shadowTlsSni;
 
             var headerItem = ServerHeaderTypeInput.SelectedItem as ComboBoxItem;
             string headerType = headerItem?.Content?.ToString() ?? "none";
@@ -2221,6 +2230,9 @@ namespace AnywhereWinUI.Views
                     node.IsShadowTls = isShadowTls;
                     node.ShadowTlsVersion = shadowTlsVersion;
                     node.ShadowTlsPassword = shadowTlsPassword;
+                    // Persist ShadowTLS SNI for SS/Snell nodes
+                    if ((proto == "SHADOWSOCKS" || proto == "SNELL") && isShadowTls && !string.IsNullOrEmpty(shadowTlsSni))
+                        node.Sni = shadowTlsSni;
                     node.HeaderType = headerType;
                     node.Alpn = alpn;
                     node.SpiderX = spiderX;

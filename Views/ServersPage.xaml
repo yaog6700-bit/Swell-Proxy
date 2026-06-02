@@ -410,6 +410,7 @@
                                 <ComboBoxItem Content="1"/>
                             </ComboBox>
                             <TextBox x:Name="ServerShadowTlsPasswordInput" Header="Shadow-TLS 密码" PlaceholderText="请输入 Shadow-TLS 密码" />
+                            <TextBox x:Name="ServerShadowTlsSniInput" Header="SNI（伪装域名）" PlaceholderText="例如: support.apple.com" />
                         </StackPanel>
                     </StackPanel>
 

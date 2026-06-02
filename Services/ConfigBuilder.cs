@@ -435,7 +435,7 @@ namespace AnywhereWinUI.Services
                 // 2. 生成 shadow-tls 出站
                 var shadowTlsOutbound = new JsonObject
                 {
-                    ["type"] = "shadow-tls",
+                    ["type"] = "shadowtls",
                     ["tag"] = $"{baseTag}-shadow-tls-out",
                     ["server"] = FormatHost(host),
                     ["server_port"] = port,

@@ -567,6 +567,7 @@ namespace AnywhereWinUI
         {
             UpdateAppIcon();
             this.Title = "Swell Proxy";
+            this.AppWindow.Title = "Swell Proxy";
 
             // Configure WinUIEx tray settings
             _windowManager.IsVisibleInTray = true;
