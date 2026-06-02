@@ -24,5 +24,14 @@ namespace AnywhereWinUI.Views
         {
             base.OnNavigatedFrom(e);
         }
+
+        private void HeatmapDailyBtn_Checked(object sender, RoutedEventArgs e)
+            => ViewModel?.SetHeatmapMode(HeatmapViewMode.Daily);
+
+        private void HeatmapWeeklyBtn_Checked(object sender, RoutedEventArgs e)
+            => ViewModel?.SetHeatmapMode(HeatmapViewMode.Weekly);
+
+        private void HeatmapCumulativeBtn_Checked(object sender, RoutedEventArgs e)
+            => ViewModel?.SetHeatmapMode(HeatmapViewMode.Cumulative);
     }
 }

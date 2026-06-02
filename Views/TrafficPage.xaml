@@ -6,8 +6,48 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="using:WinUIEx"
     xmlns:viewmodels="using:AnywhereWinUI.ViewModels"
+    xmlns:converters="using:AnywhereWinUI.Converters"
     mc:Ignorable="d"
     Background="Transparent">
+
+    <Page.Resources>
+        <converters:HeatmapColorConverter x:Key="HeatmapColorConverter"/>
+        
+        <!-- 纯文本风格的 RadioButton 样式（无圆圈，选中时加粗变色） -->
+        <Style x:Key="TextRadioButtonStyle" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="4">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CheckStates">
+                                    <VisualState x:Name="Checked">
+                                        <VisualState.Setters>
+                                            <Setter Target="ContentPresenter.Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            <Setter Target="ContentPresenter.FontWeight" Value="SemiBold"/>
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Unchecked"/>
+                                </VisualStateGroup>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="PointerOver">
+                                        <VisualState.Setters>
+                                            <Setter Target="ContentPresenter.Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <ContentPresenter x:Name="ContentPresenter" Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Page.Resources>
 
     <Grid Margin="24">
         <Grid.RowDefinitions>
@@ -28,6 +68,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -181,6 +222,104 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+                <!-- 6. 年度流量热力图 (Row 3, ColSpan 2) -->
+                <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                        Background="Transparent"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="24">
+                    <StackPanel Spacing="20">
+
+                        <!-- 标题行 + 视图切换 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="流量热力图" FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                <RadioButton x:Name="HeatmapDailyBtn" Content="每日" GroupName="HeatmapMode"
+                                             IsChecked="True" Checked="HeatmapDailyBtn_Checked"
+                                             Style="{StaticResource TextRadioButtonStyle}"/>
+                                <RadioButton x:Name="HeatmapWeeklyBtn" Content="每周" GroupName="HeatmapMode"
+                                             Checked="HeatmapWeeklyBtn_Checked"
+                                             Style="{StaticResource TextRadioButtonStyle}"/>
+                                <RadioButton x:Name="HeatmapCumulativeBtn" Content="累计" GroupName="HeatmapMode"
+                                             Checked="HeatmapCumulativeBtn_Checked"
+                                             Style="{StaticResource TextRadioButtonStyle}"/>
+                            </StackPanel>
+                        </Grid>
+
+
+                        <!-- 热力图主体：7行 × 52列，行=周几，列=第几周 -->
+                        <!-- 热力图与底部月份标签 -->
+                        <!-- 增加 MinHeight 防止高度塌陷；HorizontalAlignment="Center" 让热力图在宽卡片中居中，平衡左右留白 -->
+                        <StackPanel Spacing="8" MinHeight="130" HorizontalAlignment="Center">
+                            <ItemsControl x:Name="HeatmapControl"
+                                          ItemsSource="{x:Bind ViewModel.HeatmapCells, Mode=OneWay}"
+                                          HorizontalAlignment="Stretch">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <ItemsWrapGrid Orientation="Vertical" MaximumRowsOrColumns="7"
+                                                       HorizontalAlignment="Left"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <!-- 格子间距，上下左右各 1.5，总共占据 10+3=13 像素宽度 -->
+                                        <Setter Property="Margin" Value="1.5"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="viewmodels:HeatmapCellViewModel">
+                                        <Border Width="10" Height="10"
+                                                CornerRadius="2"
+                                                Background="{x:Bind ColorLevel, Converter={StaticResource HeatmapColorConverter}}"
+                                                ToolTipService.ToolTip="{x:Bind Tooltip}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- 月份标签（宽度对齐热力图的列） -->
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.MonthLabels, Mode=OneWay}" HorizontalAlignment="Stretch">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <!-- 每列宽度 13px (10 + 1.5 + 1.5) -->
+                                        <Border Width="13" Height="20">
+                                            <!-- 使用 Canvas 允许文字突破 13px 宽度向右溢出，防止两位数月份被截断，同时防止底部被截断 -->
+                                            <Canvas>
+                                                <TextBlock Text="{x:Bind}" FontSize="11" 
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            </Canvas>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- 图例说明（如果不需要也可以直接注释掉，这里保留了和浅色模式相匹配的柔和颜色） -->
+                        <!--
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                            <TextBlock Text="少" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                            <Border Width="10" Height="10" CornerRadius="2" Background="#F3F4F6"/>
+                            <Border Width="10" Height="10" CornerRadius="2" Background="#CBE2FE"/>
+                            <Border Width="10" Height="10" CornerRadius="2" Background="#8CB8FE"/>
+                            <Border Width="10" Height="10" CornerRadius="2" Background="#4B8DF8"/>
+                            <Border Width="10" Height="10" CornerRadius="2" Background="#2B66E0"/>
+                            <TextBlock Text="多" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        -->
+
                     </StackPanel>
                 </Border>
 
