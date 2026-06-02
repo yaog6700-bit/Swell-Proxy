@@ -112,6 +112,8 @@ namespace AnywhereWinUI
                 // ── Cleanup leftover staged update packages on startup ────────────────────
                 new Services.AppUpdateService().CleanupOldStagingDirs();
 
+                AnywhereWinUI.Services.ClipboardMonitorService.Instance.Start();
+
                 _window = new MainWindow();
                 _window.Activate();
                 

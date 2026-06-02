@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="AnywhereWinUI.Views.ClipboardToastWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Window.SystemBackdrop>
+        <DesktopAcrylicBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid Background="Transparent" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" Padding="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <FontIcon Glyph="&#xE128;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+            <TextBlock Text="检测到代理节点" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
+        </StackPanel>
+        
+        <TextBlock x:Name="NodeInfoText" Grid.Row="1" Text="类型: ... | 名称: ..." Margin="24,12,0,16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+        
+        <Button x:Name="ImportButton" Content="一键导入并测速 (Enter)" Grid.Row="2" HorizontalAlignment="Stretch" Style="{ThemeResource AccentButtonStyle}" Click="ImportButton_Click" CornerRadius="4" />
+    </Grid>
+</Window>
