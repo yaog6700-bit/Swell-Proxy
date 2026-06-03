@@ -87,7 +87,61 @@ namespace AnywhereWinUI.Services
                 }
             };
 
+            // 仅当用户启用 Tailscale 时，才注入 endpoints 字段
+            if (session.EnableTailscale)
+            {
+                config["endpoints"] = BuildEndpoints(session);
+            }
+
             return config.ToJsonString(JsonOpts);
+        }
+
+        private static JsonArray BuildEndpoints(AppSession session)
+        {
+            var ep = new JsonObject
+            {
+                ["type"] = "tailscale",
+                ["tag"]  = "tailscale-ep",
+                ["ephemeral"] = session.TailscaleEphemeral,
+                ["accept_routes"] = session.TailscaleAcceptRoutes,
+                ["advertise_exit_node"] = session.TailscaleAdvertiseExitNode,
+                ["domain_resolver"] = "local-dns"
+            };
+
+            if (!string.IsNullOrWhiteSpace(session.TailscaleAuthKey))
+                ep["auth_key"] = session.TailscaleAuthKey;
+
+            if (!string.IsNullOrWhiteSpace(session.TailscaleHostname))
+                ep["hostname"] = session.TailscaleHostname;
+
+            // 状态目录：优先使用用户配置值；留空时自动回退到 App 数据目录，确保有写权限
+            var stateDir = string.IsNullOrWhiteSpace(session.TailscaleStateDirectory)
+                ? System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SwellProxy", "tailscale-state")
+                : session.TailscaleStateDirectory;
+
+            // 提前创建目录，防止 sing-box 因目录不存在而报 Access is denied
+            try { System.IO.Directory.CreateDirectory(stateDir); } catch { }
+
+            ep["state_directory"] = stateDir;
+
+            if (!string.IsNullOrWhiteSpace(session.TailscaleControlUrl))
+                ep["control_url"] = session.TailscaleControlUrl;
+
+            if (!string.IsNullOrWhiteSpace(session.TailscaleExitNode))
+                ep["exit_node"] = session.TailscaleExitNode;
+
+            if (!string.IsNullOrWhiteSpace(session.TailscaleAdvertiseRoutes))
+            {
+                var routeArr = new JsonArray();
+                foreach (var cidr in session.TailscaleAdvertiseRoutes.Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries))
+                    routeArr.Add((JsonNode)cidr);
+                if (routeArr.Count > 0)
+                    ep["advertise_routes"] = routeArr;
+            }
+
+            return new JsonArray { ep };
         }
 
         private static JsonObject BuildDns(bool bypassChina, bool blockIPv6, string routingMode, bool enableTun = false)

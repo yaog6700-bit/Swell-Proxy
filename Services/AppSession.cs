@@ -54,6 +54,18 @@ namespace AnywhereWinUI.Services
         // Custom Routing Rules
         public List<CustomRule> CustomRules { get; set; } = new();
 
+        // Tailscale Endpoint
+        public bool EnableTailscale { get; set; } = false;
+        public string TailscaleAuthKey { get; set; } = string.Empty;
+        public string TailscaleHostname { get; set; } = string.Empty;
+        public bool TailscaleEphemeral { get; set; } = false;
+        public string TailscaleStateDirectory { get; set; } = string.Empty;
+        public string TailscaleControlUrl { get; set; } = string.Empty;
+        public bool TailscaleAcceptRoutes { get; set; } = false;
+        public string TailscaleAdvertiseRoutes { get; set; } = string.Empty;
+        public string TailscaleExitNode { get; set; } = string.Empty;
+        public bool TailscaleAdvertiseExitNode { get; set; } = false;
+
         private AppSession()
         {
             if (Helpers.LocalSettingsHelper.TryGetValue<int>("proxyModeIndex", out var pmi)) ProxyModeIndex = pmi;
@@ -111,6 +123,19 @@ namespace AnywhereWinUI.Services
                 SelectedNodeProtocol = node.Protocol;
                 SelectedNodeHost = node.Host;
             }
+
+            // 加载 Tailscale 设置
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableTailscale", out var ets)) EnableTailscale = ets;
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("tailscaleAuthKey", out var tsKey) && !string.IsNullOrEmpty(tsKey)) TailscaleAuthKey = tsKey;
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("tailscaleHostname", out var tsHost) && !string.IsNullOrEmpty(tsHost)) TailscaleHostname = tsHost;
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>("tailscaleEphemeral", out var tsEph)) TailscaleEphemeral = tsEph;
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("tailscaleStateDirectory", out var tsDir) && !string.IsNullOrEmpty(tsDir)) TailscaleStateDirectory = tsDir;
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("tailscaleControlUrl", out var tsCtrl) && !string.IsNullOrEmpty(tsCtrl)) TailscaleControlUrl = tsCtrl;
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>("tailscaleAcceptRoutes", out var tsAR)) TailscaleAcceptRoutes = tsAR;
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("tailscaleAdvertiseRoutes", out var tsAdv) && !string.IsNullOrEmpty(tsAdv)) TailscaleAdvertiseRoutes = tsAdv;
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("tailscaleExitNode", out var tsExit) && !string.IsNullOrEmpty(tsExit)) TailscaleExitNode = tsExit;
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>("tailscaleAdvertiseExitNode", out var tsAEN)) TailscaleAdvertiseExitNode = tsAEN;
         }
+
     }
 }

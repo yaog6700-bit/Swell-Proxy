@@ -73,6 +73,37 @@ namespace AnywhereWinUI.ViewModels
         [ObservableProperty]
         private string _appVersionText = "Checking...";
 
+        // ── Tailscale Endpoint ───────────────────────────────────────────────
+        [ObservableProperty]
+        private bool _enableTailscale;
+
+        [ObservableProperty]
+        private string _tailscaleAuthKey = string.Empty;
+
+        [ObservableProperty]
+        private string _tailscaleHostname = string.Empty;
+
+        [ObservableProperty]
+        private bool _tailscaleEphemeral;
+
+        [ObservableProperty]
+        private string _tailscaleStateDirectory = string.Empty;
+
+        [ObservableProperty]
+        private string _tailscaleControlUrl = string.Empty;
+
+        [ObservableProperty]
+        private bool _tailscaleAcceptRoutes;
+
+        [ObservableProperty]
+        private string _tailscaleAdvertiseRoutes = string.Empty;
+
+        [ObservableProperty]
+        private string _tailscaleExitNode = string.Empty;
+
+        [ObservableProperty]
+        private bool _tailscaleAdvertiseExitNode;
+
         public SettingsViewModel()
         {
             LoadSettings();
@@ -100,6 +131,18 @@ namespace AnywhereWinUI.ViewModels
             _enableFakeDns = AppSession.Instance.EnableFakeDns;
             _enableClassicDashboard = AppSession.Instance.EnableClassicDashboard;
             _isPrivacyModeActive = AppSession.Instance.IsPrivacyModeActive;
+
+            // Tailscale
+            _enableTailscale = AppSession.Instance.EnableTailscale;
+            _tailscaleAuthKey = AppSession.Instance.TailscaleAuthKey;
+            _tailscaleHostname = AppSession.Instance.TailscaleHostname;
+            _tailscaleEphemeral = AppSession.Instance.TailscaleEphemeral;
+            _tailscaleStateDirectory = AppSession.Instance.TailscaleStateDirectory;
+            _tailscaleControlUrl = AppSession.Instance.TailscaleControlUrl;
+            _tailscaleAcceptRoutes = AppSession.Instance.TailscaleAcceptRoutes;
+            _tailscaleAdvertiseRoutes = AppSession.Instance.TailscaleAdvertiseRoutes;
+            _tailscaleExitNode = AppSession.Instance.TailscaleExitNode;
+            _tailscaleAdvertiseExitNode = AppSession.Instance.TailscaleAdvertiseExitNode;
 
             try
             {
@@ -234,6 +277,68 @@ namespace AnywhereWinUI.ViewModels
                     AutostartManager.DisableAutostart();
             }
             catch { }
+        }
+
+        // ── Tailscale Change Handlers ─────────────────────────────────────────
+        partial void OnEnableTailscaleChanged(bool value)
+        {
+            AppSession.Instance.EnableTailscale = value;
+            Helpers.LocalSettingsHelper.SetValue("enableTailscale", value);
+            _ = TriggerCoreRestartIfNeeded();
+        }
+
+        partial void OnTailscaleAuthKeyChanged(string value)
+        {
+            AppSession.Instance.TailscaleAuthKey = value;
+            Helpers.LocalSettingsHelper.SetValue("tailscaleAuthKey", value);
+        }
+
+        partial void OnTailscaleHostnameChanged(string value)
+        {
+            AppSession.Instance.TailscaleHostname = value;
+            Helpers.LocalSettingsHelper.SetValue("tailscaleHostname", value);
+        }
+
+        partial void OnTailscaleEphemeralChanged(bool value)
+        {
+            AppSession.Instance.TailscaleEphemeral = value;
+            Helpers.LocalSettingsHelper.SetValue("tailscaleEphemeral", value);
+        }
+
+        partial void OnTailscaleStateDirectoryChanged(string value)
+        {
+            AppSession.Instance.TailscaleStateDirectory = value;
+            Helpers.LocalSettingsHelper.SetValue("tailscaleStateDirectory", value);
+        }
+
+        partial void OnTailscaleControlUrlChanged(string value)
+        {
+            AppSession.Instance.TailscaleControlUrl = value;
+            Helpers.LocalSettingsHelper.SetValue("tailscaleControlUrl", value);
+        }
+
+        partial void OnTailscaleAcceptRoutesChanged(bool value)
+        {
+            AppSession.Instance.TailscaleAcceptRoutes = value;
+            Helpers.LocalSettingsHelper.SetValue("tailscaleAcceptRoutes", value);
+        }
+
+        partial void OnTailscaleAdvertiseRoutesChanged(string value)
+        {
+            AppSession.Instance.TailscaleAdvertiseRoutes = value;
+            Helpers.LocalSettingsHelper.SetValue("tailscaleAdvertiseRoutes", value);
+        }
+
+        partial void OnTailscaleExitNodeChanged(string value)
+        {
+            AppSession.Instance.TailscaleExitNode = value;
+            Helpers.LocalSettingsHelper.SetValue("tailscaleExitNode", value);
+        }
+
+        partial void OnTailscaleAdvertiseExitNodeChanged(bool value)
+        {
+            AppSession.Instance.TailscaleAdvertiseExitNode = value;
+            Helpers.LocalSettingsHelper.SetValue("tailscaleAdvertiseExitNode", value);
         }
 
         private async Task TriggerCoreRestartIfNeeded()

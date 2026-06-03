@@ -77,6 +77,14 @@
                         <TextBlock Grid.Column="1" Text="DNS 与解析" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                     </Grid>
                 </ListViewItem>
+                <ListViewItem Tag="Tailscale"
+                              PointerEntered="TailscaleItem_PointerEntered"
+                              PointerExited="TailscaleItem_PointerExited">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <FontIcon x:Name="IconTailscale" Glyph="&#xE703;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <TextBlock Grid.Column="1" Text="Tailscale 组网" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                    </Grid>
+                </ListViewItem>
                 <ListViewItem Tag="Autostart" 
                               PointerEntered="AutostartItem_PointerEntered" 
                               PointerExited="AutostartItem_PointerExited">
@@ -201,6 +209,147 @@
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" VerticalAlignment="Center" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.IsPrivacyModeActive, Mode=TwoWay}" HorizontalAlignment="Right"/>
                             </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Panel: Tailscale 组网 -->
+                    <StackPanel x:Name="TailscalePanel" Spacing="12" Visibility="Collapsed">
+                        <StackPanel.ChildrenTransitions>
+                            <TransitionCollection>
+                                <EntranceThemeTransition FromVerticalOffset="28" />
+                            </TransitionCollection>
+                        </StackPanel.ChildrenTransitions>
+
+                        <TextBlock Text="Tailscale 私有组网" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+                        <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,12">
+                            <StackPanel>
+
+                                <!-- 总开关 -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,4,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <FontIcon Grid.Column="0" Glyph="&#xE703;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="启用 Tailscale Endpoint" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="将 sing-box 作为 Tailscale 节点加入私有网络（tailnet），需要 sing-box 核心支持 Tailscale" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnableTailscale, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                                <!-- Auth Key -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <FontIcon Grid.Column="0" Glyph="&#xE8D7;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="授权 Key (Auth Key)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="Tailscale 预授权 Key（tskey-auth-...），留空则启动时在日志中显示登录 URL" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <PasswordBox Grid.Column="2" Width="220" PlaceholderText="tskey-auth-..." Password="{x:Bind ViewModel.TailscaleAuthKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- Hostname -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <FontIcon Grid.Column="0" Glyph="&#xE8F4;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="节点主机名 (Hostname)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="此节点在 tailnet 中显示的名称，留空则使用系统主机名" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                    <TextBox Grid.Column="2" Width="220" PlaceholderText="my-pc" Text="{x:Bind ViewModel.TailscaleHostname, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- State Directory -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <FontIcon Grid.Column="0" Glyph="&#xE8DA;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="状态目录 (State Directory)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="保存 Tailscale 认证状态的文件夹，重启后保持登录。留空则使用默认位置" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                        <TextBox Width="170" PlaceholderText="留空使用默认" Text="{x:Bind ViewModel.TailscaleStateDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <Button x:Name="TailscaleStateDirBrowseButton" Style="{StaticResource SubtleButtonStyle}" Click="TailscaleStateDirBrowse_Click" ToolTipService.ToolTip="选择文件夹">
+                                            <FontIcon Glyph="&#xE8DA;" FontSize="14"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Control URL -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <FontIcon Grid.Column="0" Glyph="&#xE774;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="协调服务器 (Control URL)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="留空使用官方 Tailscale，或填入 Headscale 自建服务器地址" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
+                                        <TextBox Width="220" PlaceholderText="留空 = 官方 Tailscale" Text="{x:Bind ViewModel.TailscaleControlUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Button Content="官方" Click="SetTailscaleControlUrlOfficial_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                            <Button Content="清空" Click="ClearTailscaleControlUrl_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Ephemeral -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <FontIcon Grid.Column="0" Glyph="&#xE81B;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="临时节点模式 (Ephemeral)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="断开后节点自动从 tailnet 中移除，适合临时或自动化部署场景" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.TailscaleEphemeral, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                                <!-- Accept Routes -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <FontIcon Grid.Column="0" Glyph="&#xE909;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="接受其他节点路由 (Accept Routes)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="允许接收 tailnet 中其他节点通告的子网路由" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.TailscaleAcceptRoutes, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                                <!-- Advertise Routes -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <FontIcon Grid.Column="0" Glyph="&#xECAA;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="通告本地网段 (Advertise Routes)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="向 tailnet 共享本机所在网段，多个 CIDR 用逗号分隔，如 192.168.1.0/24" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <TextBox Grid.Column="2" Width="220" PlaceholderText="192.168.1.0/24" Text="{x:Bind ViewModel.TailscaleAdvertiseRoutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- Exit Node -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <FontIcon Grid.Column="0" Glyph="&#xF0AF;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="指定出口节点 (Exit Node)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="将全部出站流量通过指定的 tailnet 节点转发，填入对端节点 IP 或名称" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <TextBox Grid.Column="2" Width="220" PlaceholderText="100.x.x.x 或留空" Text="{x:Bind ViewModel.TailscaleExitNode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- Advertise Exit Node -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,4">
+                                    <FontIcon Grid.Column="0" Glyph="&#xE72A;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="通告为出口节点 (Advertise Exit Node)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="将本机对外通告为 Exit Node，允许其他 tailnet 节点将流量经由本机出站" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.TailscaleAdvertiseExitNode, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 使用提示 -->
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,12">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE946;" FontSize="14" Foreground="{ThemeResource SystemAccentColor}"/>
+                                    <TextBlock Text="使用须知" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="• 首次启用且未填 Auth Key 时，请在日志页查看登录 URL 并用浏览器完成授权" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="• 已存在状态文件时，Auth Key 字段会被忽略，直接复用已认证状态" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="• sing-box 核心需支持 Tailscale（实验性功能，需 sing-box 1.12.0+）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
 

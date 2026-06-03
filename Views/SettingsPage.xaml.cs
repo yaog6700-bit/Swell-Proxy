@@ -111,6 +111,7 @@ namespace AnywhereWinUI.Views
                 if (ColorsPanel != null) ColorsPanel.Visibility = Visibility.Collapsed;
                 if (RoutingPanel != null) RoutingPanel.Visibility = Visibility.Collapsed;
                 if (DnsSettingsPanel != null) DnsSettingsPanel.Visibility = Visibility.Collapsed;
+                if (TailscalePanel != null) TailscalePanel.Visibility = Visibility.Collapsed;
                 if (BackupPanel != null) BackupPanel.Visibility = Visibility.Collapsed;
                 if (AutostartPanel != null) AutostartPanel.Visibility = Visibility.Collapsed;
                 if (AboutPanel != null) AboutPanel.Visibility = Visibility.Collapsed;
@@ -136,6 +137,11 @@ namespace AnywhereWinUI.Views
                         if (DnsSettingsPanel != null) DnsSettingsPanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "DNS与解析";
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "配置代理环境下的远端与直连DNS防污染及FakeDNS";
+                        break;
+                    case "Tailscale":
+                        if (TailscalePanel != null) TailscalePanel.Visibility = Visibility.Visible;
+                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "Tailscale 组网";
+                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "将 sing-box 接入 Tailscale 私有网络，实现内网穿透与多设备互联";
                         break;
                     case "Backup":
                         if (BackupPanel != null) BackupPanel.Visibility = Visibility.Visible;
@@ -1106,6 +1112,83 @@ namespace AnywhereWinUI.Views
         private void SetProxyDnsDoH_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.ProxyDns = "https://1.1.1.1/dns-query";
+        }
+
+        // ── Tailscale Handlers ────────────────────────────────────────────────
+
+        private void SetTailscaleControlUrlOfficial_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.TailscaleControlUrl = string.Empty;
+        }
+
+        private void ClearTailscaleControlUrl_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.TailscaleControlUrl = string.Empty;
+        }
+
+        private async void TailscaleStateDirBrowse_Click(object sender, RoutedEventArgs e)
+        {
+            var picker = new Windows.Storage.Pickers.FolderPicker();
+            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+            picker.FileTypeFilter.Add("*");
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            var folder = await picker.PickSingleFolderAsync();
+            if (folder != null)
+            {
+                ViewModel.TailscaleStateDirectory = folder.Path;
+            }
+        }
+
+        // 🌐 Tailscale: Pulse & Scale Animation
+        private void TailscaleItem_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            if (IconTailscale == null) return;
+            var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(IconTailscale);
+            var compositor = visual.Compositor;
+
+            float cx = IconTailscale.ActualWidth > 0 ? (float)(IconTailscale.ActualWidth / 2) : 8f;
+            float cy = IconTailscale.ActualHeight > 0 ? (float)(IconTailscale.ActualHeight / 2) : 8f;
+            visual.CenterPoint = new System.Numerics.Vector3(cx, cy, 0f);
+
+            var scaleX = compositor.CreateScalarKeyFrameAnimation();
+            scaleX.InsertKeyFrame(0f, 1f);
+            scaleX.InsertKeyFrame(0.35f, 1.35f);
+            scaleX.InsertKeyFrame(0.65f, 0.9f);
+            scaleX.InsertKeyFrame(1.0f, 1.15f);
+            scaleX.Duration = TimeSpan.FromMilliseconds(500);
+
+            var scaleY = compositor.CreateScalarKeyFrameAnimation();
+            scaleY.InsertKeyFrame(0f, 1f);
+            scaleY.InsertKeyFrame(0.35f, 1.35f);
+            scaleY.InsertKeyFrame(0.65f, 0.9f);
+            scaleY.InsertKeyFrame(1.0f, 1.15f);
+            scaleY.Duration = TimeSpan.FromMilliseconds(500);
+
+            visual.StartAnimation("Scale.X", scaleX);
+            visual.StartAnimation("Scale.Y", scaleY);
+        }
+
+        private void TailscaleItem_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            if (IconTailscale == null) return;
+            var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(IconTailscale);
+            var compositor = visual.Compositor;
+
+            var easeOut = compositor.CreateCubicBezierEasingFunction(new System.Numerics.Vector2(0f, 0f), new System.Numerics.Vector2(0.2f, 1f));
+
+            var scaleX = compositor.CreateScalarKeyFrameAnimation();
+            scaleX.InsertKeyFrame(1f, 1f, easeOut);
+            scaleX.Duration = TimeSpan.FromMilliseconds(250);
+
+            var scaleY = compositor.CreateScalarKeyFrameAnimation();
+            scaleY.InsertKeyFrame(1f, 1f, easeOut);
+            scaleY.Duration = TimeSpan.FromMilliseconds(250);
+
+            visual.StartAnimation("Scale.X", scaleX);
+            visual.StartAnimation("Scale.Y", scaleY);
         }
     }
 }
