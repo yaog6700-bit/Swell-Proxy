@@ -10,7 +10,7 @@ function OnManual() {
     var mbStr = Plugin.GetConfig("testFileSize");
     var mb = parseInt(mbStr);
     if (isNaN(mb) || mb <= 0) {
-        mb = 1; 
+        mb = 10;  // 默认 10MB，测速更准确；可在插件配置 testFileSize 中自定义
     }
 
     var bytes = mb * 1024 * 1024;
