@@ -1,3 +1,4 @@
+﻿using AnywhereWinUI.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -378,7 +379,7 @@ namespace AnywhereWinUI.Views
                                     XamlRoot = this.XamlRoot
                                 };
 
-                                var result = await dialog.ShowAsync();
+                                var result = await dialog.WithAppTheme().ShowAsync();
                                 if (result != ContentDialogResult.Primary)
                                 {
                                     tcs.SetResult(false);
@@ -413,7 +414,7 @@ namespace AnywhereWinUI.Views
                             CloseButtonText = "确定",
                             XamlRoot = this.XamlRoot
                         };
-                        _ = dialog.ShowAsync();
+                        _ = dialog.WithAppTheme().ShowAsync();
                     }
                     else
                     {
@@ -441,7 +442,7 @@ namespace AnywhereWinUI.Views
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
-                _ = dialog.ShowAsync();
+                _ = dialog.WithAppTheme().ShowAsync();
                 System.Diagnostics.Debug.WriteLine($"Start error: {ex}");
             }
         }
@@ -1170,7 +1171,7 @@ namespace AnywhereWinUI.Views
                     XamlRoot = this.XamlRoot
                 };
 
-                var result = await dialog.ShowAsync();
+                var result = await dialog.WithAppTheme().ShowAsync();
                 if (result != ContentDialogResult.Primary) return;
 
                 string text = textBox.Text?.Trim() ?? string.Empty;
@@ -1197,7 +1198,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await successDialog.ShowAsync();
+                    await successDialog.WithAppTheme().ShowAsync();
                 }
                 else
                 {
@@ -1208,7 +1209,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await failDialog.ShowAsync();
+                    await failDialog.WithAppTheme().ShowAsync();
                 }
             }
             catch (Exception ex)
@@ -1220,7 +1221,7 @@ namespace AnywhereWinUI.Views
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
-                try { await errDialog.ShowAsync(); } catch { }
+                try { await errDialog.WithAppTheme().ShowAsync(); } catch { }
             }
         }
 
@@ -1247,7 +1248,7 @@ namespace AnywhereWinUI.Views
                                 CloseButtonText = "取消",
                                 XamlRoot = this.XamlRoot
                             };
-                            var result = await dialog.ShowAsync();
+                            var result = await dialog.WithAppTheme().ShowAsync();
                             if (result != ContentDialogResult.Primary)
                             {
                                 tcs.SetResult(false);
@@ -1311,7 +1312,7 @@ namespace AnywhereWinUI.Views
 
             try
             {
-                await dialog.ShowAsync();
+                await dialog.WithAppTheme().ShowAsync();
             }
             catch (Exception ex)
             {
@@ -1791,7 +1792,7 @@ namespace AnywhereWinUI.Views
                             }
                         };
 
-                        try { await dialog.ShowAsync(); } catch { }
+                        try { await dialog.WithAppTheme().ShowAsync(); } catch { }
                     }
                     else
                     {
@@ -1802,7 +1803,7 @@ namespace AnywhereWinUI.Views
                             CloseButtonText = "确定",
                             XamlRoot = this.XamlRoot
                         };
-                        try { await failDialog.ShowAsync(); } catch { }
+                        try { await failDialog.WithAppTheme().ShowAsync(); } catch { }
                     }
                 }
             }
@@ -2042,7 +2043,7 @@ namespace AnywhereWinUI.Views
                     XamlRoot = this.XamlRoot
                 };
 
-                var result = await dialog.ShowAsync();
+                var result = await dialog.WithAppTheme().ShowAsync();
                 if (result == ContentDialogResult.Primary)
                 {
                     ViewModel.DeleteServerCommand.Execute(selected);

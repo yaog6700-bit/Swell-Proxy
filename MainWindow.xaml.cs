@@ -1,3 +1,4 @@
+﻿using AnywhereWinUI.Helpers;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -728,7 +729,7 @@ namespace AnywhereWinUI
                 }
             };
 
-            var result = await dialog.ShowAsync();
+            var result = await dialog.WithAppTheme().ShowAsync();
             return result == ContentDialogResult.Primary ? pwdBox.Password : null;
         }
 

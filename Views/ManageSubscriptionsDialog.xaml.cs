@@ -1,3 +1,4 @@
+﻿using AnywhereWinUI.Helpers;
 using System;
 using System.Threading.Tasks;
 using Microsoft.UI;
@@ -106,7 +107,7 @@ namespace AnywhereWinUI.Views
                             CloseButtonText = "确定",
                             XamlRoot = this.XamlRoot
                         };
-                        try { await errDialog.ShowAsync(); } catch { }
+                        try { await errDialog.WithAppTheme().ShowAsync(); } catch { }
                         return false;
                     }
                 }
@@ -215,7 +216,7 @@ namespace AnywhereWinUI.Views
                             CloseButtonText = "确定",
                             XamlRoot = this.XamlRoot
                         };
-                        try { await errDialog.ShowAsync(); } catch { }
+                        try { await errDialog.WithAppTheme().ShowAsync(); } catch { }
                     }
                     else
                     {

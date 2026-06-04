@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -225,7 +225,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await dialog.ShowAsync();
+                    await dialog.WithAppTheme().ShowAsync();
                 }
                 catch (Exception ex)
                 {
@@ -236,7 +236,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await dialog.ShowAsync();
+                    await dialog.WithAppTheme().ShowAsync();
                 }
                 finally
                 {
@@ -258,7 +258,7 @@ namespace AnywhereWinUI.Views
                 XamlRoot = this.XamlRoot
             };
 
-            var confirmResult = await confirmDialog.ShowAsync();
+            var confirmResult = await confirmDialog.WithAppTheme().ShowAsync();
             if (confirmResult != ContentDialogResult.Primary) return;
 
             var picker = new FileOpenPicker();
@@ -289,7 +289,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await dialog.ShowAsync();
+                    await dialog.WithAppTheme().ShowAsync();
                 }
                 catch (Exception ex)
                 {
@@ -300,7 +300,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await dialog.ShowAsync();
+                    await dialog.WithAppTheme().ShowAsync();
                 }
                 finally
                 {
@@ -332,7 +332,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await dialog.ShowAsync();
+                    await dialog.WithAppTheme().ShowAsync();
                     return;
                 }
 
@@ -348,7 +348,7 @@ namespace AnywhereWinUI.Views
                     XamlRoot = this.XamlRoot
                 };
 
-                if (await confirmDialog.ShowAsync() != ContentDialogResult.Primary)
+                if (await confirmDialog.WithAppTheme().ShowAsync() != ContentDialogResult.Primary)
                 {
                     return;
                 }
@@ -379,7 +379,7 @@ namespace AnywhereWinUI.Views
                 });
                 
                 // Show dialog without awaiting it to allow background updates
-                _ = progressDialog.ShowAsync();
+                _ = progressDialog.WithAppTheme().ShowAsync();
                 
                 try
                 {
@@ -397,7 +397,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await successDialog.ShowAsync();
+                    await successDialog.WithAppTheme().ShowAsync();
                 }
                 catch (Exception ex)
                 {
@@ -410,7 +410,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await errDialog.ShowAsync();
+                    await errDialog.WithAppTheme().ShowAsync();
                 }
             }
             catch (Exception ex)
@@ -422,7 +422,7 @@ namespace AnywhereWinUI.Views
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
-                await dialog.ShowAsync();
+                await dialog.WithAppTheme().ShowAsync();
             }
             finally
             {
@@ -451,7 +451,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await dialog.ShowAsync();
+                    await dialog.WithAppTheme().ShowAsync();
                     return;
                 }
 
@@ -464,7 +464,7 @@ namespace AnywhereWinUI.Views
                     XamlRoot = this.XamlRoot
                 };
 
-                if (await confirmDialog.ShowAsync() != ContentDialogResult.Primary)
+                if (await confirmDialog.WithAppTheme().ShowAsync() != ContentDialogResult.Primary)
                 {
                     return;
                 }
@@ -494,7 +494,7 @@ namespace AnywhereWinUI.Views
 
                 var updateTask = updater.DownloadVerifyAndExtractAsync(info, proxyUrl, progress, CancellationToken.None);
                 
-                _ = progressDialog.ShowAsync();
+                _ = progressDialog.WithAppTheme().ShowAsync();
                 
                 try
                 {
@@ -510,7 +510,7 @@ namespace AnywhereWinUI.Views
                         XamlRoot = this.XamlRoot
                     };
                     
-                    if (await successDialog.ShowAsync() == ContentDialogResult.Primary)
+                    if (await successDialog.WithAppTheme().ShowAsync() == ContentDialogResult.Primary)
                     {
                         if (CoreManager.Instance.IsRunning)
                         {
@@ -531,7 +531,7 @@ namespace AnywhereWinUI.Views
                         CloseButtonText = "确定",
                         XamlRoot = this.XamlRoot
                     };
-                    await errDialog.ShowAsync();
+                    await errDialog.WithAppTheme().ShowAsync();
                 }
             }
             catch (Exception ex)
@@ -543,7 +543,7 @@ namespace AnywhereWinUI.Views
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
-                await dialog.ShowAsync();
+                await dialog.WithAppTheme().ShowAsync();
             }
             finally
             {
@@ -593,7 +593,7 @@ namespace AnywhereWinUI.Views
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
-                await dialog.ShowAsync();
+                await dialog.WithAppTheme().ShowAsync();
             }
             catch (Exception ex)
             {
@@ -604,7 +604,7 @@ namespace AnywhereWinUI.Views
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
-                await dialog.ShowAsync();
+                await dialog.WithAppTheme().ShowAsync();
             }
         }
 
@@ -624,7 +624,7 @@ namespace AnywhereWinUI.Views
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
-                await dialog.ShowAsync();
+                await dialog.WithAppTheme().ShowAsync();
             }
             catch (Exception ex)
             {
@@ -635,7 +635,7 @@ namespace AnywhereWinUI.Views
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
-                await errDialog.ShowAsync();
+                await errDialog.WithAppTheme().ShowAsync();
             }
         }
 
@@ -674,7 +674,7 @@ namespace AnywhereWinUI.Views
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
-                await dialog.ShowAsync();
+                await dialog.WithAppTheme().ShowAsync();
             }
             catch (Exception ex)
             {
@@ -685,7 +685,7 @@ namespace AnywhereWinUI.Views
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
-                await errDialog.ShowAsync();
+                await errDialog.WithAppTheme().ShowAsync();
             }
             finally
             {
