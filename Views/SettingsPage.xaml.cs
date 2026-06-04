@@ -385,6 +385,7 @@ namespace AnywhereWinUI.Views
                 {
                     await updateTask;
                     progressDialog.Hide();
+                    await Task.Delay(50);
 
                     SingboxVersionText.Text = $"当前版本: {GetLocalSingboxVersionText()}";
 
@@ -401,6 +402,7 @@ namespace AnywhereWinUI.Views
                 catch (Exception ex)
                 {
                     progressDialog.Hide();
+                    await Task.Delay(50);
                     var errDialog = new ContentDialog
                     {
                         Title = "更新失败",
@@ -498,6 +500,7 @@ namespace AnywhereWinUI.Views
                 {
                     var staging = await updateTask;
                     progressDialog.Hide();
+                    await Task.Delay(50);
 
                     var successDialog = new ContentDialog
                     {
@@ -520,6 +523,7 @@ namespace AnywhereWinUI.Views
                 catch (Exception ex)
                 {
                     progressDialog.Hide();
+                    await Task.Delay(50);
                     var errDialog = new ContentDialog
                     {
                         Title = "更新失败",
