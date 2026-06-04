@@ -62,6 +62,9 @@ namespace AnywhereWinUI.ViewModels
         private bool _enableClassicDashboard;
 
         [ObservableProperty]
+        private bool _enablePlugins;
+
+        [ObservableProperty]
         private bool _isPrivacyModeActive;
 
         [ObservableProperty]
@@ -130,6 +133,7 @@ namespace AnywhereWinUI.ViewModels
             _enableDnsCache = AppSession.Instance.EnableDnsCache;
             _enableFakeDns = AppSession.Instance.EnableFakeDns;
             _enableClassicDashboard = AppSession.Instance.EnableClassicDashboard;
+            _enablePlugins = AppSession.Instance.EnablePlugins;
             _isPrivacyModeActive = AppSession.Instance.IsPrivacyModeActive;
 
             // Tailscale
@@ -259,6 +263,13 @@ namespace AnywhereWinUI.ViewModels
             AppSession.Instance.EnableClassicDashboard = value;
             Helpers.LocalSettingsHelper.SetValue("enableClassicDashboard", value);
             MainWindow.Instance?.UpdateDashboardNavVisibility();
+        }
+
+        partial void OnEnablePluginsChanged(bool value)
+        {
+            AppSession.Instance.EnablePlugins = value;
+            Helpers.LocalSettingsHelper.SetValue("enablePlugins", value);
+            MainWindow.Instance?.UpdatePluginsNavVisibility();
         }
 
         partial void OnIsPrivacyModeActiveChanged(bool value)

@@ -1,0 +1,71 @@
+<Page
+    x:Class="AnywhereWinUI.Views.PluginsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid Margin="24,16,24,24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock Text="插件" Style="{StaticResource TitleTextBlockStyle}"/>
+                <TextBlock Text="使用 JavaScript 插件扩展 Swell Proxy 的功能"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                <Button x:Name="BtnAddPlugin" Click="BtnAddPlugin_Click"
+                        Style="{StaticResource AccentButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE710;" FontSize="14"/>
+                        <TextBlock Text="添加插件"/>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="BtnOpenFolder" Click="BtnOpenFolder_Click" ToolTipService.ToolTip="打开插件目录">
+                    <FontIcon Glyph="&#xE8B7;" FontSize="14"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Info Bar -->
+        <InfoBar x:Name="InfoBarMain" Grid.Row="1" IsClosable="True"/>
+
+        <!-- Plugin List -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="PluginListPanel" Spacing="8">
+                <!-- Empty state -->
+                <StackPanel x:Name="EmptyState" 
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Margin="0,80,0,0" Spacing="12">
+                    <FontIcon Glyph="&#xECAA;" FontSize="48"
+                              Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                    <TextBlock Text="还没有插件" HorizontalAlignment="Center"
+                               Style="{StaticResource SubtitleTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="点击「添加插件」导入一个本地 .js 文件来开始使用" 
+                               HorizontalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                    <Button Content="添加插件" HorizontalAlignment="Center"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Click="BtnAddPlugin_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

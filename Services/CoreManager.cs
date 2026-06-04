@@ -180,6 +180,7 @@ namespace AnywhereWinUI.Services
                 _process.Exited += (_, _) =>
                 {
                     AppendLog("[sing-box 进程已退出]");
+                    _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStopped);
                     if (AppSession.Instance.EnableTunMode)
                     {
                         var tunService = new TunService();
@@ -215,6 +216,7 @@ namespace AnywhereWinUI.Services
                 }
 
                 RunningChanged?.Invoke(this, true);
+                _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStarted);
                 StartStatsPolling();
                 if (AppSession.Instance.EnableSystemProxy)
                 {
@@ -283,7 +285,11 @@ namespace AnywhereWinUI.Services
             try
             {
                 if (!_process.HasExited)
+                {
+                    // Give plugins a chance to react before the core is killed
+                    _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnBeforeCoreStop);
                     _process.Kill(entireProcessTree: true);
+                }
 
                 // Wait up to 3 s; if the process still hasn't exited, abandon it and move on
                 // so we never block the caller indefinitely.

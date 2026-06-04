@@ -131,6 +131,7 @@ namespace AnywhereWinUI
             // AppOnboarding is now a ContentControl placeholder; actual content is inserted here.
             UpdateRoutingNavVisibility();
             UpdateDashboardNavVisibility();
+            UpdatePluginsNavVisibility();
         }
 
         public void UpdateDashboardNavVisibility()
@@ -142,6 +143,21 @@ namespace AnywhereWinUI
                     : Visibility.Collapsed;
 
                 if (!AnywhereWinUI.Services.AppSession.Instance.EnableClassicDashboard && MainNav.SelectedItem == DashboardNavItem)
+                {
+                    MainNav.SelectedItem = ServersNavItem;
+                }
+            }
+        }
+
+        public void UpdatePluginsNavVisibility()
+        {
+            if (PluginsNavItem != null)
+            {
+                PluginsNavItem.Visibility = AnywhereWinUI.Services.AppSession.Instance.EnablePlugins 
+                    ? Visibility.Visible 
+                    : Visibility.Collapsed;
+
+                if (!AnywhereWinUI.Services.AppSession.Instance.EnablePlugins && MainNav.SelectedItem == PluginsNavItem)
                 {
                     MainNav.SelectedItem = ServersNavItem;
                 }
@@ -203,6 +219,7 @@ namespace AnywhereWinUI
                     "connections" => typeof(AnywhereWinUI.Views.ConnectionsPage),
                     "servers"     => typeof(AnywhereWinUI.Views.ServersPage),
                     "routing"     => typeof(AnywhereWinUI.Views.RoutingPage),
+                    "plugins"     => typeof(AnywhereWinUI.Views.PluginsPage),
                     "logs"        => typeof(AnywhereWinUI.Views.LogsPage),
                     "settings"    => typeof(AnywhereWinUI.Views.SettingsPage),
                     _ => null
@@ -1027,6 +1044,10 @@ namespace AnywhereWinUI
         {
             // Stop backend engine core completely
             await CoreManager.Instance.StopAsync();
+
+            // Fire shutdown trigger so plugins can clean up
+            await AnywhereWinUI.Plugins.PluginManager.Instance.FireAsync(
+                AnywhereWinUI.Plugins.PluginTrigger.OnShutdown);
 
             // Quit application process
             _windowManager.Dispose();

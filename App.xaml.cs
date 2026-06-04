@@ -1,15 +1,22 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using AnywhereWinUI.Services;
+using AnywhereWinUI.Plugins;
 
 namespace AnywhereWinUI
 {
     public partial class App : Application
     {
         private Window? _window;
+        public IntPtr MainWindowHandle => _window != null
+            ? WinRT.Interop.WindowNative.GetWindowHandle(_window)
+            : IntPtr.Zero;
+
+
 
         /// <summary>
         /// Gets the current <see cref="App"/> instance in use
@@ -116,7 +123,17 @@ namespace AnywhereWinUI
 
                 _window = new MainWindow();
                 _window.Activate();
-                
+
+                // ── Plugin system: load manifests and initialise enabled plugins ──────
+                if (AppSession.Instance.EnablePlugins)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        await PluginManager.Instance.LoadAllAsync();
+                        await PluginManager.Instance.FireAsync(PluginTrigger.OnStartup);
+                    });
+                }
+
                 if (isTunRestart && isAutoStart)
                 {
                     // Auto-start proxy if it was running before UAC restart

@@ -316,6 +316,24 @@ namespace AnywhereWinUI.Services
                     }
                 }
 
+                // ── OnSubscribe plugin hook ──────────────────────────────────
+                // Serialize nodes to JSON, let plugins filter/transform, then deserialize back.
+                try
+                {
+                    var opts = new System.Text.Json.JsonSerializerOptions();
+                    var nodesJson = System.Text.Json.JsonSerializer.Serialize(newNodes, opts);
+                    var transformedJson = await Plugins.PluginManager.Instance
+                        .FireSubscribeAsync(nodesJson, sub.Name);
+                    if (!string.Equals(transformedJson, nodesJson, System.StringComparison.Ordinal))
+                    {
+                        var transformed = System.Text.Json.JsonSerializer
+                            .Deserialize<List<PersistedNode>>(transformedJson, opts);
+                        if (transformed != null)
+                            newNodes = transformed;
+                    }
+                }
+                catch { /* Plugin errors must not break subscription update */ }
+
                 // Clear old nodes for this sub
                 Nodes.RemoveAll(n => n.SubscriptionId == subId);
                 Nodes.AddRange(newNodes);

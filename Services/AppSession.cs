@@ -30,6 +30,7 @@ namespace AnywhereWinUI.Services
 
         // UI Preferences
         public bool EnableClassicDashboard { get; set; } = false;
+        public bool EnablePlugins { get; set; } = false;
         
         // Privacy Mode
         public bool IsPrivacyModeActive { get; set; } = false;
@@ -76,6 +77,7 @@ namespace AnywhereWinUI.Services
 
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("bypassChina", out var bc)) BypassChina = bc;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableClassicDashboard", out var ecd)) EnableClassicDashboard = ecd;
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enablePlugins", out var ep)) EnablePlugins = ep;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("isPrivacyModeActive", out var ipm)) IsPrivacyModeActive = ipm;
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("privacyPassword", out var pwd) && !string.IsNullOrEmpty(pwd)) PrivacyPassword = pwd;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("blockAds", out var ba)) BlockAds = ba;

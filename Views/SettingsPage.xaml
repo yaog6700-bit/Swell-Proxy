@@ -210,6 +210,17 @@
                                 <ToggleSwitch Grid.Column="1" VerticalAlignment="Center" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.IsPrivacyModeActive, Mode=TwoWay}" HorizontalAlignment="Right"/>
                             </Grid>
                         </Border>
+
+                        <!-- Plugins System Switch -->
+                        <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,16">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel VerticalAlignment="Center" Spacing="4">
+                                    <TextBlock Text="启用插件系统" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="开启后侧边栏将显示「插件」入口，支持加载 JavaScript 插件扩展客户端功能。关闭后插件不会被加载，与未安装插件系统完全一致" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" VerticalAlignment="Center" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnablePlugins, Mode=TwoWay}" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
 
                     <!-- Panel: Tailscale 组网 -->

@@ -93,7 +93,12 @@ namespace AnywhereWinUI.Services
                 config["endpoints"] = BuildEndpoints(session);
             }
 
-            return config.ToJsonString(JsonOpts);
+            var configJson = config.ToJsonString(JsonOpts);
+
+            // Allow plugins to modify the config before it is written to disk
+            configJson = await Plugins.PluginManager.Instance.FireBeforeCoreStartAsync(configJson);
+
+            return configJson;
         }
 
         private static JsonArray BuildEndpoints(AppSession session)

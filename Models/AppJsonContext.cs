@@ -21,6 +21,10 @@ namespace AnywhereWinUI.Models
     [JsonSerializable(typeof(ClashConnectionNode))]
     [JsonSerializable(typeof(ClashMetadata))]
     [JsonSerializable(typeof(IpInfoResponse))]
+    [JsonSerializable(typeof(AnywhereWinUI.Plugins.PluginManifest))]
+    [JsonSerializable(typeof(List<AnywhereWinUI.Plugins.PluginManifest>))]
+    [JsonSerializable(typeof(AnywhereWinUI.Plugins.PluginConfigItem))]
+    [JsonSerializable(typeof(List<AnywhereWinUI.Plugins.PluginConfigItem>))]
     public partial class AppJsonContext : JsonSerializerContext
     {
     }
