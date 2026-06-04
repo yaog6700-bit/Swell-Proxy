@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Windows.AppNotifications;
 using AnywhereWinUI.Services;
 using AnywhereWinUI.Plugins;
 
@@ -120,6 +121,9 @@ namespace AnywhereWinUI
                 new Services.AppUpdateService().CleanupOldStagingDirs();
 
                 AnywhereWinUI.Services.ClipboardMonitorService.Instance.Start();
+
+                // ── Register notification service (required for Toast to work) ──────
+                try { AppNotificationManager.Default.Register(); } catch { }
 
                 _window = new MainWindow();
                 _window.Activate();
