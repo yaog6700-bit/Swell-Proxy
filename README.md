@@ -13,7 +13,7 @@
 [![License](https://img.shields.io/github/license/yaog6700-bit/Swell-Proxy?style=flat-square&label=协议)](LICENSE)
 
 </div>
-![TU0t63tT5daa13T4xZhKFEMyIZX9BHlY.webp](https://cdn.nodeimage.com/i/TU0t63tT5daa13T4xZhKFEMyIZX9BHlY.webp)
+
 ---
 
 ##  简介
