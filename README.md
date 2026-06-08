@@ -1,6 +1,7 @@
 <div align="center">
 
 <img src="Assets/output.ico" width="96" height="96" alt="Swell Proxy Logo"/>
+![TU0t63tT5daa13T4xZhKFEMyIZX9BHlY.webp](https://cdn.nodeimage.com/i/TU0t63tT5daa13T4xZhKFEMyIZX9BHlY.webp)
 
 # Swell Proxy
 
