@@ -826,6 +826,27 @@ namespace AnywhereWinUI.Services
                     proxyOutbound["obfs"] = obfsObj;
                 }
             }
+            else if (protoLower == "nowhere")
+            {
+                proxyOutbound["type"] = "nowhere";
+                proxyOutbound["key"] = passwordVal;
+                
+                if (!string.IsNullOrEmpty(node.Spec))
+                {
+                    proxyOutbound["spec"] = node.Spec;
+                }
+                
+                if (!string.IsNullOrEmpty(node.Alpn))
+                {
+                    proxyOutbound["alpn"] = node.Alpn;
+                }
+
+                proxyOutbound["tls"] = new JsonObject
+                {
+                    ["enabled"] = true,
+                    ["insecure"] = allowInsecureVal
+                };
+            }
             else if (protoLower == "socks" || protoLower == "socks5")
             {
                 proxyOutbound["type"] = "socks";

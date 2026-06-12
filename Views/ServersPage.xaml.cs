@@ -1,4 +1,4 @@
-﻿using AnywhereWinUI.Helpers;
+using AnywhereWinUI.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -1851,6 +1851,7 @@ namespace AnywhereWinUI.Views
                     "WIREGUARD" => 10,
                     "WG" => 10,
                     "SNELL" => 11,
+                    "NOWHERE" => 12,
                     _ => 0
                 };
                 // 暂存 Encryption 到 Tag 中，以便 UpdateFormFieldsVisibility 能够读取到要恢复的值
@@ -2009,6 +2010,8 @@ namespace AnywhereWinUI.Views
 
                 ServerAlpnInput.Text = node.Alpn ?? string.Empty;
                 ServerSpiderXInput.Text = node.SpiderX ?? string.Empty;
+                if (ServerNowhereSpecInput != null)
+                    ServerNowhereSpecInput.Text = node.Spec ?? string.Empty;
 
                 PopulateProxyChainOptions(node.Id);
                 if (!string.IsNullOrEmpty(node.ProxyChainId))
@@ -2133,6 +2136,7 @@ namespace AnywhereWinUI.Views
 
             string alpn = ServerAlpnInput.Text.Trim();
             string spiderX = ServerSpiderXInput.Text.Trim();
+            string nowhereSpec = ServerNowhereSpecInput != null ? ServerNowhereSpecInput.Text.Trim() : string.Empty;
 
             var proxyChainItem = ServerProxyChainInput.SelectedItem as ComboBoxItem;
             string proxyChainId = proxyChainItem != null ? (proxyChainItem.Tag as string ?? string.Empty) : string.Empty;
@@ -2193,6 +2197,7 @@ namespace AnywhereWinUI.Views
                     HeaderType = headerType,
                     Alpn = alpn,
                     SpiderX = spiderX,
+                    Spec = nowhereSpec,
                     ProxyChainId = proxyChainId,
                     WgPrivateKey = wgPrivateKey,
                     WgLocalAddress = wgLocalAddress,
@@ -2237,6 +2242,7 @@ namespace AnywhereWinUI.Views
                     node.HeaderType = headerType;
                     node.Alpn = alpn;
                     node.SpiderX = spiderX;
+                    node.Spec = nowhereSpec;
                     node.ProxyChainId = proxyChainId;
                     node.WgPrivateKey = wgPrivateKey;
                     node.WgLocalAddress = wgLocalAddress;
@@ -2430,9 +2436,9 @@ namespace AnywhereWinUI.Views
                 proto = (cbi.Content?.ToString() ?? "").ToUpper();
             }
 
-            // 1. Password Panel: visible for Shadowsocks, Trojan, Hysteria 2, TUIC, NaiveProxy, SOCKS, HTTP
+            // 1. Password Panel: visible for Shadowsocks, Trojan, Hysteria 2, TUIC, NaiveProxy, SOCKS, HTTP, NOWHERE
             bool showPassword = proto == "SHADOWSOCKS" || proto == "TROJAN" || proto == "HYSTERIA 2" || 
-                               proto == "TUIC" || proto == "NAIVEPROXY" || proto == "SOCKS" || proto == "HTTP";
+                               proto == "TUIC" || proto == "NAIVEPROXY" || proto == "SOCKS" || proto == "HTTP" || proto == "NOWHERE";
             PasswordPanel.Visibility = showPassword ? Visibility.Visible : Visibility.Collapsed;
 
             // 2. UUID Panel: visible for VLESS, VMess, TUIC, NaiveProxy, SOCKS, HTTP
@@ -2464,12 +2470,12 @@ namespace AnywhereWinUI.Views
             // Update encryption choices based on protocol
             UpdateEncryptionDropdown(proto);
 
-            // 4. Network Panel: not applicable to Hysteria 2, TUIC, NaiveProxy
-            bool showNetwork = proto != "HYSTERIA 2" && proto != "TUIC" && proto != "NAIVEPROXY";
+            // 4. Network Panel: not applicable to Hysteria 2, TUIC, NaiveProxy, NOWHERE
+            bool showNetwork = proto != "HYSTERIA 2" && proto != "TUIC" && proto != "NAIVEPROXY" && proto != "NOWHERE";
             NetworkPanel.Visibility = showNetwork ? Visibility.Visible : Visibility.Collapsed;
 
-            // 5. Security Panel: not applicable to Hysteria 2, TUIC, NaiveProxy, SOCKS
-            bool showSecurity = proto != "HYSTERIA 2" && proto != "TUIC" && proto != "NAIVEPROXY" && proto != "SOCKS";
+            // 5. Security Panel: not applicable to Hysteria 2, TUIC, NaiveProxy, SOCKS, NOWHERE
+            bool showSecurity = proto != "HYSTERIA 2" && proto != "TUIC" && proto != "NAIVEPROXY" && proto != "SOCKS" && proto != "NOWHERE";
             SecurityPanel.Visibility = showSecurity ? Visibility.Visible : Visibility.Collapsed;
 
             // Get selected Network and Security
@@ -2489,9 +2495,9 @@ namespace AnywhereWinUI.Views
             bool showPathHost = showNetwork && (network == "WS" || network == "GRPC" || network == "XHTTP" || network == "H2");
             PathHostPanel.Visibility = showPathHost ? Visibility.Visible : Visibility.Collapsed;
 
-            // 7. TLS Panel: visible when Security is TLS/REALITY, or protocol is Hysteria 2, TUIC, NaiveProxy, AnyTLS
+            // 7. TLS Panel: visible when Security is TLS/REALITY, or protocol is Hysteria 2, TUIC, NaiveProxy, AnyTLS, NOWHERE
             bool isTls = (showSecurity && (security == "TLS" || security == "REALITY")) || 
-                         proto == "HYSTERIA 2" || proto == "TUIC" || proto == "NAIVEPROXY" || proto == "ANYTLS";
+                         proto == "HYSTERIA 2" || proto == "TUIC" || proto == "NAIVEPROXY" || proto == "ANYTLS" || proto == "NOWHERE";
             TlsPanel.Visibility = isTls ? Visibility.Visible : Visibility.Collapsed;
 
             // 8. Reality Panel: visible when Security is REALITY
@@ -2520,6 +2526,10 @@ namespace AnywhereWinUI.Views
 
             // 15. Snell Panel
             SnellPanel.Visibility = proto == "SNELL" ? Visibility.Visible : Visibility.Collapsed;
+
+            // 16. Nowhere Panel
+            if (NowherePanel != null)
+                NowherePanel.Visibility = proto == "NOWHERE" ? Visibility.Visible : Visibility.Collapsed;
 
             // Hide standard panels that don't apply to Snell
             if (proto == "SNELL")

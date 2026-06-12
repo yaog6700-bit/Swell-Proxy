@@ -36,6 +36,7 @@ namespace AnywhereWinUI.Services
             if (rawLink.StartsWith("socks5://",      StringComparison.OrdinalIgnoreCase)) return ParseSocks(rawLink);
             if (rawLink.StartsWith("socks://",       StringComparison.OrdinalIgnoreCase)) return ParseSocks(rawLink);
             if (rawLink.StartsWith("wireguard://",   StringComparison.OrdinalIgnoreCase)) return ParseWireGuard(rawLink);
+            if (rawLink.StartsWith("nowhere://",     StringComparison.OrdinalIgnoreCase)) return ParseNowhere(rawLink);
             if (rawLink.StartsWith("https://",       StringComparison.OrdinalIgnoreCase)) return ParseHttp(rawLink);
             // Note: http:// must come last among http* prefixes to avoid shadowing http2://
             if (rawLink.StartsWith("http://",        StringComparison.OrdinalIgnoreCase)) return ParseHttp(rawLink);
@@ -607,6 +608,42 @@ namespace AnywhereWinUI.Services
                     WgPreSharedKey = preSharedKey,
                     WgMtu          = mtu,
                     Network        = "udp"
+                };
+            }
+            catch { return null; }
+        }
+
+        // ── Nowhere ───────────────────────────────────────────────────────────
+        // nowhere://key@host:port?spec=...&alpn=...&insecure=1#name
+
+        private static PersistedNode? ParseNowhere(string link)
+        {
+            try
+            {
+                var uri = new Uri(link);
+                var key = Uri.UnescapeDataString(uri.UserInfo);
+                var name = string.IsNullOrEmpty(uri.Fragment)
+                    ? string.Empty
+                    : Uri.UnescapeDataString(uri.Fragment.TrimStart('#'));
+
+                var query = ParseQuery(uri.Query);
+                var spec = Q(query, "spec") ?? string.Empty;
+                var alpn = Q(query, "alpn") ?? string.Empty;
+                var allowInsecure = IsTruthy(Q(query, "allowInsecure")) || IsTruthy(Q(query, "insecure"));
+
+                var port = uri.Port > 0 ? uri.Port : 11111;
+
+                return new PersistedNode
+                {
+                    Name = name,
+                    Protocol = "Nowhere",
+                    Host = FormatHostPortPublic(uri.Host, port),
+                    Password = key,
+                    Spec = spec,
+                    Alpn = alpn,
+                    Network = "tcp",
+                    Security = "tls",
+                    AllowInsecure = allowInsecure
                 };
             }
             catch { return null; }

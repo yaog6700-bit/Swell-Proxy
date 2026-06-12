@@ -1,4 +1,4 @@
-﻿using AnywhereWinUI.Helpers;
+using AnywhereWinUI.Helpers;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -297,7 +297,12 @@ namespace AnywhereWinUI.Views
             Directory.CreateDirectory(pluginsDir);
 
             var destName = file.Name;
-            File.Copy(file.Path, Path.Combine(pluginsDir, destName), overwrite: true);
+            var destPath = Path.Combine(pluginsDir, destName);
+            File.Copy(file.Path, destPath, overwrite: true);
+
+            // Auto-detect triggers from the JS source code
+            var code = await File.ReadAllTextAsync(destPath);
+            var triggers = PluginManager.DetectTriggersFromCode(code);
 
             var manifest = new PluginManifest
             {
@@ -305,12 +310,12 @@ namespace AnywhereWinUI.Views
                 Name = Path.GetFileNameWithoutExtension(destName),
                 Type = "File",
                 Path = $"plugins/{destName}",
-                Triggers = ["OnManual"],
+                Triggers = triggers,
                 Disabled = false
             };
 
             await PluginManager.Instance.AddPluginAsync(manifest);
-            ShowInfo("插件已添加", $"已成功加载插件 {manifest.Name}", InfoBarSeverity.Success);
+            ShowInfo("插件已添加", $"已成功加载插件 {manifest.Name}（触发器: {string.Join(", ", triggers)}）", InfoBarSeverity.Success);
             RefreshList();
         }
 
@@ -328,7 +333,7 @@ namespace AnywhereWinUI.Views
                 Type = "Http",
                 Path = $"plugins/{filename}",
                 Url = url,
-                Triggers = ["OnManual"],
+                Triggers = ["OnManual"],  // Temporary; will be updated after download
                 Disabled = false
             };
 
@@ -337,7 +342,19 @@ namespace AnywhereWinUI.Views
             {
                 await PluginManager.Instance.AddPluginAsync(manifest);
                 await PluginManager.Instance.UpdatePluginAsync(manifest.Id);
-                ShowInfo("安装成功", manifest.Name, InfoBarSeverity.Success);
+
+                // Re-detect triggers from the downloaded code
+                var pluginPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SwellProxy", manifest.Path.Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(pluginPath))
+                {
+                    var code = await File.ReadAllTextAsync(pluginPath);
+                    manifest.Triggers = PluginManager.DetectTriggersFromCode(code);
+                    await PluginManager.Instance.SaveAsync();
+                }
+
+                ShowInfo("安装成功", $"{manifest.Name}（触发器: {string.Join(", ", manifest.Triggers)}）", InfoBarSeverity.Success);
                 RefreshList();
             }
             catch (Exception ex)

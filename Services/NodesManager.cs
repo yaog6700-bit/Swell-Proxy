@@ -43,6 +43,7 @@ namespace AnywhereWinUI.Services
         public string? ShortId { get; set; }        // Reality sid
         public string? SpiderX { get; set; }        // Reality spx
         public string? Flow { get; set; }
+        public string? Spec { get; set; }           // Nowhere spec
         public bool    AllowInsecure { get; set; }
 
         // Hysteria2 obfuscation
@@ -753,6 +754,16 @@ namespace AnywhereWinUI.Services
                     
                     var qString = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
                     return $"hysteria2://{node.Password}@{node.Host}{qString}#{name}";
+                }
+                else if (node.Protocol == "Nowhere")
+                {
+                    var qs = new List<string>();
+                    if (!string.IsNullOrEmpty(node.Spec)) qs.Add($"spec={Uri.EscapeDataString(node.Spec)}");
+                    if (!string.IsNullOrEmpty(node.Alpn)) qs.Add($"alpn={Uri.EscapeDataString(node.Alpn)}");
+                    if (node.AllowInsecure) qs.Add("insecure=1");
+
+                    var qString = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
+                    return $"nowhere://{node.Password}@{node.Host}{qString}#{name}";
                 }
             }
             catch { }

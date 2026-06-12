@@ -385,6 +385,7 @@
                         <ComboBoxItem Content="HTTP"/>
                         <ComboBoxItem Content="WireGuard"/>
                         <ComboBoxItem Content="Snell"/>
+                        <ComboBoxItem Content="Nowhere"/>
                     </ComboBox>
 
                     <!-- 前置代理 (Proxy Chain) -->
@@ -425,6 +426,11 @@
                         <TextBox x:Name="ServerWgLocalAddressInput" Header="本地地址 (Local Address)" PlaceholderText="10.0.0.2/32" />
                         <TextBox x:Name="ServerWgPreSharedKeyInput" Header="预共享密钥 (Pre-Shared Key)" PlaceholderText="可选" />
                         <TextBox x:Name="ServerWgMtuInput" Header="MTU" InputScope="Number" PlaceholderText="1408 (为 0 则使用默认)" />
+                    </StackPanel>
+
+                    <!-- Nowhere 设置 -->
+                    <StackPanel x:Name="NowherePanel" Spacing="8" Visibility="Collapsed">
+                        <TextBox x:Name="ServerNowhereSpecInput" Header="Spec" PlaceholderText="请输入 Nowhere 的 Spec" />
                     </StackPanel>
 
                     <!-- Snell 设置 -->

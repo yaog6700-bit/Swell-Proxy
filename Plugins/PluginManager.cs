@@ -36,10 +36,17 @@ namespace AnywhereWinUI.Plugins
 
         /// <summary>
         /// Called once at app startup. Loads manifests and initialises enabled plugins.
+        /// On first run (no plugins.json), seeds bundled example plugins from Assets/plugins/.
         /// </summary>
         public async Task LoadAllAsync()
         {
             Directory.CreateDirectory(PluginsDir);
+
+            // ── First-run: seed built-in plugins from Assets/plugins/ ────
+            if (!File.Exists(ManifestsPath))
+            {
+                await SeedBuiltInPluginsAsync();
+            }
 
             if (!File.Exists(ManifestsPath))
                 return;
@@ -62,6 +69,91 @@ namespace AnywhereWinUI.Plugins
                     await LoadPluginAsync(manifest);
             }
         }
+
+        /// <summary>
+        /// Scans the bundled Assets/plugins/ directory for .js files,
+        /// detects triggers from function definitions, copies them to the
+        /// runtime plugins directory, and creates the initial plugins.json.
+        /// </summary>
+        private async Task SeedBuiltInPluginsAsync()
+        {
+            try
+            {
+                var assetsPluginsDir = Path.Combine(AppContext.BaseDirectory, "Assets", "plugins");
+                if (!Directory.Exists(assetsPluginsDir))
+                    return;
+
+                var jsFiles = Directory.GetFiles(assetsPluginsDir, "*.js");
+                if (jsFiles.Length == 0)
+                    return;
+
+                var seeded = new List<PluginManifest>();
+
+                foreach (var srcFile in jsFiles)
+                {
+                    var fileName = Path.GetFileName(srcFile);
+                    var baseName = Path.GetFileNameWithoutExtension(fileName);
+                    var destFile = Path.Combine(PluginsDir, fileName);
+
+                    // Copy to runtime directory
+                    File.Copy(srcFile, destFile, overwrite: true);
+
+                    // Read source and detect triggers from function definitions
+                    var code = await File.ReadAllTextAsync(srcFile);
+                    var triggers = DetectTriggersFromCode(code);
+
+                    var manifest = new PluginManifest
+                    {
+                        Id = baseName + "_" + Guid.NewGuid().ToString("N")[..6],
+                        Name = baseName,
+                        Type = "File",
+                        Path = $"plugins/{fileName}",
+                        Triggers = triggers,
+                        Disabled = false
+                    };
+
+                    seeded.Add(manifest);
+                    Log($"Seeded built-in plugin: {baseName} (triggers: {string.Join(", ", triggers)})");
+                }
+
+                if (seeded.Count > 0)
+                {
+                    Manifests = seeded;
+                    await SaveAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Failed to seed built-in plugins: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Scans JavaScript source code for global function definitions that match
+        /// known trigger names (e.g. "function OnManual()" → "OnManual").
+        /// </summary>
+        public static List<string> DetectTriggersFromCode(string jsCode)
+        {
+            var triggers = new List<string>();
+            var knownTriggers = Enum.GetNames(typeof(PluginTrigger));
+
+            foreach (var name in knownTriggers)
+            {
+                // Match patterns like: function OnManual( or function OnManual (
+                if (System.Text.RegularExpressions.Regex.IsMatch(
+                    jsCode, $@"\bfunction\s+{name}\s*\("))
+                {
+                    triggers.Add(name);
+                }
+            }
+
+            // Ensure OnManual is always included if no triggers found
+            if (triggers.Count == 0)
+                triggers.Add("OnManual");
+
+            return triggers;
+        }
+
 
         /// <summary>Saves the current manifest list to disk.</summary>
         public async Task SaveAsync()

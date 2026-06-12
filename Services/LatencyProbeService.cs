@@ -54,7 +54,8 @@ namespace AnywhereWinUI.Services
             var isUdpBased = string.Equals(protocol, "hysteria2", StringComparison.OrdinalIgnoreCase)
                           || string.Equals(protocol, "tuic",      StringComparison.OrdinalIgnoreCase)
                           || string.Equals(protocol, "hysteria 2", StringComparison.OrdinalIgnoreCase)
-                          || string.Equals(protocol, "hysteria",  StringComparison.OrdinalIgnoreCase);
+                          || string.Equals(protocol, "hysteria",  StringComparison.OrdinalIgnoreCase)
+                          || string.Equals(protocol, "nowhere",   StringComparison.OrdinalIgnoreCase);
 
             if (!isUdpBased)
             {

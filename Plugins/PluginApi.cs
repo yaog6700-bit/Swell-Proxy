@@ -71,12 +71,17 @@ namespace AnywhereWinUI.Plugins
         {
             try
             {
-                return _http.GetStringAsync(url).GetAwaiter().GetResult();
+                var response = _http.GetAsync(url).GetAwaiter().GetResult();
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
+                }
+                return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
                 LogError($"HttpGet failed ({url}): {ex.Message}");
-                throw;
+                throw new Jint.Runtime.JavaScriptException(ex.Message);
             }
         }
 
@@ -89,12 +94,16 @@ namespace AnywhereWinUI.Plugins
             {
                 using var content = new StringContent(body, System.Text.Encoding.UTF8, contentType);
                 var response = _http.PostAsync(url, content).GetAwaiter().GetResult();
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
+                }
                 return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
                 LogError($"HttpPost failed ({url}): {ex.Message}");
-                throw;
+                throw new Jint.Runtime.JavaScriptException(ex.Message);
             }
         }
 

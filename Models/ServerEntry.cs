@@ -89,6 +89,9 @@ namespace AnywhereWinUI.Models
         /// <summary>VLESS flow: "xtls-rprx-vision" or empty string.</summary>
         [ObservableProperty] public partial string Flow { get; set; }
 
+        [ObservableProperty] public partial string Spec { get; set; }
+
+
         [ObservableProperty] public partial string VlessEncryption { get; set; }
         [ObservableProperty] public partial string Alpn { get; set; }
         [ObservableProperty] public partial string HeaderType { get; set; }
@@ -140,6 +143,7 @@ namespace AnywhereWinUI.Models
             "http"       => "HTTP",
             "wireguard"  => "WireGuard",
             "snell"      => "Snell",
+            "nowhere"    => "Nowhere",
             _            => Protocol ?? string.Empty
         };
 
