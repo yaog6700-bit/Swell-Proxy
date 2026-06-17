@@ -1,4 +1,4 @@
-﻿using AnywhereWinUI.Helpers;
+using AnywhereWinUI.Helpers;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -1125,8 +1125,14 @@ namespace AnywhereWinUI
 
         private void SetMiniMode(bool isMini)
         {
+            if (_isMiniMode == isMini) return;
+
+            var incoming = isMini ? (FrameworkElement)MiniModeGrid : FullModeGrid;
+
+            AnywhereWinUI.Helpers.WindowModeTransition.PrepareHidden(incoming);
             _isMiniMode = isMini;
             ApplyWindowMode(isMini);
+            AnywhereWinUI.Helpers.WindowModeTransition.FadeIn(incoming);
         }
 
         private void ApplyWindowMode(bool isMini)

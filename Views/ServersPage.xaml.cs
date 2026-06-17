@@ -1569,37 +1569,50 @@ namespace AnywhereWinUI.Views
                 var geminiTask = aiService.CheckGeminiAsync(proxyPort, token);
                 var ipInfoTask = ipInfoService.GetIpInfoAsync(proxyPort, token);
 
-                await Task.WhenAll(openAiTask, claudeTask, geminiTask, ipInfoTask);
-
-                if (token.IsCancellationRequested) return;
-
-                _openAiStatus = await openAiTask;
-                _claudeStatus = await claudeTask;
-                _geminiStatus = await geminiTask;
-                var ipInfo = await ipInfoTask;
-
-                if (ipInfo != null)
+                async Task RunOne(Task<AiUnlockStatus> check, Action<AiUnlockStatus> assign)
                 {
-                    _activeIpAddress = ipInfo.ip ?? "-";
-                    var org = ipInfo.asOrganization ?? "-";
-                    if (IsDatacenter(org))
+                    var status = await check;
+                    if (token.IsCancellationRequested) return;
+                    assign(status);
+                    DispatcherQueue.TryEnqueue(() => UpdateAiAndIpDisplay());
+                }
+
+                async Task RunIpInfo()
+                {
+                    var ipInfo = await ipInfoTask;
+                    if (token.IsCancellationRequested) return;
+                    
+                    if (ipInfo != null)
                     {
-                        _ipOrgCache = $"{org} [机房]";
+                        _activeIpAddress = ipInfo.ip ?? "-";
+                        var org = ipInfo.asOrganization ?? "-";
+                        if (IsDatacenter(org))
+                        {
+                            _ipOrgCache = $"{org} [机房]";
+                        }
+                        else
+                        {
+                            _ipOrgCache = org;
+                        }
+                        _ipAsnCache = ipInfo.asn?.ToString() ?? "-";
+                        _ipLocationCache = $"{ipInfo.city}, {ipInfo.region}, {ipInfo.country}";
                     }
                     else
                     {
-                        _ipOrgCache = org;
+                        _activeIpAddress = "-";
+                        _ipOrgCache = "获取失败";
+                        _ipAsnCache = "-";
+                        _ipLocationCache = "-";
                     }
-                    _ipAsnCache = ipInfo.asn?.ToString() ?? "-";
-                    _ipLocationCache = $"{ipInfo.city}, {ipInfo.region}, {ipInfo.country}";
+                    DispatcherQueue.TryEnqueue(() => UpdateAiAndIpDisplay());
                 }
-                else
-                {
-                    _activeIpAddress = "-";
-                    _ipOrgCache = "获取失败";
-                    _ipAsnCache = "-";
-                    _ipLocationCache = "-";
-                }
+
+                await Task.WhenAll(
+                    RunOne(openAiTask, s => _openAiStatus = s),
+                    RunOne(claudeTask, s => _claudeStatus = s),
+                    RunOne(geminiTask, s => _geminiStatus = s),
+                    RunIpInfo()
+                );
             }
             catch (Exception ex)
             {
