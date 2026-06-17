@@ -1,57 +1,97 @@
-# Snell V4 / V5 / V6 一键安装管理脚本
+<div align="center">
 
-这是一个极其轻量且功能强大的 Snell 代理服务端一键安装与管理脚本。支持在 Linux 系统上一键安装、平滑更新、完全卸载 Snell 的 V4、V5 和 V6 最新的版本。
+<img src="Assets/output.ico" width="96" height="96" alt="Swell Proxy Logo"/>
 
-## ✨ 核心特性
 
-- **多版本自由切换**：随心所欲安装 Snell V4、V5 或最新的 V6（自动从官网拉取最新小版本号）。
-- **全自动依赖处理**：完美解决 Snell V6 在 Debian/CentOS 运行时 `c-ares` 和 `libsodium` 库缺失导致服务启动失败（`status=127`）的问题。
-- **自定义端口与密码**：安装时可选择全自动随机生成，也可手动输入你习惯的自定义端口号与密码。
-- **Surge 节点配置直出**：安装完成后，自动抓取服务器公网 IP，并生成带正确版本号（Snell4/5/6）的一键复制 Surge 节点配置格式。
-- **平滑无损升级**：在 V4/V5/V6 之间切换或升级时，自动检测并保留原有配置文件，绝不丢失已有端口和密码。
-- **独立配置修改菜单**：提供专属的“查看/修改配置”功能，可随时查看当前配置，或一键修改端口和密码并自动重启生效。
+# Swell Proxy
 
-## 🚀 一键安装与使用
+**基于 sing-box 内核Windows原生代理客户端**
 
-请在你的 VPS 终端中使用 `root` 用户运行以下命令：
+[![Release](https://img.shields.io/github/v/release/yaog6700-bit/Swell-Proxy?style=flat-square&logo=github&label=最新版本)](https://github.com/yaog6700-bit/Swell-Proxy/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/yaog6700-bit/Swell-Proxy/total?style=flat-square&label=总下载量)](https://github.com/yaog6700-bit/Swell-Proxy/releases)
+[![Platform](https://img.shields.io/badge/平台-Windows%2010%2B-0078D4?style=flat-square&logo=windows11)](https://github.com/yaog6700-bit/Swell-Proxy/releases/latest)
+[![License](https://img.shields.io/github/license/yaog6700-bit/Swell-Proxy?style=flat-square&label=协议)](LICENSE)
 
-```bash
-bash <(curl -sL https://raw.githubusercontent.com/yaog6700-bit/snell-v6/main/snell.sh)
+</div>
+
+---
+
+##  简介
+
+Swell Proxy 是基于 **WinUI 3** 构建的 Windows 原生代理管理客户端，系统内存占用低，以 [sing-box](https://github.com/SagerNet/sing-box) 作为底层代理引擎。提供了精心设计的现代化界面，支持 Mica / Acrylic 窗口材质、以及丰富的路由分流、便捷使用链式代理和DNS 配置能力。
+
+---
+
+##  功能特性
+
+
+| 功能 | 说明 |
+|------|------|
+| **多协议** | VLESS · VMess · Shadowsocks · Trojan · Hysteria 2 · TUIC · WireGuard · SOCKS5 · HTTP · Naive · AnyTLS · Snell ·Tailscale|
+| **路由模式** | 规则分流 (Rule) / 全局代理 (Global) / 直连 (Direct) |
+| **代理模式** | 系统代理 / TUN 虚拟网卡/ 仅手动代理 |
+| **插件功能** | 
+
+---
+
+##  预览 
+![TU0t63tT5daa13T4xZhKFEMyIZX9BHlY.webp](https://cdn.nodeimage.com/i/TU0t63tT5daa13T4xZhKFEMyIZX9BHlY.webp)
+![Cd5ZrMyjLNK6vMNrOCfTLdLX7YUKCrmp.webp](https://cdn.nodeimage.com/i/Cd5ZrMyjLNK6vMNrOCfTLdLX7YUKCrmp.webp)
+![NoddMyUtzgHRckl5O4XfFLclOCqcDPHO.webp](https://cdn.nodeimage.com/i/NoddMyUtzgHRckl5O4XfFLclOCqcDPHO.webp)
+![xIEmWEiUWe7Azbr9Zkpf650aEYDZCIs3.webp](https://cdn.nodeimage.com/i/xIEmWEiUWe7Azbr9Zkpf650aEYDZCIs3.webp)
+![MmdmlYUtqjLBYClYTaQY8QxxPpo6jpaG.webp](https://cdn.nodeimage.com/i/MmdmlYUtqjLBYClYTaQY8QxxPpo6jpaG.webp)
+![DYvbJyBcC0cQXNniEcH3bxfwnCedKVZu.webp](https://cdn.nodeimage.com/i/DYvbJyBcC0cQXNniEcH3bxfwnCedKVZu.webp)
+
+
+
+
+
+
+
+##  下载安装
+
+前往 **[Releases 页面](https://github.com/yaog6700-bit/Swell-Proxy/releases/latest)** 下载最新版本：
+
+| 架构 | 适用场景 | 下载文件 |
+|------|----------|----------|
+| **x64** | 主流 Intel / AMD PC | `Swell-win-x64.zip` |
+| **ARM64** | 骁龙 X / Copilot+ PC | `Swell-win-arm64.zip` |
+
+
+> **系统要求：** Windows 10 版本 1809 (17763) 或更高，推荐 Windows 11
+
+
+
+##  数据目录
+
+所有用户数据存储于：
+
+```
+%LOCALAPPDATA%\SwellProxy\
+├── nodes_config.json              # 节点、订阅列表及个人设置
+├── local_settings.json            # 界面偏好（主题、窗口状态等）
+├── singbox_config.json            # 运行时生成的 sing-box 配置（自动覆盖）
+├── geosite-cn.srs                 # 路由规则集 — 中国域名
+├── geoip-cn.srs                   # 路由规则集 — 中国 IP
+├── geosite-category-ads-all.srs   # 广告拦截规则集
+└── Updates\                       # 客户端升级暂存（启动时自动清理）
 ```
 
-运行后将出现交互式主菜单，根据提示输入对应的数字即可：
+---
 
-```text
-=================================
-  Snell 代理一键安装管理脚本 [v1.0]
-  支持版本: V4 / V5 / V6
-=================================
-  1. 安装/更新 Snell V4
-  2. 安装/更新 Snell V5
-  3. 安装/更新 Snell V6 (推荐)
-  4. 完全卸载 Snell
-  5. 查看/修改配置 (端口和密码)
-  0. 退出脚本
-=================================
-请输入数字选项 [0-5]: 
-```
+##  开源协议
 
-## 🛠️ 系统架构支持
+基于 [MIT License](LICENSE) 开源，欢迎 PR 和 Issues。
 
-脚本会自动检测你的系统架构并下载对应版本的二进制文件：
-- `amd64` (x86_64)
-- `aarch64` (arm64)
-- `i386`
-- `armv7l` *(注：Snell V6 官方目前暂不提供 armv7l 包，脚本会自动拦截提示，建议这些设备使用 V5 或 V4)*
+---
 
-**系统支持**：支持所有使用 `systemd` 以及主流包管理器（`apt` / `yum`）的 Linux 发行版（Debian / Ubuntu / CentOS / RHEL 等）。
+## 🙏 致谢
 
-## 📝 注意事项
-
-1. 如果安装成功后 Surge 客户端无法连接，请务必检查 VPS 系统自带防火墙（如 `UFW` / `firewalld` / `iptables`）以及云服务商控制台（安全组）是否已**放行你配置的端口（TCP/UDP）**。
-2. Snell 官方建议客户端尽量保持协议更新，以获得最佳性能。
-3. 更多有关协议的设计与详细说明，请参阅 [Surge 官方手册](https://manual.nssurge.com/)。
-
-## 🤝 鸣谢与声明
-
-本脚本代码仅供学习与交流使用，底层基于 Snell 官方二进制文件构建，请遵循当地法律法规合理使用网络。
+- [SagerNet/sing-box](https://github.com/SagerNet/sing-box) — 强大的通用代理内核
+- [microsoft/microsoft-ui-xaml](https://github.com/microsoft/microsoft-ui-xaml) — WinUI 3 原生 UI 框架
+- [CommunityToolkit/Windows](https://github.com/CommunityToolkit/Windows) — WinUI 控件扩展库
+- [SagerNet/sing-geosite](https://github.com/SagerNet/sing-geosite) & [sing-geoip](https://github.com/SagerNet/sing-geoip) — 路由规则数据集
+- [PhoenixNil/XrayUI-dev](https://github.com/PhoenixNil/XrayUI-dev) — 设计参考
+- [dododook/FlowZ](https://github.com/dododook/FlowZ) — 设计参考
+- [Anywhere](https://github.com/NodePassProject/Anywhere)— 设计参考
+- [google/antigravity](https://antigravity.google/)— 本人不懂代码开发，真正开发者属于antigravity，谢谢倾力相助，实现程序梦。
