@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -320,7 +320,7 @@ namespace AnywhereWinUI.Views
             try
             {
                 var updater = new Services.CoreUpdateService();
-                var proxyUrl = CoreManager.Instance.IsRunning ? "socks5://127.0.0.1:2080" : null;
+                var proxyUrl = CoreManager.Instance.IsRunning ? $"socks5://127.0.0.1:{AppSession.Instance.MixedPort}" : null;
                 var info = await updater.CheckSingboxAsync(proxyUrl, CancellationToken.None);
 
                 if (info == null)
@@ -439,7 +439,7 @@ namespace AnywhereWinUI.Views
             try
             {
                 var updater = new AppUpdateService();
-                var proxyUrl = CoreManager.Instance.IsRunning ? "socks5://127.0.0.1:2080" : null;
+                var proxyUrl = CoreManager.Instance.IsRunning ? $"socks5://127.0.0.1:{AppSession.Instance.MixedPort}" : null;
                 var info = await updater.CheckAsync(proxyUrl, CancellationToken.None);
 
                 if (info == null)

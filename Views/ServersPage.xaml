@@ -479,6 +479,7 @@
                         <ComboBox x:Name="ServerNetworkInput" Header="传输协议 (Network)" HorizontalAlignment="Stretch" SelectionChanged="ServerNetworkInput_SelectionChanged">
                             <ComboBoxItem Content="tcp" IsSelected="True"/>
                             <ComboBoxItem Content="ws"/>
+                            <ComboBoxItem Content="httpupgrade"/>
                             <ComboBoxItem Content="grpc"/>
                             <ComboBoxItem Content="xhttp"/>
                             <ComboBoxItem Content="kcp"/>

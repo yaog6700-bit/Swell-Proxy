@@ -71,6 +71,13 @@ namespace AnywhereWinUI.ViewModels
         private bool _autoStart;
 
         [ObservableProperty]
+        private int _mixedPort = 2080;
+
+        // Guard flag: prevents OnAutoStartChanged from writing to the registry
+        // while LoadSettings() is initialising the property from the registry.
+        private bool _isLoading;
+
+        [ObservableProperty]
         private string _coreVersionText = "Checking...";
 
         [ObservableProperty]
@@ -150,9 +157,15 @@ namespace AnywhereWinUI.ViewModels
 
             try
             {
-                _autoStart = AutostartManager.IsAutostartEnabled();
+                _isLoading = true;
+                AutoStart = AutostartManager.IsAutostartEnabled();
+                MixedPort = AppSession.Instance.MixedPort;
             }
             catch { }
+            finally
+            {
+                _isLoading = false;
+            }
 
             var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
             Task.Run(() =>
@@ -280,6 +293,7 @@ namespace AnywhereWinUI.ViewModels
 
         partial void OnAutoStartChanged(bool value)
         {
+            if (_isLoading) return;
             try
             {
                 if (value)
@@ -288,6 +302,15 @@ namespace AnywhereWinUI.ViewModels
                     AutostartManager.DisableAutostart();
             }
             catch { }
+        }
+
+        partial void OnMixedPortChanged(int value)
+        {
+            if (_isLoading) return;
+            if (value < 1 || value > 65535) return;
+            AppSession.Instance.MixedPort = value;
+            Helpers.LocalSettingsHelper.SetValue("mixedPort", value);
+            _ = TriggerCoreRestartIfNeeded();
         }
 
         // ── Tailscale Change Handlers ─────────────────────────────────────────

@@ -496,9 +496,12 @@ namespace AnywhereWinUI.Services
                         // grpc serviceName
                         if (string.IsNullOrEmpty(path))
                             path = transportEl.TryGetProperty("service_name", out var snProp) ? snProp.GetString() ?? "" : "";
-                        // ws host header
+                        // ws host header (headers object)
                         if (transportEl.TryGetProperty("headers", out var headersEl))
                             wsHost = headersEl.TryGetProperty("Host", out var hostProp) ? hostProp.GetString() ?? "" : "";
+                        // httpupgrade host (direct string field)
+                        if (string.IsNullOrEmpty(wsHost) && network == "httpupgrade")
+                            wsHost = transportEl.TryGetProperty("host", out var huHostProp) ? huHostProp.GetString() ?? "" : "";
                     }
 
                     switch (type.ToLowerInvariant())

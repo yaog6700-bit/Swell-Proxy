@@ -220,7 +220,7 @@ namespace AnywhereWinUI.Services
                 StartStatsPolling();
                 if (AppSession.Instance.EnableSystemProxy)
                 {
-                    SystemProxyManager.EnableProxy("127.0.0.1", 2080);
+                    SystemProxyManager.EnableProxy("127.0.0.1", AppSession.Instance.MixedPort);
                     AppendLog("[SystemProxy] 系统代理已开启");
                 }
                 else if (AppSession.Instance.EnableTunMode)

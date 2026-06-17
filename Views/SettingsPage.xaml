@@ -685,6 +685,33 @@
                                 <ToggleSwitch x:Name="AutoStartSwitch" Grid.Column="1" VerticalAlignment="Center" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.AutoStart, Mode=TwoWay}" HorizontalAlignment="Right"/>
                             </Grid>
                         </Border>
+
+                        <!-- 本地代理端口设置 -->
+                        <TextBlock Text="本地代理端口" FontSize="14" FontWeight="Medium" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+                        <Border Background="Transparent"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16,16">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="4" VerticalAlignment="Center">
+                                    <TextBlock Text="混合代理端口 (SOCKS5 &amp; HTTP)" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="sing-box 在本机监听的混合代理端口，SOCKS5 和 HTTP 共用同一端口。修改后将自动重启代理内核生效（范围 1024–65535）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <NumberBox x:Name="MixedPortInput"
+                                           Grid.Column="1"
+                                           Width="110"
+                                           Minimum="1024"
+                                           Maximum="65535"
+                                           SpinButtonPlacementMode="Inline"
+                                           SmallChange="1"
+                                           LargeChange="100"
+                                           PlaceholderText="2080"
+                                           Value="{x:Bind ViewModel.MixedPort, Mode=TwoWay}"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
 
                     <!-- Panel 4: 备份与恢复 -->

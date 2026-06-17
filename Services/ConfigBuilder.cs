@@ -354,13 +354,13 @@ namespace AnywhereWinUI.Services
                 list.Add(tunObj);
             }
 
-            // mixed 入站：SOCKS5 + HTTP 共用端口 2080
+            // mixed 入站：SOCKS5 + HTTP 共用端口（用户可在设置中自定义）
             list.Add(new JsonObject
             {
                 ["type"]        = "mixed",
                 ["tag"]         = "mixed-in",
                 ["listen"]      = "127.0.0.1",
-                ["listen_port"] = 2080
+                ["listen_port"] = AppSession.Instance.MixedPort
             });
 
             return await System.Threading.Tasks.Task.FromResult(list);
@@ -877,6 +877,18 @@ namespace AnywhereWinUI.Services
                     ["path"] = pathVal,
                     ["headers"] = new JsonObject { ["Host"] = wsHostVal }
                 };
+            }
+            else if (networkVal == "httpupgrade")
+            {
+                var transportObj = new JsonObject
+                {
+                    ["type"] = "httpupgrade"
+                };
+                if (!string.IsNullOrEmpty(pathVal))
+                    transportObj["path"] = pathVal;
+                if (!string.IsNullOrEmpty(wsHostVal))
+                    transportObj["host"] = wsHostVal;
+                proxyOutbound["transport"] = transportObj;
             }
             else if (networkVal == "grpc")
             {

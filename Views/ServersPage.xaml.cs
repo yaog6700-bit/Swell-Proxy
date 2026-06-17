@@ -1562,7 +1562,7 @@ namespace AnywhereWinUI.Views
             {
                 var ipInfoService = new IpInfoService();
                 var aiService = new AiUnlockCheckService();
-                int proxyPort = 2080;
+                int proxyPort = AppSession.Instance.MixedPort;
 
                 var openAiTask = aiService.CheckOpenAiAsync(proxyPort, token);
                 var claudeTask = aiService.CheckClaudeAsync(proxyPort, token);
@@ -1940,11 +1940,12 @@ namespace AnywhereWinUI.Views
                     {
                         "tcp" => 0,
                         "ws" => 1,
-                        "grpc" => 2,
-                        "xhttp" => 3,
-                        "kcp" => 4,
-                        "quic" => 5,
-                        "h2" => 6,
+                        "httpupgrade" => 2,
+                        "grpc" => 3,
+                        "xhttp" => 4,
+                        "kcp" => 5,
+                        "quic" => 6,
+                        "h2" => 7,
                         _ => 0
                     };
                 }
@@ -2491,8 +2492,8 @@ namespace AnywhereWinUI.Views
                 security = (secItem.Content?.ToString() ?? "").ToUpper();
             }
 
-            // 6. Path & WsHost Panel: visible when Network is WS, GRPC, XHTTP, H2
-            bool showPathHost = showNetwork && (network == "WS" || network == "GRPC" || network == "XHTTP" || network == "H2");
+            // 6. Path & WsHost Panel: visible when Network is WS, HTTPUPGRADE, GRPC, XHTTP, H2
+            bool showPathHost = showNetwork && (network == "WS" || network == "HTTPUPGRADE" || network == "GRPC" || network == "XHTTP" || network == "H2");
             PathHostPanel.Visibility = showPathHost ? Visibility.Visible : Visibility.Collapsed;
 
             // 7. TLS Panel: visible when Security is TLS/REALITY, or protocol is Hysteria 2, TUIC, NaiveProxy, AnyTLS, NOWHERE

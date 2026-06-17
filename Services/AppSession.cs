@@ -20,6 +20,9 @@ namespace AnywhereWinUI.Services
         public bool EnableSystemProxy => ProxyModeIndex == 0;
         public string? LastTunServerHost { get; set; }
 
+        // Local Proxy Port (mixed SOCKS5+HTTP inbound)
+        public int MixedPort { get; set; } = 2080;
+
         // Routing Rules State
         public bool BypassChina { get; set; } = true;
         public bool BlockAds { get; set; } = true;
@@ -72,6 +75,8 @@ namespace AnywhereWinUI.Services
             if (Helpers.LocalSettingsHelper.TryGetValue<int>("proxyModeIndex", out var pmi)) ProxyModeIndex = pmi;
             // Migrate legacy setting if exists and proxyModeIndex is missing
             else if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableTunMode", out var etm) && etm) ProxyModeIndex = 1;
+
+            if (Helpers.LocalSettingsHelper.TryGetValue<int>("mixedPort", out var mp) && mp >= 1 && mp <= 65535) MixedPort = mp;
 
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("lastTunServerHost", out var ltsh) && !string.IsNullOrEmpty(ltsh)) LastTunServerHost = ltsh;
 

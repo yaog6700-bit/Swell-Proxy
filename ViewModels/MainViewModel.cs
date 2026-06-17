@@ -52,7 +52,7 @@ namespace AnywhereWinUI.ViewModels
                 await Task.Delay(2000);
                 
                 var updater = new AppUpdateService();
-                var proxyUrl = CoreManager.Instance.IsRunning ? "socks5://127.0.0.1:2080" : null;
+                var proxyUrl = CoreManager.Instance.IsRunning ? $"socks5://127.0.0.1:{AppSession.Instance.MixedPort}" : null;
                 var info = await updater.CheckAsync(proxyUrl, CancellationToken.None);
 
                 if (info != null)
