@@ -29,8 +29,10 @@ namespace AnywhereWinUI.Services
         {
             try
             {
-                string exePath = Path.Combine(AppContext.BaseDirectory, "AnywhereWinUI.exe");
-                if (!File.Exists(exePath)) return;
+                // Use the actual running process path instead of a hardcoded filename,
+                // because AssemblyName ("Swell Proxy") differs from "AnywhereWinUI.exe".
+                string? exePath = Environment.ProcessPath;
+                if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath)) return;
 
                 using (var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true))
                 {
