@@ -62,6 +62,22 @@ namespace AnywhereWinUI.Services
                 System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] TUN 出站网卡: {outboundInterface ?? "(未探测到)"}");
             }
 
+            // 检测本地 sing-box 内核版本，用于按版本生成不同的配置节
+            // 注意：预发布版本（如 v1.14.0-alpha.32）含非数字后缀，需先截断再解析
+            var coreVersionStr = CoreUpdateService.GetLocalSingboxVersionText();
+            bool isSingbox114OrAbove = false;
+            if (coreVersionStr.StartsWith("v"))
+            {
+                var versionPart = coreVersionStr.Substring(1);
+                // 截断 -alpha / -beta / -rc 等预发布标签，只保留纯数字部分
+                var dashIndex = versionPart.IndexOf('-');
+                if (dashIndex > 0) versionPart = versionPart.Substring(0, dashIndex);
+                if (System.Version.TryParse(versionPart, out var coreVersion))
+                {
+                    isSingbox114OrAbove = coreVersion >= new System.Version(1, 14, 0);
+                }
+            }
+
             var config = new JsonObject
             {
                 ["log"] = new JsonObject
@@ -86,6 +102,42 @@ namespace AnywhereWinUI.Services
                     }
                 }
             };
+
+            // sing-box >= 1.14.0：额外注入原生 API 服务（gRPC，监听 9091）
+            // 同时保留 clash_api（9090）确保现有功能不受影响
+            // 注意：1.13.x 不识别顶级 "services" 字段，注入会导致内核启动失败，必须做版本判断
+            if (isSingbox114OrAbove)
+            {
+                config["services"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["type"] = "api",
+                        ["tag"] = "sing-box dashboard",
+                        ["listen"] = "127.0.0.1",
+                        ["listen_port"] = 9091,
+                        ["secret"] = "",
+                        // 同时允许 http 和 https 两种协议的官方 Dashboard 域名
+                        // 避免浏览器因混合内容（HTTPS 页面 → HTTP 本地端口）而拒绝请求
+                        ["access_control_allow_origin"] = new JsonArray
+                        {
+                            (JsonNode)"http://sing-box-dashboard.sagernet.org",
+                            (JsonNode)"https://sing-box-dashboard.sagernet.org",
+                            (JsonNode)"http://dash.sing-box.app",
+                            (JsonNode)"https://dash.sing-box.app"
+                        },
+                        ["access_control_allow_private_network"] = true,
+                        // 启用内置 Dashboard：sing-box 自动下载并在 /dashboard/ 路径提供服务
+                        // 用户也可直接访问 http://127.0.0.1:9091/dashboard/ 完全绕过 CORS
+                        ["dashboard"] = true
+                    }
+                };
+                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 检测到 sing-box {coreVersionStr}，已启用原生 API（端口 9091）");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 检测到 sing-box {coreVersionStr}（< 1.14.0），跳过原生 API 注入");
+            }
 
             // 仅当用户启用 Tailscale 时，才注入 endpoints 字段
             if (session.EnableTailscale)
