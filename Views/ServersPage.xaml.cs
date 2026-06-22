@@ -528,7 +528,14 @@ namespace AnywhereWinUI.Views
         {
             ViewModel.SearchQuery = ServerSearchBox.Text;
             ViewModel.ShowFavoritesOnly = FavoriteFilterButton.IsChecked == true;
-            ViewModel.LoadServersList(); // Temporary: trigger filtering since ApplyFilters is private in VM right now. Wait, I can just update the properties.
+            // NOTE: Do NOT call ViewModel.LoadServersList() here.
+            // Setting SearchQuery / ShowFavoritesOnly above already triggers
+            // OnSearchQueryChanged / OnShowFavoritesOnlyChanged in the ViewModel,
+            // which internally calls ApplyFilters() to rebuild FilteredServers.
+            // Calling LoadServersList() here would reconstruct AllServers from
+            // NodesManager.Instance.Nodes every time the user types in the search box
+            // or toggles favourites, effectively discarding any drag-reorder that was
+            // already applied in-memory (and saved to disk) by ReorderServers().
 
             ServersListView.ItemsSource = ViewModel.FilteredServers;
 

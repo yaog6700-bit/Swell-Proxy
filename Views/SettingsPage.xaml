@@ -39,9 +39,77 @@
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        <Setter Property="Padding" Value="16,10"/>
-                        <Setter Property="Margin" Value="0,0,0,4"/>
-                        <Setter Property="CornerRadius" Value="6"/>
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Margin" Value="0,2"/>
+                        <Setter Property="MinHeight" Value="36"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListViewItem">
+                                    <Grid Background="Transparent">
+                                        <!-- Interactive background -->
+                                        <Rectangle x:Name="BackgroundElement"
+                                                   Fill="Transparent"
+                                                   RadiusX="6" RadiusY="6"/>
+                                        <!-- Content -->
+                                        <ContentPresenter x:Name="ContentPresenter"
+                                                          Padding="16,10"
+                                                          HorizontalAlignment="Stretch"
+                                                          VerticalAlignment="Center"/>
+                                        <!-- Pill Indicator -->
+                                        <Rectangle x:Name="PillIndicator"
+                                                   Width="3"
+                                                   Height="16"
+                                                   RadiusX="1.5" RadiusY="1.5"
+                                                   Fill="{ThemeResource SystemAccentColor}"
+                                                   HorizontalAlignment="Left"
+                                                   VerticalAlignment="Center"
+                                                   Margin="2,0,0,0"
+                                                   Opacity="0"/>
+                                        
+                                        <VisualStateManager.VisualStateGroups>
+                                            <VisualStateGroup x:Name="CommonStates">
+                                                <VisualStateGroup.Transitions>
+                                                    <VisualTransition GeneratedDuration="0:0:0.15"/>
+                                                </VisualStateGroup.Transitions>
+                                                <VisualState x:Name="Normal"/>
+                                                <VisualState x:Name="PointerOver">
+                                                    <VisualState.Setters>
+                                                        <Setter Target="BackgroundElement.Fill" Value="{ThemeResource SubtleFillColorSecondaryBrush}"/>
+                                                    </VisualState.Setters>
+                                                </VisualState>
+                                                <VisualState x:Name="Pressed">
+                                                    <VisualState.Setters>
+                                                        <Setter Target="BackgroundElement.Fill" Value="{ThemeResource SubtleFillColorTertiaryBrush}"/>
+                                                    </VisualState.Setters>
+                                                </VisualState>
+                                                <VisualState x:Name="Selected">
+                                                    <VisualState.Setters>
+                                                        <Setter Target="BackgroundElement.Fill" Value="{ThemeResource SubtleFillColorSecondaryBrush}"/>
+                                                        <Setter Target="PillIndicator.Opacity" Value="1"/>
+                                                        <Setter Target="PillIndicator.Height" Value="16"/>
+                                                    </VisualState.Setters>
+                                                </VisualState>
+                                                <VisualState x:Name="PointerOverSelected">
+                                                    <VisualState.Setters>
+                                                        <Setter Target="BackgroundElement.Fill" Value="{ThemeResource SubtleFillColorTertiaryBrush}"/>
+                                                        <Setter Target="PillIndicator.Opacity" Value="1"/>
+                                                        <Setter Target="PillIndicator.Height" Value="16"/>
+                                                    </VisualState.Setters>
+                                                </VisualState>
+                                                <VisualState x:Name="PressedSelected">
+                                                    <VisualState.Setters>
+                                                        <Setter Target="BackgroundElement.Fill" Value="{ThemeResource SubtleFillColorTertiaryBrush}"/>
+                                                        <Setter Target="PillIndicator.Opacity" Value="1"/>
+                                                        <Setter Target="PillIndicator.Height" Value="12"/>
+                                                    </VisualState.Setters>
+                                                </VisualState>
+                                            </VisualStateGroup>
+                                        </VisualStateManager.VisualStateGroups>
+                                    </Grid>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                     </Style>
                 </ListView.ItemContainerStyle>
                 
