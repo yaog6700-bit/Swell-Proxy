@@ -267,23 +267,41 @@ namespace AnywhereWinUI.ViewModels
         [RelayCommand]
         private void ReorderServers()
         {
+            // Legacy path: reads from FilteredServers.
+            // Prefer ApplyNodeOrder() which accepts an explicit order from sender.Items.
+            var orderedIds = FilteredServers.Select(x => x.Id).ToList();
+            ApplyNodeOrder(orderedIds);
+        }
+
+        /// <summary>
+        /// Persists a new node ordering supplied by the view.
+        /// The caller should extract IDs from <c>sender.Items</c> inside
+        /// <c>DragItemsCompleted</c> so the order is authoritative regardless
+        /// of when WinUI 3 updates the bound ObservableCollection.
+        /// </summary>
+        public void ApplyNodeOrder(System.Collections.Generic.IList<string> orderedIds)
+        {
             var newNodesList = new System.Collections.Generic.List<PersistedNode>();
-            
-            foreach (var item in FilteredServers)
+
+            // 1. Add nodes in the explicit new order (visible items only)
+            foreach (var id in orderedIds)
             {
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == item.Id);
+                var node = NodesManager.Instance.Nodes.Find(n => n.Id == id);
                 if (node != null) newNodesList.Add(node);
             }
 
+            // 2. Append any nodes that were filtered out (not visible in the list)
             foreach (var node in NodesManager.Instance.Nodes)
             {
                 if (!newNodesList.Exists(n => n.Id == node.Id)) newNodesList.Add(node);
             }
 
+            // 3. Commit to NodesManager and persist to disk
             NodesManager.Instance.Nodes.Clear();
             NodesManager.Instance.Nodes.AddRange(newNodesList);
             NodesManager.Instance.Save();
 
+            // 4. Rebuild AllServers to reflect the new order in the UI
             var newAllServers = new System.Collections.Generic.List<ServerEntryItem>();
             foreach (var node in NodesManager.Instance.Nodes)
             {
