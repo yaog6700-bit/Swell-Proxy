@@ -2399,15 +2399,16 @@ namespace AnywhereWinUI.Views
 
         private void ServersListView_DragItemsCompleted(ListViewBase sender, DragItemsCompletedEventArgs args)
         {
-            // IMPORTANT: In WinUI 3, DragItemsCompleted can fire before the bound
-            // ObservableCollection (FilteredServers) is actually reordered.
-            // Reading sender.Items gives the authoritative post-drag visual order,
-            // so we extract the IDs here and pass them explicitly to the ViewModel.
-            var orderedIds = sender.Items
-                .OfType<ServerEntryItem>()
-                .Select(x => x.Id)
-                .ToList();
-            ViewModel.ApplyNodeOrder(orderedIds);
+            DispatcherQueue.TryEnqueue(
+                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                () =>
+                {
+                    var orderedIds = ViewModel.FilteredServers
+                        .Select(x => x.Id)
+                        .ToList();
+                    if (orderedIds.Count > 0)
+                        ViewModel.ApplyNodeOrder(orderedIds);
+                });
         }
 
         private void PopulateProxyChainOptions(string excludeId)

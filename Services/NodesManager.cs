@@ -335,9 +335,19 @@ namespace AnywhereWinUI.Services
                 }
                 catch { /* Plugin errors must not break subscription update */ }
 
-                // Clear old nodes for this sub
+                // Replace old sub nodes in-place so manual ordering is preserved.
+                // Strategy:
+                //   1. Find the index of the first node belonging to this subscription.
+                //   2. Remove all old subscription nodes (preserving their slots).
+                //   3. Insert new nodes at that same index.
+                //   4. Any nodes that no longer exist in the subscription are dropped;
+                //      brand-new nodes from the subscription are inserted at the end of
+                //      where the old subscription block was.
+                int insertIndex = Nodes.FindIndex(n => n.SubscriptionId == subId);
                 Nodes.RemoveAll(n => n.SubscriptionId == subId);
-                Nodes.AddRange(newNodes);
+                if (insertIndex < 0 || insertIndex > Nodes.Count)
+                    insertIndex = Nodes.Count; // fallback: append at end
+                Nodes.InsertRange(insertIndex, newNodes);
                 sub.LastUpdated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 Save();
                 return null; // success

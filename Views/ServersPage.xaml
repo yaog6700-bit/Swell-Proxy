@@ -65,6 +65,7 @@
                       Margin="0"
                       HorizontalAlignment="Stretch"
                       CanReorderItems="True"
+                      CanDragItems="True"
                       AllowDrop="True"
                       DragItemsCompleted="ServersListView_DragItemsCompleted">
                 <ListView.ItemContainerStyle>
