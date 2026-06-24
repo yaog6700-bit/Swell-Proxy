@@ -195,9 +195,9 @@ namespace AnywhereWinUI.ViewModels
         {
             if (AppSession.Instance.ProxyModeIndex == value) return;
 
-            if (value == 1)
+            if (value == 1 || value == 3)
             {
-                _ = HandleTunToggleAsync();
+                _ = HandleTunToggleAsync(value);
             }
             else
             {
@@ -208,12 +208,13 @@ namespace AnywhereWinUI.ViewModels
             }
         }
 
-        private async Task HandleTunToggleAsync()
+        private async Task HandleTunToggleAsync(int targetModeIndex = 1)
         {
             bool isAdmin = AdminHelper.IsAdministrator();
 
             if (!isAdmin)
             {
+                int previousModeIndex = AppSession.Instance.ProxyModeIndex;
                 // Ensure we run on UI thread with a short delay to let any UI transitions finish
                 var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
                 var dispatcher = MainWindow.Instance?.DispatcherQueue;
@@ -262,11 +263,20 @@ namespace AnywhereWinUI.ViewModels
                             await CoreManager.Instance.StopAsync();
                         }
 
-                        string arg = wasRunning ? "--tun-start" : "--tun";
+                        AppSession.Instance.ProxyModeIndex = targetModeIndex;
+                        LocalSettingsHelper.SetValue("proxyModeIndex", targetModeIndex);
+                        LocalSettingsHelper.SetValue("enableTunMode", true);
+
+                        string arg = targetModeIndex == 3
+                            ? (wasRunning ? "--tun-system-start" : "--tun-system")
+                            : (wasRunning ? "--tun-start" : "--tun");
                         bool restarted = AdminHelper.RestartAsAdmin(arg);
                         if (!restarted)
                         {
-                            ProxyModeIndex = AppSession.Instance.ProxyModeIndex;
+                            AppSession.Instance.ProxyModeIndex = previousModeIndex;
+                            LocalSettingsHelper.SetValue("proxyModeIndex", previousModeIndex);
+                            LocalSettingsHelper.SetValue("enableTunMode", previousModeIndex == 1 || previousModeIndex == 3);
+                            ProxyModeIndex = previousModeIndex;
                         }
                         tcs.SetResult(restarted);
                     }
@@ -282,8 +292,8 @@ namespace AnywhereWinUI.ViewModels
             }
             else
             {
-                AppSession.Instance.ProxyModeIndex = 1;
-                LocalSettingsHelper.SetValue("proxyModeIndex", 1);
+                AppSession.Instance.ProxyModeIndex = targetModeIndex;
+                LocalSettingsHelper.SetValue("proxyModeIndex", targetModeIndex);
                 LocalSettingsHelper.SetValue("enableTunMode", true);
                 _ = TriggerCoreRestartIfNeeded();
             }
@@ -317,9 +327,9 @@ namespace AnywhereWinUI.ViewModels
                     NodesManager.Instance.Save();
                 }
 
-                if (AppSession.Instance.ProxyModeIndex == 1 && !AdminHelper.IsAdministrator())
+                if (AppSession.Instance.EnableTunMode && !AdminHelper.IsAdministrator())
                 {
-                    _ = HandleTunToggleAsync();
+                    _ = HandleTunToggleAsync(AppSession.Instance.ProxyModeIndex);
                     return;
                 }
 

@@ -580,6 +580,20 @@
                                     <ToggleSwitch x:Name="SettingsBlockIPv6Switch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.BlockIPv6, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
 
+                                <!-- TUN Stack -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <FontIcon Grid.Column="0" Glyph="&#xE839;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="TUN Stack" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="选择 TUN 入站使用的网络栈，mixed 为推荐默认值" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="2" Width="160" SelectedValuePath="Tag" SelectedValue="{x:Bind ViewModel.TunStack, Mode=TwoWay}" VerticalAlignment="Center">
+                                        <ComboBoxItem Content="mixed" Tag="mixed"/>
+                                        <ComboBoxItem Content="system" Tag="system"/>
+                                        <ComboBoxItem Content="gvisor" Tag="gvisor"/>
+                                    </ComboBox>
+                                </Grid>
+
                                 <!-- Flush DNS -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,4">
                                     <FontIcon Grid.Column="0" Glyph="&#xE81E;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>

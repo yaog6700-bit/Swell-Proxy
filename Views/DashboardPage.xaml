@@ -357,6 +357,8 @@
                                 <tk:Segmented SelectedIndex="{x:Bind ViewModel.ProxyModeIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
                                     <tk:SegmentedItem Content="系统代理"/>
                                     <tk:SegmentedItem Content="TUN 模式"/>
+                                    <tk:SegmentedItem Content="本地"/>
+                                    <tk:SegmentedItem Content="TUN + 系统"/>
                                 </tk:Segmented>
                             </StackPanel>
 

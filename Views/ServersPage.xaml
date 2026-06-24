@@ -717,6 +717,7 @@
                                 <MenuFlyoutItem Text="系统代理" Tag="system" Click="SetProxyMode_Click" />
                                 <MenuFlyoutItem Text="TUN模式" Tag="tun" Click="SetProxyMode_Click" />
                                 <MenuFlyoutItem Text="仅手动代理" Tag="manual" Click="SetProxyMode_Click" />
+                                <MenuFlyoutItem Text="TUN + 系统代理" Tag="tun-system" Click="SetProxyMode_Click" />
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>

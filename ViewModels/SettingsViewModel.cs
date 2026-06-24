@@ -59,6 +59,9 @@ namespace AnywhereWinUI.ViewModels
         private bool _enableFakeDns;
 
         [ObservableProperty]
+        private string _tunStack = "mixed";
+
+        [ObservableProperty]
         private bool _enableClassicDashboard;
 
         [ObservableProperty]
@@ -139,6 +142,7 @@ namespace AnywhereWinUI.ViewModels
             _dnsStrategy = AppSession.Instance.DnsStrategy;
             _enableDnsCache = AppSession.Instance.EnableDnsCache;
             _enableFakeDns = AppSession.Instance.EnableFakeDns;
+            _tunStack = AppSession.Instance.TunStack;
             _enableClassicDashboard = AppSession.Instance.EnableClassicDashboard;
             _enablePlugins = AppSession.Instance.EnablePlugins;
             _isPrivacyModeActive = AppSession.Instance.IsPrivacyModeActive;
@@ -268,6 +272,14 @@ namespace AnywhereWinUI.ViewModels
         {
             AppSession.Instance.EnableFakeDns = value;
             Helpers.LocalSettingsHelper.SetValue("enableFakeDns", value);
+            _ = TriggerCoreRestartIfNeeded();
+        }
+
+        partial void OnTunStackChanged(string value)
+        {
+            if (value != "system" && value != "gvisor" && value != "mixed") return;
+            AppSession.Instance.TunStack = value;
+            Helpers.LocalSettingsHelper.SetValue("tunStack", value);
             _ = TriggerCoreRestartIfNeeded();
         }
 

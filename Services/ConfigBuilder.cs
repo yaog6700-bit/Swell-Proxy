@@ -334,7 +334,7 @@ namespace AnywhereWinUI.Services
                     ["auto_route"]   = true,
                     // 关闭 strict_route 避免 WFP 拦截导致 WSAEACCES 报错（我们已经在 direct 出站绑定了物理网卡防止死循环）
                     ["strict_route"] = false,
-                    ["stack"]        = "mixed",
+                    ["stack"]        = NormalizeTunStack(AppSession.Instance.TunStack),
                     ["mtu"]          = 9000
                 };
 
@@ -518,6 +518,11 @@ namespace AnywhereWinUI.Services
             list.Add(new JsonObject { ["type"] = "block", ["tag"] = "block" });
 
             return list;
+        }
+
+        private static string NormalizeTunStack(string? stack)
+        {
+            return stack == "system" || stack == "gvisor" || stack == "mixed" ? stack : "mixed";
         }
 
         private static List<JsonObject> GenerateOutboundsForNode(PersistedNode node, string host, int port, string baseTag)

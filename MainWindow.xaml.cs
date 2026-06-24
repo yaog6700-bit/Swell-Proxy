@@ -1081,7 +1081,7 @@ namespace AnywhereWinUI
             }
             else
             {
-                if (AppSession.Instance.ProxyModeIndex == 1 && !AnywhereWinUI.Helpers.AdminHelper.IsAdministrator())
+                if (AppSession.Instance.EnableTunMode && !AnywhereWinUI.Helpers.AdminHelper.IsAdministrator())
                 {
                     MiniStartStopButton.IsChecked = false;
                     SetMiniMode(false); // Expand to full mode
@@ -1182,13 +1182,22 @@ namespace AnywhereWinUI
             var nodeName = activeNode?.Name ?? "未选择节点";
             MiniServerNameText.Text = nodeName;
 
+            string proxyModeText = AppSession.Instance.ProxyModeIndex switch
+            {
+                0 => "系统代理",
+                1 => "TUN",
+                3 => "TUN + 系统代理",
+                _ => "本地代理"
+            };
+
             string routingMode = AppSession.Instance.RoutingMode;
-            MiniProxyModeText.Text = routingMode switch
+            string routeModeText = routingMode switch
             {
                 "global" => "全局代理",
                 "direct" => "全部直连",
                 _ => "智能分流"
             };
+            MiniProxyModeText.Text = $"{proxyModeText} · {routeModeText}";
             
             bool isRunning = CoreManager.Instance.IsRunning;
             MiniStartStopButton.IsChecked = isRunning;

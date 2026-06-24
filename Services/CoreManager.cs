@@ -186,7 +186,7 @@ namespace AnywhereWinUI.Services
                         var tunService = new TunService();
                         tunService.CleanupTunRoutes(AppSession.Instance.LastTunServerHost);
                     }
-                    else if (AppSession.Instance.EnableSystemProxy)
+                    if (AppSession.Instance.EnableSystemProxy)
                     {
                         SystemProxyManager.DisableProxy();
                     }
@@ -223,14 +223,17 @@ namespace AnywhereWinUI.Services
                     SystemProxyManager.EnableProxy("127.0.0.1", AppSession.Instance.MixedPort);
                     AppendLog("[SystemProxy] 系统代理已开启");
                 }
-                else if (AppSession.Instance.EnableTunMode)
-                {
-                    SystemProxyManager.DisableProxy();
-                    AppendLog("[TUN] TUN 模式已激活");
-                }
                 else
                 {
                     SystemProxyManager.DisableProxy();
+                }
+
+                if (AppSession.Instance.EnableTunMode)
+                {
+                    AppendLog("[TUN] TUN 模式已激活");
+                }
+                else if (!AppSession.Instance.EnableSystemProxy)
+                {
                     AppendLog("[Local] 仅本地代理运行");
                 }
                 return true;
@@ -269,7 +272,7 @@ namespace AnywhereWinUI.Services
                 var tunService = new TunService();
                 tunService.CleanupTunRoutes(AppSession.Instance.LastTunServerHost);
             }
-            else
+            if (AppSession.Instance.EnableSystemProxy)
             {
                 SystemProxyManager.DisableProxy();
             }

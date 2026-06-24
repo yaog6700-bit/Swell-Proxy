@@ -15,9 +15,9 @@ namespace AnywhereWinUI.Services
         public string SelectedNodeHost { get; set; } = string.Empty;
 
         // Proxy Mode
-        public int ProxyModeIndex { get; set; } = 0; // 0: System Proxy, 1: TUN, 2: Local Only
-        public bool EnableTunMode => ProxyModeIndex == 1;
-        public bool EnableSystemProxy => ProxyModeIndex == 0;
+        public int ProxyModeIndex { get; set; } = 0; // 0: System Proxy, 1: TUN, 2: Local Only, 3: TUN + System Proxy
+        public bool EnableTunMode => ProxyModeIndex == 1 || ProxyModeIndex == 3;
+        public bool EnableSystemProxy => ProxyModeIndex == 0 || ProxyModeIndex == 3;
         public string? LastTunServerHost { get; set; }
 
         // Local Proxy Port (mixed SOCKS5+HTTP inbound)
@@ -54,6 +54,7 @@ namespace AnywhereWinUI.Services
         public string DnsStrategy { get; set; } = "prefer_ipv4";
         public bool EnableDnsCache { get; set; } = true;
         public bool EnableFakeDns { get; set; } = false;
+        public string TunStack { get; set; } = "mixed";
 
         // Custom Routing Rules
         public List<CustomRule> CustomRules { get; set; } = new();
@@ -96,6 +97,7 @@ namespace AnywhereWinUI.Services
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("dnsStrategy", out var ds) && !string.IsNullOrEmpty(ds)) DnsStrategy = ds;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableDnsCache", out var edc)) EnableDnsCache = edc;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableFakeDns", out var efd)) EnableFakeDns = efd;
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("tunStack", out var ts) && ts is not null && IsValidTunStack(ts)) TunStack = ts;
 
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("ruleNetflixAction", out var netflix) && !string.IsNullOrEmpty(netflix)) RuleNetflixAction = netflix;
 
@@ -142,6 +144,11 @@ namespace AnywhereWinUI.Services
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("tailscaleAdvertiseRoutes", out var tsAdv) && !string.IsNullOrEmpty(tsAdv)) TailscaleAdvertiseRoutes = tsAdv;
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("tailscaleExitNode", out var tsExit) && !string.IsNullOrEmpty(tsExit)) TailscaleExitNode = tsExit;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("tailscaleAdvertiseExitNode", out var tsAEN)) TailscaleAdvertiseExitNode = tsAEN;
+        }
+
+        private static bool IsValidTunStack(string? value)
+        {
+            return value == "system" || value == "gvisor" || value == "mixed";
         }
 
     }

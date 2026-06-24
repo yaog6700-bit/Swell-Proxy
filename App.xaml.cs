@@ -75,12 +75,13 @@ namespace AnywhereWinUI
 
             foreach (var arg in cmdArgs)
             {
-                if (arg == "--tun" || arg == "--tun-start")
+                if (arg == "--tun" || arg == "--tun-start" || arg == "--tun-system" || arg == "--tun-system-start")
                 {
                     isTunRestart = true;
-                    isAutoStart = (arg == "--tun-start");
-                    AppSession.Instance.ProxyModeIndex = 1;
-                    Helpers.LocalSettingsHelper.SetValue("proxyModeIndex", 1);
+                    isAutoStart = (arg == "--tun-start" || arg == "--tun-system-start");
+                    int proxyModeIndex = arg.StartsWith("--tun-system", StringComparison.Ordinal) ? 3 : 1;
+                    AppSession.Instance.ProxyModeIndex = proxyModeIndex;
+                    Helpers.LocalSettingsHelper.SetValue("proxyModeIndex", proxyModeIndex);
                 }
                 else if (arg.StartsWith("--parent-pid="))
                 {

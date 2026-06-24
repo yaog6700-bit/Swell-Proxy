@@ -221,6 +221,9 @@ namespace AnywhereWinUI.Views
             } else if (mode == 1) {
                 ProxyModeIcon.Glyph = "\uE839";
                 ToolTipService.SetToolTip(ProxyModeButton, "TUN模式");
+            } else if (mode == 3) {
+                ProxyModeIcon.Glyph = "\uE83D";
+                ToolTipService.SetToolTip(ProxyModeButton, "TUN + 系统代理");
             } else {
                 ProxyModeIcon.Glyph = "\uF384";
                 ToolTipService.SetToolTip(ProxyModeButton, "仅手动代理");
@@ -230,7 +233,7 @@ namespace AnywhereWinUI.Views
         private void UpdateRoutingModeUI()
         {
             var mode = AppSession.Instance.RoutingMode;
-            bool isTun = AppSession.Instance.ProxyModeIndex == 1;
+            bool isTun = AppSession.Instance.EnableTunMode;
             
             string modeName = mode == "direct" ? "直接连接" : mode == "global" ? "全局路由" : "智能分流";
             ToolTipService.SetToolTip(RoutingModeButton, isTun ? $"TUN ({modeName})" : modeName);
@@ -360,7 +363,7 @@ namespace AnywhereWinUI.Views
                         NodesManager.Instance.Save();
                     }
 
-                    if (AppSession.Instance.ProxyModeIndex == 1 && !Helpers.AdminHelper.IsAdministrator())
+                    if (AppSession.Instance.EnableTunMode && !Helpers.AdminHelper.IsAdministrator())
                     {
                         StartStopButton.IsChecked = false;
                         var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
@@ -386,7 +389,8 @@ namespace AnywhereWinUI.Views
                                     return;
                                 }
 
-                                bool restarted = Helpers.AdminHelper.RestartAsAdmin("--tun-start");
+                                string arg = AppSession.Instance.ProxyModeIndex == 3 ? "--tun-system-start" : "--tun-start";
+                                bool restarted = Helpers.AdminHelper.RestartAsAdmin(arg);
                                 tcs.SetResult(restarted);
                             }
                             catch (Exception ex)
@@ -1236,11 +1240,12 @@ namespace AnywhereWinUI.Views
         {
             if (sender is MenuFlyoutItem item && item.Tag is string mode)
             {
-                int index = mode == "tun" ? 1 : mode == "manual" ? 2 : 0;
+                int index = mode == "tun" ? 1 : mode == "manual" ? 2 : mode == "tun-system" ? 3 : 0;
 
                 // If switching to TUN mode without admin, show UAC dialog first
-                if (index == 1 && !Helpers.AdminHelper.IsAdministrator())
+                if ((index == 1 || index == 3) && !Helpers.AdminHelper.IsAdministrator())
                 {
+                    int previousModeIndex = AppSession.Instance.ProxyModeIndex;
                     var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
                     this.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, async () =>
                     {
@@ -1263,9 +1268,23 @@ namespace AnywhereWinUI.Views
                             }
                             bool wasRunning = CoreManager.Instance.IsRunning;
                             if (wasRunning) await CoreManager.Instance.StopAsync();
-                            string arg = wasRunning ? "--tun-start" : "--tun";
-                            Helpers.AdminHelper.RestartAsAdmin(arg);
-                            tcs.SetResult(true);
+                            AppSession.Instance.ProxyModeIndex = index;
+                            Helpers.LocalSettingsHelper.SetValue("proxyModeIndex", index);
+                            Helpers.LocalSettingsHelper.SetValue("enableTunMode", true);
+
+                            string arg = index == 3
+                                ? (wasRunning ? "--tun-system-start" : "--tun-system")
+                                : (wasRunning ? "--tun-start" : "--tun");
+                            bool restarted = Helpers.AdminHelper.RestartAsAdmin(arg);
+                            if (!restarted)
+                            {
+                                AppSession.Instance.ProxyModeIndex = previousModeIndex;
+                                Helpers.LocalSettingsHelper.SetValue("proxyModeIndex", previousModeIndex);
+                                Helpers.LocalSettingsHelper.SetValue("enableTunMode", previousModeIndex == 1 || previousModeIndex == 3);
+                                UpdateProxyModeUI();
+                                UpdateRoutingModeUI();
+                            }
+                            tcs.SetResult(restarted);
                         }
                         catch (Exception ex)
                         {
@@ -1279,7 +1298,7 @@ namespace AnywhereWinUI.Views
 
                 AppSession.Instance.ProxyModeIndex = index;
                 Helpers.LocalSettingsHelper.SetValue("proxyModeIndex", index);
-                Helpers.LocalSettingsHelper.SetValue("enableTunMode", index == 1);
+                Helpers.LocalSettingsHelper.SetValue("enableTunMode", index == 1 || index == 3);
 
                 UpdateProxyModeUI();
                 UpdateRoutingModeUI();
