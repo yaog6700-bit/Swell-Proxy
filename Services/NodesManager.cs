@@ -107,6 +107,7 @@ namespace AnywhereWinUI.Services
             "SwellProxy",
             "nodes_config.json"
         );
+        public static readonly TimeSpan SubscriptionAutoRefreshInterval = TimeSpan.FromHours(24);
 
         public static NodesManager Instance { get; } = new NodesManager();
 
@@ -365,6 +366,54 @@ namespace AnywhereWinUI.Services
                 System.Diagnostics.Debug.WriteLine($"Failed to update subscription: {ex.Message}");
                 return $"更新失败：{ex.Message}";
             }
+        }
+
+        public async Task<int> RefreshDueSubscriptionsAsync()
+        {
+            if (!AppSession.Instance.EnableSubscriptionAutoRefresh)
+                return 0;
+
+            var dueSubscriptions = new List<PersistedSubscription>();
+            foreach (var sub in Subscriptions)
+            {
+                if (IsSubscriptionAutoRefreshDue(sub))
+                    dueSubscriptions.Add(sub);
+            }
+
+            int refreshedCount = 0;
+            foreach (var sub in dueSubscriptions)
+            {
+                string? err = await UpdateSubscriptionAsync(sub.Id);
+                if (err == null)
+                    refreshedCount++;
+            }
+            return refreshedCount;
+        }
+
+        public static bool IsSubscriptionAutoRefreshDue(PersistedSubscription sub)
+        {
+            if (!TryParseLastUpdated(sub.LastUpdated, out var lastUpdated))
+                return true;
+
+            return DateTime.Now - lastUpdated >= SubscriptionAutoRefreshInterval;
+        }
+
+        public static string GetSubscriptionNextAutoRefreshText(PersistedSubscription sub)
+        {
+            if (!TryParseLastUpdated(sub.LastUpdated, out var lastUpdated))
+                return "下次自动同步：待下次启动时同步";
+
+            return $"下次自动同步：{lastUpdated.Add(SubscriptionAutoRefreshInterval):yyyy-MM-dd HH:mm:ss}";
+        }
+
+        private static bool TryParseLastUpdated(string? value, out DateTime lastUpdated)
+        {
+            return DateTime.TryParseExact(
+                value,
+                "yyyy-MM-dd HH:mm:ss",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out lastUpdated);
         }
 
         private List<PersistedNode> ParseSubscriptionContent(string content, string subId)

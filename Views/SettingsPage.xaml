@@ -754,10 +754,10 @@
                         
                         <TextBlock Text="系统启动行为" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
-                        <Border Background="Transparent" 
+                        <Border Background="Transparent"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                BorderThickness="1" 
-                                CornerRadius="8" 
+                                BorderThickness="1"
+                                CornerRadius="8"
                                 Padding="16,16">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel Spacing="4" VerticalAlignment="Center">
@@ -792,6 +792,27 @@
                                            PlaceholderText="2080"
                                            Value="{x:Bind ViewModel.MixedPort, Mode=TwoWay}"
                                            VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <Border Background="Transparent"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16,16">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="4" VerticalAlignment="Center">
+                                    <TextBlock Text="允许局域网设备连接" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="开启后，同一局域网内的设备可使用下方地址作为 HTTP/SOCKS5 代理。若无法连接，请检查 Windows 防火墙是否允许访问。" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{x:Bind ViewModel.LanProxyEndpoint, Mode=OneWay}" FontSize="12" FontFamily="Consolas" Foreground="{ThemeResource SystemAccentColor}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              VerticalAlignment="Center"
+                                              OnContent=""
+                                              OffContent=""
+                                              MinWidth="0"
+                                              IsOn="{x:Bind ViewModel.AllowLanAccess, Mode=TwoWay}"
+                                              HorizontalAlignment="Right"/>
                             </Grid>
                         </Border>
                     </StackPanel>

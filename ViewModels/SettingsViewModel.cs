@@ -1,4 +1,7 @@
 using System;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -75,6 +78,12 @@ namespace AnywhereWinUI.ViewModels
 
         [ObservableProperty]
         private int _mixedPort = 2080;
+
+        [ObservableProperty]
+        private bool _allowLanAccess;
+
+        [ObservableProperty]
+        private string _lanProxyEndpoint = string.Empty;
 
         // Guard flag: prevents OnAutoStartChanged from writing to the registry
         // while LoadSettings() is initialising the property from the registry.
@@ -164,6 +173,8 @@ namespace AnywhereWinUI.ViewModels
                 _isLoading = true;
                 AutoStart = AutostartManager.IsAutostartEnabled();
                 MixedPort = AppSession.Instance.MixedPort;
+                AllowLanAccess = AppSession.Instance.AllowLanAccess;
+                UpdateLanProxyEndpoint();
             }
             catch { }
             finally
@@ -322,10 +333,42 @@ namespace AnywhereWinUI.ViewModels
             if (value < 1 || value > 65535) return;
             AppSession.Instance.MixedPort = value;
             Helpers.LocalSettingsHelper.SetValue("mixedPort", value);
+            UpdateLanProxyEndpoint();
             _ = TriggerCoreRestartIfNeeded();
         }
 
         // ── Tailscale Change Handlers ─────────────────────────────────────────
+        partial void OnAllowLanAccessChanged(bool value)
+        {
+            if (_isLoading) return;
+            AppSession.Instance.AllowLanAccess = value;
+            Helpers.LocalSettingsHelper.SetValue("allowLanAccess", value);
+            UpdateLanProxyEndpoint();
+            _ = TriggerCoreRestartIfNeeded();
+        }
+
+        private void UpdateLanProxyEndpoint()
+        {
+            var address = GetPrimaryLanAddress() ?? "本机局域网 IP";
+            LanProxyEndpoint = $"{address}:{MixedPort}";
+        }
+
+        private static string? GetPrimaryLanAddress()
+        {
+            try
+            {
+                return Dns.GetHostEntry(Dns.GetHostName()).AddressList
+                    .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)
+                    .Where(ip => !IPAddress.IsLoopback(ip))
+                    .Select(ip => ip.ToString())
+                    .FirstOrDefault(ip => !ip.StartsWith("169.254.", StringComparison.Ordinal));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         partial void OnEnableTailscaleChanged(bool value)
         {
             AppSession.Instance.EnableTailscale = value;

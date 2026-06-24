@@ -148,11 +148,48 @@ namespace AnywhereWinUI
                         await CoreManager.Instance.StartAsync(cfg);
                     });
                 }
+
+                StartSubscriptionAutoRefreshMonitor();
             }
             catch (Exception ex)
             {
                 LogCrash(ex, "OnLaunched Execution");
                 throw;
+            }
+        }
+
+        private void StartSubscriptionAutoRefreshMonitor()
+        {
+            _ = Task.Run(async () =>
+            {
+                await RefreshDueSubscriptionsAndReloadAsync();
+
+                using var timer = new System.Threading.PeriodicTimer(TimeSpan.FromHours(1));
+                while (await timer.WaitForNextTickAsync())
+                    await RefreshDueSubscriptionsAndReloadAsync();
+            });
+        }
+
+        private async Task RefreshDueSubscriptionsAndReloadAsync()
+        {
+            try
+            {
+                int refreshed = await NodesManager.Instance.RefreshDueSubscriptionsAsync();
+                if (refreshed > 0)
+                {
+                    MainWindow.Instance?.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        if (Services.GetService(typeof(AnywhereWinUI.ViewModels.ServersViewModel)) is AnywhereWinUI.ViewModels.ServersViewModel vm)
+                        {
+                            vm.LoadSubscriptions();
+                            vm.LoadServersList();
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SubscriptionAutoRefresh] failed: {ex.Message}");
             }
         }
 

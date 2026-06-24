@@ -19,6 +19,7 @@ namespace AnywhereWinUI.Views
     {
         private readonly Action _onDataChanged;
         private bool _initialized;
+        private bool _isLoadingAutoRefreshSwitch;
 
         public ManageSubscriptionsDialog(Action onDataChanged)
         {
@@ -60,6 +61,18 @@ namespace AnywhereWinUI.Views
             PrimaryButtonText          = string.Empty;
             CloseButtonText            = "完成";
             IsPrimaryButtonEnabled     = false;
+            _isLoadingAutoRefreshSwitch = true;
+            AutoRefreshSwitch.IsOn = AppSession.Instance.EnableSubscriptionAutoRefresh;
+            _isLoadingAutoRefreshSwitch = false;
+            LoadSubscriptionCards();
+        }
+
+        private void AutoRefreshSwitch_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (!_initialized || _isLoadingAutoRefreshSwitch) return;
+
+            AppSession.Instance.EnableSubscriptionAutoRefresh = AutoRefreshSwitch.IsOn;
+            LocalSettingsHelper.SetValue("enableSubscriptionAutoRefresh", AutoRefreshSwitch.IsOn);
             LoadSubscriptionCards();
         }
 
@@ -132,11 +145,13 @@ namespace AnywhereWinUI.Views
 
                 if (subs.Count == 0)
                 {
+                    AutoRefreshPanel.Visibility = Visibility.Collapsed;
                     EmptyStateText.Visibility  = Visibility.Visible;
                     SubScrollViewer.Visibility = Visibility.Collapsed;
                     return;
                 }
 
+                AutoRefreshPanel.Visibility = Visibility.Visible;
                 EmptyStateText.Visibility  = Visibility.Collapsed;
                 SubScrollViewer.Visibility = Visibility.Visible;
 
@@ -168,7 +183,13 @@ namespace AnywhereWinUI.Views
             };
             var updatedBlock = new TextBlock
             {
-                Text     = $"更新时间：{sub.LastUpdated}",
+                Text     = $"上次同步：{sub.LastUpdated}",
+                FontSize = 12,
+                Opacity  = 0.7
+            };
+            var nextUpdateBlock = new TextBlock
+            {
+                Text     = GetAutoRefreshStatusText(sub),
                 FontSize = 12,
                 Opacity  = 0.7
             };
@@ -176,6 +197,7 @@ namespace AnywhereWinUI.Views
             infoPanel.Children.Add(nameBlock);
             infoPanel.Children.Add(urlBlock);
             infoPanel.Children.Add(updatedBlock);
+            infoPanel.Children.Add(nextUpdateBlock);
 
             // ── Refresh button (icon ↔ ProgressRing) ─────────────────────────
             var refreshIcon = new FontIcon { Glyph = "\uE895", FontSize = 14 };
@@ -222,7 +244,11 @@ namespace AnywhereWinUI.Views
                     {
                         // Refresh the updated-time label
                         var latest = NodesManager.Instance.Subscriptions.Find(s => s.Id == sub.Id);
-                        if (latest != null) updatedBlock.Text = $"更新时间：{latest.LastUpdated}";
+                        if (latest != null)
+                        {
+                            updatedBlock.Text = $"上次同步：{latest.LastUpdated}";
+                            nextUpdateBlock.Text = GetAutoRefreshStatusText(latest);
+                        }
                     }
                     _onDataChanged?.Invoke();
                 }
@@ -333,6 +359,13 @@ namespace AnywhereWinUI.Views
                 Margin          = new Thickness(0, 0, 0, 8),
                 Child           = cardGrid
             };
+        }
+
+        private static string GetAutoRefreshStatusText(PersistedSubscription sub)
+        {
+            return AppSession.Instance.EnableSubscriptionAutoRefresh
+                ? NodesManager.GetSubscriptionNextAutoRefreshText(sub)
+                : "下次自动同步：已关闭";
         }
     }
 }

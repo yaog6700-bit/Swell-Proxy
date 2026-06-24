@@ -411,7 +411,7 @@ namespace AnywhereWinUI.Services
             {
                 ["type"]        = "mixed",
                 ["tag"]         = "mixed-in",
-                ["listen"]      = "127.0.0.1",
+                ["listen"]      = AppSession.Instance.AllowLanAccess ? "0.0.0.0" : "127.0.0.1",
                 ["listen_port"] = AppSession.Instance.MixedPort
             });
 

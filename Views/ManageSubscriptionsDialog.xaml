@@ -66,9 +66,37 @@
         </StackPanel>
 
         <!-- ── Manage Page ───────────────────────────────────────────────────── -->
-        <Grid x:Name="ManagePagePanel" Visibility="Collapsed">
+        <Grid x:Name="ManagePagePanel" Visibility="Collapsed" RowSpacing="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border x:Name="AutoRefreshPanel"
+                    Grid.Row="0"
+                    Padding="2,0">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="自动刷新订阅"
+                                   FontSize="14"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="每 24 小时同步一次"
+                                   FontSize="12"
+                                   Opacity="0.65" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="AutoRefreshSwitch"
+                                  Grid.Column="1"
+                                  OnContent=""
+                                  OffContent=""
+                                  MinWidth="0"
+                                  VerticalAlignment="Center"
+                                  Toggled="AutoRefreshSwitch_Toggled" />
+                </Grid>
+            </Border>
+
             <!-- Empty state -->
             <TextBlock x:Name="EmptyStateText"
+                       Grid.Row="1"
                        Text="暂无订阅"
                        HorizontalAlignment="Center"
                        Margin="0,48,0,48"
@@ -78,6 +106,7 @@
 
             <!-- Subscription list -->
             <ScrollViewer x:Name="SubScrollViewer"
+                          Grid.Row="1"
                           MaxHeight="440"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">

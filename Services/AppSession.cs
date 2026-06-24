@@ -22,6 +22,7 @@ namespace AnywhereWinUI.Services
 
         // Local Proxy Port (mixed SOCKS5+HTTP inbound)
         public int MixedPort { get; set; } = 2080;
+        public bool AllowLanAccess { get; set; } = false;
 
         // Routing Rules State
         public bool BypassChina { get; set; } = true;
@@ -55,6 +56,7 @@ namespace AnywhereWinUI.Services
         public bool EnableDnsCache { get; set; } = true;
         public bool EnableFakeDns { get; set; } = false;
         public string TunStack { get; set; } = "mixed";
+        public bool EnableSubscriptionAutoRefresh { get; set; } = true;
 
         // Custom Routing Rules
         public List<CustomRule> CustomRules { get; set; } = new();
@@ -78,6 +80,7 @@ namespace AnywhereWinUI.Services
             else if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableTunMode", out var etm) && etm) ProxyModeIndex = 1;
 
             if (Helpers.LocalSettingsHelper.TryGetValue<int>("mixedPort", out var mp) && mp >= 1 && mp <= 65535) MixedPort = mp;
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>("allowLanAccess", out var ala)) AllowLanAccess = ala;
 
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("lastTunServerHost", out var ltsh) && !string.IsNullOrEmpty(ltsh)) LastTunServerHost = ltsh;
 
@@ -98,6 +101,7 @@ namespace AnywhereWinUI.Services
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableDnsCache", out var edc)) EnableDnsCache = edc;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableFakeDns", out var efd)) EnableFakeDns = efd;
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("tunStack", out var ts) && ts is not null && IsValidTunStack(ts)) TunStack = ts;
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableSubscriptionAutoRefresh", out var esar)) EnableSubscriptionAutoRefresh = esar;
 
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("ruleNetflixAction", out var netflix) && !string.IsNullOrEmpty(netflix)) RuleNetflixAction = netflix;
 
