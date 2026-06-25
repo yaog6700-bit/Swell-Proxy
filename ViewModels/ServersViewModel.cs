@@ -82,7 +82,12 @@ namespace AnywhereWinUI.ViewModels
 
             foreach (var node in nodes)
             {
-                var (hostPart, portPart) = AnywhereWinUI.Services.NodeLinkParser.SplitHostPort(node.Host);
+                if (!NodeLinkParser.TrySplitHostPort(node.Host, out var hostPart, out var portPart))
+                {
+                    Debug.WriteLine($"[ServersViewModel] Skipping node with invalid host: {node.Name} ({node.Host})");
+                    continue;
+                }
+
                 if (portPart == 0) portPart = 443;
 
                 var item = new ServerEntryItem

@@ -20,28 +20,29 @@ namespace AnywhereWinUI.Services
 
             rawLink = rawLink.Trim();
 
-            if (rawLink.StartsWith("ss://",          StringComparison.OrdinalIgnoreCase)) return ParseSs(rawLink);
-            if (rawLink.StartsWith("vmess://",       StringComparison.OrdinalIgnoreCase)) return ParseVmess(rawLink);
-            if (rawLink.StartsWith("vless://",       StringComparison.OrdinalIgnoreCase)) return ParseVless(rawLink);
-            if (rawLink.StartsWith("hysteria2://",   StringComparison.OrdinalIgnoreCase)) return ParseHysteria2(rawLink);
-            if (rawLink.StartsWith("hy2://",         StringComparison.OrdinalIgnoreCase)) return ParseHysteria2(rawLink);
-            if (rawLink.StartsWith("trojan://",      StringComparison.OrdinalIgnoreCase)) return ParseTrojan(rawLink);
-            if (rawLink.StartsWith("tuic://",        StringComparison.OrdinalIgnoreCase)) return ParseTuic(rawLink);
-            if (rawLink.StartsWith("naive+https://", StringComparison.OrdinalIgnoreCase)) return ParseNaive(rawLink, "naive+https://");
-            if (rawLink.StartsWith("naive+http2://", StringComparison.OrdinalIgnoreCase)) return ParseNaive(rawLink, "naive+http2://");
-            if (rawLink.StartsWith("naive+http://",  StringComparison.OrdinalIgnoreCase)) return ParseNaive(rawLink, "naive+http://");
-            if (rawLink.StartsWith("naive://",       StringComparison.OrdinalIgnoreCase)) return ParseNaive(rawLink, "naive://");
-            if (rawLink.StartsWith("http2://",       StringComparison.OrdinalIgnoreCase)) return ParseNaive(rawLink, "http2://");
-            if (rawLink.StartsWith("anytls://",      StringComparison.OrdinalIgnoreCase)) return ParseAnyTls(rawLink);
-            if (rawLink.StartsWith("socks5://",      StringComparison.OrdinalIgnoreCase)) return ParseSocks(rawLink);
-            if (rawLink.StartsWith("socks://",       StringComparison.OrdinalIgnoreCase)) return ParseSocks(rawLink);
-            if (rawLink.StartsWith("wireguard://",   StringComparison.OrdinalIgnoreCase)) return ParseWireGuard(rawLink);
-            if (rawLink.StartsWith("nowhere://",     StringComparison.OrdinalIgnoreCase)) return ParseNowhere(rawLink);
-            if (rawLink.StartsWith("https://",       StringComparison.OrdinalIgnoreCase)) return ParseHttp(rawLink);
+            PersistedNode? parsed = null;
+            if (rawLink.StartsWith("ss://",          StringComparison.OrdinalIgnoreCase)) parsed = ParseSs(rawLink);
+            else if (rawLink.StartsWith("vmess://",       StringComparison.OrdinalIgnoreCase)) parsed = ParseVmess(rawLink);
+            else if (rawLink.StartsWith("vless://",       StringComparison.OrdinalIgnoreCase)) parsed = ParseVless(rawLink);
+            else if (rawLink.StartsWith("hysteria2://",   StringComparison.OrdinalIgnoreCase)) parsed = ParseHysteria2(rawLink);
+            else if (rawLink.StartsWith("hy2://",         StringComparison.OrdinalIgnoreCase)) parsed = ParseHysteria2(rawLink);
+            else if (rawLink.StartsWith("trojan://",      StringComparison.OrdinalIgnoreCase)) parsed = ParseTrojan(rawLink);
+            else if (rawLink.StartsWith("tuic://",        StringComparison.OrdinalIgnoreCase)) parsed = ParseTuic(rawLink);
+            else if (rawLink.StartsWith("naive+https://", StringComparison.OrdinalIgnoreCase)) parsed = ParseNaive(rawLink, "naive+https://");
+            else if (rawLink.StartsWith("naive+http2://", StringComparison.OrdinalIgnoreCase)) parsed = ParseNaive(rawLink, "naive+http2://");
+            else if (rawLink.StartsWith("naive+http://",  StringComparison.OrdinalIgnoreCase)) parsed = ParseNaive(rawLink, "naive+http://");
+            else if (rawLink.StartsWith("naive://",       StringComparison.OrdinalIgnoreCase)) parsed = ParseNaive(rawLink, "naive://");
+            else if (rawLink.StartsWith("http2://",       StringComparison.OrdinalIgnoreCase)) parsed = ParseNaive(rawLink, "http2://");
+            else if (rawLink.StartsWith("anytls://",      StringComparison.OrdinalIgnoreCase)) parsed = ParseAnyTls(rawLink);
+            else if (rawLink.StartsWith("socks5://",      StringComparison.OrdinalIgnoreCase)) parsed = ParseSocks(rawLink);
+            else if (rawLink.StartsWith("socks://",       StringComparison.OrdinalIgnoreCase)) parsed = ParseSocks(rawLink);
+            else if (rawLink.StartsWith("wireguard://",   StringComparison.OrdinalIgnoreCase)) parsed = ParseWireGuard(rawLink);
+            else if (rawLink.StartsWith("nowhere://",     StringComparison.OrdinalIgnoreCase)) parsed = ParseNowhere(rawLink);
+            else if (rawLink.StartsWith("https://",       StringComparison.OrdinalIgnoreCase)) parsed = ParseHttp(rawLink);
             // Note: http:// must come last among http* prefixes to avoid shadowing http2://
-            if (rawLink.StartsWith("http://",        StringComparison.OrdinalIgnoreCase)) return ParseHttp(rawLink);
+            else if (rawLink.StartsWith("http://",        StringComparison.OrdinalIgnoreCase)) parsed = ParseHttp(rawLink);
 
-            return null;
+            return IsValidParsedNode(parsed) ? parsed : null;
         }
 
         // ── Shadowsocks ───────────────────────────────────────────────────────
@@ -751,6 +752,10 @@ namespace AnywhereWinUI.Services
                    || value.Equals("true", StringComparison.OrdinalIgnoreCase)
                    || value.Equals("yes",  StringComparison.OrdinalIgnoreCase));
 
+        private static bool IsValidParsedNode(PersistedNode? node)
+            => node != null && TrySplitHostPort(node.Host, out var host, out _)
+                            && !string.IsNullOrWhiteSpace(host);
+
         private static string NormalizeTrojanNetwork(string network)
         {
             if (string.IsNullOrWhiteSpace(network)) return "tcp";
@@ -758,19 +763,71 @@ namespace AnywhereWinUI.Services
             return network == "original" ? "tcp" : network;
         }
 
-        public static (string host, int port) SplitHostPort(string hostPort)
+        public static bool TrySplitHostPort(string? hostPort, out string host, out int port)
         {
-            if (hostPort.StartsWith("["))
+            host = string.Empty;
+            port = 0;
+
+            if (string.IsNullOrWhiteSpace(hostPort))
+                return false;
+
+            hostPort = hostPort.Trim();
+
+            if (hostPort.StartsWith("[", StringComparison.Ordinal))
             {
                 var close = hostPort.IndexOf(']');
-                var h     = hostPort.Substring(1, close - 1);
-                var p     = int.Parse(hostPort.Substring(close + 2));
-                return (h, p);
+                if (close <= 1)
+                    return false;
+
+                host = hostPort.Substring(1, close - 1);
+                if (string.IsNullOrWhiteSpace(host))
+                    return false;
+
+                if (close == hostPort.Length - 1)
+                    return true;
+
+                if (close + 1 >= hostPort.Length || hostPort[close + 1] != ':')
+                    return false;
+
+                var portText = hostPort.Substring(close + 2);
+                return TryParsePort(portText, out port);
             }
 
-            var idx = hostPort.LastIndexOf(':');
-            if (idx < 0) return (hostPort, 0);
-            return (hostPort.Substring(0, idx), int.Parse(hostPort.Substring(idx + 1)));
+            var firstColon = hostPort.IndexOf(':');
+            var lastColon = hostPort.LastIndexOf(':');
+            if (firstColon < 0)
+            {
+                host = hostPort;
+                return !string.IsNullOrWhiteSpace(host);
+            }
+
+            if (firstColon != lastColon)
+            {
+                host = hostPort;
+                return !string.IsNullOrWhiteSpace(host);
+            }
+
+            if (lastColon <= 0 || lastColon == hostPort.Length - 1)
+                return false;
+
+            host = hostPort.Substring(0, lastColon);
+            if (string.IsNullOrWhiteSpace(host))
+                return false;
+
+            var text = hostPort.Substring(lastColon + 1);
+            return TryParsePort(text, out port);
+        }
+
+        public static (string host, int port) SplitHostPort(string hostPort)
+        {
+            return TrySplitHostPort(hostPort, out var host, out var port)
+                ? (host, port)
+                : (string.Empty, 0);
+        }
+
+        private static bool TryParsePort(string text, out int port)
+        {
+            return int.TryParse(text, out port) && port >= 0 && port <= 65535;
         }
 
         /// <summary>
@@ -785,6 +842,7 @@ namespace AnywhereWinUI.Services
         /// </summary>
         public static string FormatHostPortPublic(string host, int port)
         {
+            if (string.IsNullOrWhiteSpace(host)) return string.Empty;
             return host.Contains(':') ? $"[{host}]:{port}" : $"{host}:{port}";
         }
     }

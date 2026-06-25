@@ -457,6 +457,12 @@ namespace AnywhereWinUI.Services
                 var parsed = ParseShareUrl(trimmed);
                 if (parsed != null)
                 {
+                    if (!NodeLinkParser.TrySplitHostPort(parsed.Host, out _, out _))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[NodesManager] Skipping parsed node with invalid host: {parsed.Name} ({parsed.Host})");
+                        continue;
+                    }
+
                     parsed.SubscriptionId = subId;
                     list.Add(parsed);
                 }
@@ -502,6 +508,8 @@ namespace AnywhereWinUI.Services
                     string tag = ob.TryGetProperty("tag", out var tagProp) ? tagProp.GetString() ?? "" : "";
                     string server = ob.TryGetProperty("server", out var serverProp) ? serverProp.GetString() ?? "" : "";
                     int port = ob.TryGetProperty("server_port", out var portProp) ? portProp.GetInt32() : 0;
+                    if (string.IsNullOrWhiteSpace(server))
+                        continue;
 
                     var node = new PersistedNode
                     {
@@ -757,6 +765,12 @@ namespace AnywhereWinUI.Services
                         default:
                             // 未知协议，跳过
                             continue;
+                    }
+
+                    if (!NodeLinkParser.TrySplitHostPort(node.Host, out _, out _))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ParseSingboxConfig] skipping node with invalid host: {node.Name} ({node.Host})");
+                        continue;
                     }
 
                     list.Add(node);
