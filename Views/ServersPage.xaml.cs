@@ -655,7 +655,12 @@ namespace AnywhereWinUI.Views
 
         private void GroupFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            ApplyFilters();
+            // 直接更新 ViewModel，触发 OnSelectedGroupFilterIdChanged → ViewModel.ApplyFilters()
+            // 无需再调 View 的 ApplyFilters()，避免列表双重重建
+            if (GroupFilterComboBox.SelectedValue is string selectedGroupId)
+            {
+                ViewModel.SelectedGroupFilterId = selectedGroupId;
+            }
             UpdateGroupFilterButtonToolTip();
         }
 
@@ -665,9 +670,9 @@ namespace AnywhereWinUI.Views
                 item.Tag is string tag &&
                 Enum.TryParse<ServerSortMode>(tag, out var mode))
             {
-                ViewModel.SortMode = mode;
+                ViewModel.SortMode = mode;  // 自动触发 OnSortModeChanged → ApplyFilters()
                 UpdateSortMenuCheckedState();
-                ApplyFilters();
+                // 无需手动再调 ApplyFilters()，避免列表闪烁重建两次
             }
         }
 

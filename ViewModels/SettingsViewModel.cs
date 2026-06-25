@@ -357,16 +357,35 @@ namespace AnywhereWinUI.ViewModels
         {
             try
             {
-                return Dns.GetHostEntry(Dns.GetHostName()).AddressList
+                var candidates = Dns.GetHostEntry(Dns.GetHostName()).AddressList
                     .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)
                     .Where(ip => !IPAddress.IsLoopback(ip))
                     .Select(ip => ip.ToString())
-                    .FirstOrDefault(ip => !ip.StartsWith("169.254.", StringComparison.Ordinal));
+                    .Where(ip => !ip.StartsWith("169.254.", StringComparison.Ordinal))
+                    .ToList();
+
+                // 优先返回 RFC1918 私有地址（192.168.x.x / 10.x.x.x / 172.16-31.x.x）
+                // 避免多网卡时返回 VMware / Docker 等虚拟网卡的地址
+                return candidates.FirstOrDefault(ip =>
+                           ip.StartsWith("192.168.", StringComparison.Ordinal) ||
+                           ip.StartsWith("10.", StringComparison.Ordinal) ||
+                           IsRfc1918_172(ip))
+                       ?? candidates.FirstOrDefault();
             }
             catch
             {
                 return null;
             }
+        }
+
+        private static bool IsRfc1918_172(string ip)
+        {
+            // 172.16.0.0 – 172.31.255.255
+            if (!ip.StartsWith("172.", StringComparison.Ordinal)) return false;
+            var parts = ip.Split('.');
+            return parts.Length >= 2 &&
+                   int.TryParse(parts[1], out var second) &&
+                   second >= 16 && second <= 31;
         }
 
         partial void OnEnableTailscaleChanged(bool value)

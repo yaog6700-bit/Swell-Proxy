@@ -37,7 +37,7 @@
                 <!-- Action Toolbar -->
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,20">
                     <TextBlock Text="策略组配置" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
-                    <Button Grid.Column="1" Content="配置高级规程" Style="{ThemeResource AccentButtonStyle}" FontSize="12" Padding="14,6" CornerRadius="6" Click="AdvancedRulesButton_Click"/>
+                    <Button Grid.Column="1" Content="配置高级规则" Style="{ThemeResource AccentButtonStyle}" FontSize="12" Padding="14,6" CornerRadius="6" Click="AdvancedRulesButton_Click"/>
                 </Grid>
 
                 <ListView Grid.Row="1" SelectionMode="None">

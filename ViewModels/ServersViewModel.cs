@@ -52,9 +52,6 @@ namespace AnywhereWinUI.ViewModels
         private string _searchQuery = string.Empty;
 
         [ObservableProperty]
-        private bool _showFavoritesOnly = false;
-
-        [ObservableProperty]
         private string _selectedGroupFilterId = AllFilterId;
 
         [ObservableProperty]
@@ -76,10 +73,11 @@ namespace AnywhereWinUI.ViewModels
         {
             _latencyProbeService = new LatencyProbeService();
             _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+            // LoadSubscriptions() → RebuildGroupFilters() 第1次
+            // LoadServersList()   → RebuildGroupFilters() + ApplyFilters() 第2次
+            // 不需要在此处额外再调用，避免三次重复重建
             LoadSubscriptions();
             LoadServersList();
-            RebuildGroupFilters();
-            ApplyFilters();
         }
 
         public void LoadSubscriptions()
@@ -94,11 +92,6 @@ namespace AnywhereWinUI.ViewModels
         }
 
         partial void OnSearchQueryChanged(string value)
-        {
-            ApplyFilters();
-        }
-
-        partial void OnShowFavoritesOnlyChanged(bool value)
         {
             ApplyFilters();
         }
@@ -153,11 +146,6 @@ namespace AnywhereWinUI.ViewModels
         {
             var query = AllServers.AsEnumerable();
 
-            if (ShowFavoritesOnly)
-            {
-                query = query.Where(s => s.IsFavorite);
-            }
-
             if (SelectedGroupFilterId == FavoritesFilterId)
             {
                 query = query.Where(s => s.IsFavorite);
@@ -194,11 +182,13 @@ namespace AnywhereWinUI.ViewModels
             }
         }
 
+        // 排序优先级：已测速(0) > 未测试(1) > 超时/失败(2)
+        // 超时/失败的节点比从未测试的节点更差，排在最后
         private static int LatencySortBucket(int? latencyMs) => latencyMs switch
         {
-            null => 2,
-            < 0 => 1,
-            _ => 0
+            null => 1,  // 未测试 → 中间
+            < 0  => 2,  // 超时/失败 → 最后
+            _    => 0   // 有效延迟 → 最前
         };
 
         private void RebuildGroupFilters()
