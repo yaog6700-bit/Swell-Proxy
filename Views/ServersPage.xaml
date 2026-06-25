@@ -34,25 +34,127 @@
             </Grid.RowDefinitions>
 
             <!-- Search & Filters -->
-            <Grid Grid.Row="0" Margin="0,0,0,12" ColumnDefinitions="*,Auto">
-                <AutoSuggestBox x:Name="ServerSearchBox"
-                                Grid.Column="0"
-                                PlaceholderText="搜索服务器..."
-                                QueryIcon="Find"
-                                HorizontalAlignment="Stretch"
-                                TextMemberPath="Name"
-                                TextChanged="ServerSearchBox_TextChanged"
-                                SuggestionChosen="ServerSearchBox_SuggestionChosen"
-                                QuerySubmitted="ServerSearchBox_QuerySubmitted" />
-                <ToggleButton x:Name="FavoriteFilterButton"
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <AutoSuggestBox x:Name="ServerSearchBox"
+                                    Grid.Column="0"
+                                    PlaceholderText="搜索服务器..."
+                                    QueryIcon="Find"
+                                    HorizontalAlignment="Stretch"
+                                    TextMemberPath="Name"
+                                    TextChanged="ServerSearchBox_TextChanged"
+                                    SuggestionChosen="ServerSearchBox_SuggestionChosen"
+                                    QuerySubmitted="ServerSearchBox_QuerySubmitted">
+                        <AutoSuggestBox.ItemTemplate>
+                            <DataTemplate x:DataType="views:ServerEntryItem">
+                                <Grid Padding="0,4">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="{x:Bind Name, Mode=OneWay}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Grid.Row="1"
+                                                Orientation="Horizontal"
+                                                Spacing="4">
+                                        <TextBlock Text="{x:Bind HostPortDisplay, Mode=OneWay}"
+                                                   FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="·"
+                                                   FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                        <TextBlock Text="{x:Bind DisplayProtocol, Mode=OneWay}"
+                                                   FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </AutoSuggestBox.ItemTemplate>
+                    </AutoSuggestBox>
+                    <ToggleButton x:Name="GroupFilterToggleButton"
+                                  Grid.Column="1"
+                                  Background="Transparent"
+                                  BorderBrush="Transparent"
+                                  ToolTipService.ToolTip="筛选分组"
+                                  Checked="GroupFilterToggleButton_Changed"
+                                  Unchecked="GroupFilterToggleButton_Changed"
+                                  Padding="6"
+                                  VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE8A9;" FontSize="16" />
+                    </ToggleButton>
+                </Grid>
+
+                <Grid x:Name="GroupFilterBar"
+                      Grid.Row="1"
+                      Margin="0,12,0,0"
+                      ColumnSpacing="8"
+                      Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xEA37;"
+                                  FontSize="12"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="筛选条件:"
+                                   FontSize="14"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <ComboBox x:Name="GroupFilterComboBox"
                               Grid.Column="1"
-                              Margin="8,0,0,0"
-                              ToolTipService.ToolTip="只显示收藏"
-                              Checked="FavoriteFilterButton_Changed"
-                              Unchecked="FavoriteFilterButton_Changed"
-                              Padding="8,6" CornerRadius="6">
-                    <FontIcon Glyph="&#xE734;" FontSize="14" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
-                </ToggleButton>
+                              DisplayMemberPath="Name"
+                              SelectedValuePath="Id"
+                              SelectionChanged="GroupFilterComboBox_SelectionChanged" />
+
+                    <DropDownButton x:Name="SortButton"
+                                    Grid.Column="2"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    ToolTipService.ToolTip="排序">
+                        <DropDownButton.Content>
+                            <FontIcon Glyph="&#xE8CB;" FontSize="16" />
+                        </DropDownButton.Content>
+                        <DropDownButton.Flyout>
+                            <MenuFlyout Placement="Bottom">
+                                <RadioMenuFlyoutItem x:Name="SortDefaultItem"
+                                                     Text="默认"
+                                                     Tag="Default"
+                                                     GroupName="ServerSortMode"
+                                                     Click="SortMenuItem_Click" />
+                                <RadioMenuFlyoutItem x:Name="SortActiveItem"
+                                                     Text="当前连接"
+                                                     Tag="Active"
+                                                     GroupName="ServerSortMode"
+                                                     Click="SortMenuItem_Click" />
+                                <RadioMenuFlyoutItem x:Name="SortProtocolItem"
+                                                     Text="协议"
+                                                     Tag="Protocol"
+                                                     GroupName="ServerSortMode"
+                                                     Click="SortMenuItem_Click" />
+                                <RadioMenuFlyoutItem x:Name="SortLatencyItem"
+                                                     Text="延迟"
+                                                     Tag="Latency"
+                                                     GroupName="ServerSortMode"
+                                                     Click="SortMenuItem_Click" />
+                            </MenuFlyout>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
+                </Grid>
             </Grid>
 
             <!-- ListView of servers -->

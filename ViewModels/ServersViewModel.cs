@@ -13,8 +13,26 @@ using Microsoft.UI.Xaml.Media;
 
 namespace AnywhereWinUI.ViewModels
 {
+    public sealed class ServerGroupFilterItem
+    {
+        public string Id { get; init; } = string.Empty;
+        public string Name { get; init; } = string.Empty;
+    }
+
+    public enum ServerSortMode
+    {
+        Default,
+        Active,
+        Protocol,
+        Latency
+    }
+
     public partial class ServersViewModel : ObservableObject
     {
+        private const string AllFilterId = "__all__";
+        private const string FavoritesFilterId = "__favorites__";
+        private const string ManualFilterId = "__manual__";
+
         private readonly LatencyProbeService _latencyProbeService;
         private readonly DispatcherQueue _dispatcherQueue;
 
@@ -28,10 +46,19 @@ namespace AnywhereWinUI.ViewModels
         private ObservableCollection<PersistedSubscription> _subscriptions = new();
 
         [ObservableProperty]
+        private ObservableCollection<ServerGroupFilterItem> _groupFilters = new();
+
+        [ObservableProperty]
         private string _searchQuery = string.Empty;
 
         [ObservableProperty]
         private bool _showFavoritesOnly = false;
+
+        [ObservableProperty]
+        private string _selectedGroupFilterId = AllFilterId;
+
+        [ObservableProperty]
+        private ServerSortMode _sortMode = ServerSortMode.Default;
 
         [ObservableProperty]
         private string _selectedNodeId = string.Empty;
@@ -49,8 +76,9 @@ namespace AnywhereWinUI.ViewModels
         {
             _latencyProbeService = new LatencyProbeService();
             _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
-            LoadServersList();
             LoadSubscriptions();
+            LoadServersList();
+            RebuildGroupFilters();
             ApplyFilters();
         }
 
@@ -69,6 +97,16 @@ namespace AnywhereWinUI.ViewModels
         }
 
         partial void OnShowFavoritesOnlyChanged(bool value)
+        {
+            ApplyFilters();
+        }
+
+        partial void OnSelectedGroupFilterIdChanged(string value)
+        {
+            ApplyFilters();
+        }
+
+        partial void OnSortModeChanged(ServerSortMode value)
         {
             ApplyFilters();
         }
@@ -97,16 +135,19 @@ namespace AnywhereWinUI.ViewModels
                     Host = hostPart,
                     Port = portPart,
                     Protocol = node.Protocol,
+                    SubscriptionId = node.SubscriptionId ?? string.Empty,
+                    Network = node.Network ?? string.Empty,
                     IsFavorite = node.IsFavorite,
                     PingText = "未测试",
                     ActiveIndicatorVisibility = (node.Id == currentSelectedId && isRunning) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed
                 };
                 AllServers.Add(item);
             }
+            RebuildGroupFilters();
             ApplyFilters();
         }
 
-        private void ApplyFilters()
+        public void ApplyFilters()
         {
             var query = AllServers.AsEnumerable();
 
@@ -115,16 +156,91 @@ namespace AnywhereWinUI.ViewModels
                 query = query.Where(s => s.IsFavorite);
             }
 
+            if (SelectedGroupFilterId == FavoritesFilterId)
+            {
+                query = query.Where(s => s.IsFavorite);
+            }
+            else if (SelectedGroupFilterId == ManualFilterId)
+            {
+                query = query.Where(s => string.IsNullOrEmpty(s.SubscriptionId));
+            }
+            else if (!string.IsNullOrEmpty(SelectedGroupFilterId) && SelectedGroupFilterId != AllFilterId)
+            {
+                query = query.Where(s => s.SubscriptionId == SelectedGroupFilterId);
+            }
+
             if (!string.IsNullOrWhiteSpace(SearchQuery))
             {
                 var q = SearchQuery.ToLower();
                 query = query.Where(s => s.Name.ToLower().Contains(q) || s.Host.ToLower().Contains(q));
             }
 
+            query = SortMode switch
+            {
+                ServerSortMode.Active => query.OrderBy(s => s.ActiveIndicatorVisibility == Microsoft.UI.Xaml.Visibility.Visible ? 0 : 1),
+                ServerSortMode.Protocol => query.OrderBy(s => s.Protocol ?? string.Empty, StringComparer.OrdinalIgnoreCase),
+                ServerSortMode.Latency => query
+                    .OrderBy(s => LatencySortBucket(s.LatencyMs))
+                    .ThenBy(s => s.LatencyMs ?? int.MaxValue),
+                _ => query
+            };
+
             FilteredServers.Clear();
             foreach (var item in query)
             {
                 FilteredServers.Add(item);
+            }
+        }
+
+        private static int LatencySortBucket(int? latencyMs) => latencyMs switch
+        {
+            null => 2,
+            < 0 => 1,
+            _ => 0
+        };
+
+        private void RebuildGroupFilters()
+        {
+            var selected = string.IsNullOrWhiteSpace(SelectedGroupFilterId) ? AllFilterId : SelectedGroupFilterId;
+
+            GroupFilters.Clear();
+            GroupFilters.Add(new ServerGroupFilterItem { Id = AllFilterId, Name = "全部服务器" });
+            GroupFilters.Add(new ServerGroupFilterItem { Id = FavoritesFilterId, Name = "收藏列表" });
+
+            if (AllServers.Any(s => string.IsNullOrEmpty(s.SubscriptionId)))
+            {
+                GroupFilters.Add(new ServerGroupFilterItem { Id = ManualFilterId, Name = "自建服务器" });
+            }
+
+            foreach (var sub in Subscriptions)
+            {
+                if (string.IsNullOrEmpty(sub.Id)) continue;
+                if (!AllServers.Any(s => s.SubscriptionId == sub.Id)) continue;
+
+                GroupFilters.Add(new ServerGroupFilterItem
+                {
+                    Id = sub.Id,
+                    Name = string.IsNullOrWhiteSpace(sub.Name) ? "未命名订阅" : sub.Name
+                });
+            }
+
+            foreach (var orphanId in AllServers
+                         .Select(s => s.SubscriptionId)
+                         .Where(id => !string.IsNullOrEmpty(id))
+                         .Distinct(StringComparer.Ordinal)
+                         .Where(id => !Subscriptions.Any(sub => sub.Id == id)))
+            {
+                GroupFilters.Add(new ServerGroupFilterItem { Id = orphanId, Name = "已删除订阅" });
+            }
+
+            if (!GroupFilters.Any(g => g.Id == selected))
+            {
+                selected = AllFilterId;
+            }
+
+            if (SelectedGroupFilterId != selected)
+            {
+                SelectedGroupFilterId = selected;
             }
         }
 
@@ -157,6 +273,7 @@ namespace AnywhereWinUI.ViewModels
 
             _dispatcherQueue.TryEnqueue(() =>
             {
+                item.LatencyMs = null;
                 item.PingText = "测试中...";
                 item.PingColor = new SolidColorBrush(Colors.Orange);
             });
@@ -167,6 +284,7 @@ namespace AnywhereWinUI.ViewModels
             {
                 if (result.Status != LatencyProbeStatus.Success)
                 {
+                    item.LatencyMs = -1;
                     item.PingText = result.Status == LatencyProbeStatus.Timeout ? "超时" : "失败";
                     item.PingColor = new SolidColorBrush(Colors.Red);
 
@@ -179,6 +297,7 @@ namespace AnywhereWinUI.ViewModels
                 else
                 {
                     int delay = result.Milliseconds ?? 0;
+                    item.LatencyMs = delay;
                     item.PingText = $"{delay} ms";
                     
                     SolidColorBrush colorBrush;
@@ -192,6 +311,11 @@ namespace AnywhereWinUI.ViewModels
                     {
                         OnPropertyChanged(nameof(SelectedServer));
                     }
+                }
+
+                if (SortMode == ServerSortMode.Latency)
+                {
+                    ApplyFilters();
                 }
             });
         }
@@ -213,6 +337,11 @@ namespace AnywhereWinUI.ViewModels
             foreach (var s in AllServers)
             {
                 s.ActiveIndicatorVisibility = (s.Id == server.Id && isRunning) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+            }
+
+            if (SortMode == ServerSortMode.Active)
+            {
+                ApplyFilters();
             }
 
             // Sync with AppSession active properties
