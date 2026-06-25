@@ -49,6 +49,11 @@ namespace AnywhereWinUI.Views
 
         public string HostPortDisplay => $"{Host}:{Port}";
 
+        public override string ToString()
+        {
+            return string.IsNullOrWhiteSpace(Name) ? HostPortDisplay : Name;
+        }
+
         private string _pingText = "未测速";
         public string PingText
         {
@@ -72,6 +77,20 @@ namespace AnywhereWinUI.Views
                 if (_pingColor != value)
                 {
                     _pingColor = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private int? _latencyMs;
+        public int? LatencyMs
+        {
+            get => _latencyMs;
+            set
+            {
+                if (_latencyMs != value)
+                {
+                    _latencyMs = value;
                     OnPropertyChanged();
                 }
             }
@@ -198,6 +217,10 @@ namespace AnywhereWinUI.Views
 
             this.InitializeComponent();
             ServersListView.ItemsSource = ViewModel.FilteredServers;
+            GroupFilterComboBox.ItemsSource = ViewModel.GroupFilters;
+            GroupFilterComboBox.SelectedValue = ViewModel.SelectedGroupFilterId;
+            UpdateGroupFilterButtonToolTip();
+            UpdateSortMenuCheckedState();
             
             CoreManager.Instance.RunningChanged += CoreManager_RunningChanged;
             CoreManager.Instance.TrafficUpdated += CoreManager_TrafficUpdated;
@@ -280,6 +303,10 @@ namespace AnywhereWinUI.Views
                 foreach (var s in AllServers)
                 {
                     s.ActiveIndicatorVisibility = (s.Id == selectedId && isRunning) ? Visibility.Visible : Visibility.Collapsed;
+                }
+                if (ViewModel.SortMode == ServerSortMode.Active)
+                {
+                    ViewModel.ApplyFilters();
                 }
                 UpdateControlBarUI();
             });
@@ -524,17 +551,24 @@ namespace AnywhereWinUI.Views
 
         private void LoadServersList()
         {
+            ViewModel.LoadSubscriptions();
             ViewModel.LoadServersList();
+            GroupFilterComboBox.SelectedValue = ViewModel.SelectedGroupFilterId;
+            UpdateGroupFilterButtonToolTip();
             ApplyFilters();
         }
 
         private void ApplyFilters()
         {
             ViewModel.SearchQuery = ServerSearchBox.Text;
-            ViewModel.ShowFavoritesOnly = FavoriteFilterButton.IsChecked == true;
+            if (GroupFilterComboBox.SelectedValue is string selectedGroupId &&
+                !string.Equals(ViewModel.SelectedGroupFilterId, selectedGroupId, StringComparison.Ordinal))
+            {
+                ViewModel.SelectedGroupFilterId = selectedGroupId;
+            }
             // NOTE: Do NOT call ViewModel.LoadServersList() here.
-            // Setting SearchQuery / ShowFavoritesOnly above already triggers
-            // OnSearchQueryChanged / OnShowFavoritesOnlyChanged in the ViewModel,
+            // Setting SearchQuery / SelectedGroupFilterId above already triggers
+            // OnSearchQueryChanged / OnSelectedGroupFilterIdChanged in the ViewModel,
             // which internally calls ApplyFilters() to rebuild FilteredServers.
             // Calling LoadServersList() here would reconstruct AllServers from
             // NodesManager.Instance.Nodes every time the user types in the search box
@@ -612,9 +646,54 @@ namespace AnywhereWinUI.Views
             }
         }
 
-        private void FavoriteFilterButton_Changed(object sender, RoutedEventArgs e)
+        private void GroupFilterToggleButton_Changed(object sender, RoutedEventArgs e)
+        {
+            GroupFilterBar.Visibility = GroupFilterToggleButton.IsChecked == true
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private void GroupFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ApplyFilters();
+            UpdateGroupFilterButtonToolTip();
+        }
+
+        private void SortMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is RadioMenuFlyoutItem item &&
+                item.Tag is string tag &&
+                Enum.TryParse<ServerSortMode>(tag, out var mode))
+            {
+                ViewModel.SortMode = mode;
+                UpdateSortMenuCheckedState();
+                ApplyFilters();
+            }
+        }
+
+        private void UpdateGroupFilterButtonToolTip()
+        {
+            var selected = ViewModel.GroupFilters.FirstOrDefault(g =>
+                string.Equals(g.Id, ViewModel.SelectedGroupFilterId, StringComparison.Ordinal));
+            var name = selected?.Name ?? "全部服务器";
+            ToolTipService.SetToolTip(GroupFilterToggleButton, $"筛选分组：{name}");
+        }
+
+        private void UpdateSortMenuCheckedState()
+        {
+            SortDefaultItem.IsChecked = ViewModel.SortMode == ServerSortMode.Default;
+            SortActiveItem.IsChecked = ViewModel.SortMode == ServerSortMode.Active;
+            SortProtocolItem.IsChecked = ViewModel.SortMode == ServerSortMode.Protocol;
+            SortLatencyItem.IsChecked = ViewModel.SortMode == ServerSortMode.Latency;
+
+            var sortName = ViewModel.SortMode switch
+            {
+                ServerSortMode.Active => "当前连接",
+                ServerSortMode.Protocol => "协议",
+                ServerSortMode.Latency => "延迟",
+                _ => "默认"
+            };
+            ToolTipService.SetToolTip(SortButton, $"排序：{sortName}");
         }
 
         private void NodeItem_PointerEntered(object sender, PointerRoutedEventArgs e)

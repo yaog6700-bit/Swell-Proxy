@@ -336,6 +336,17 @@ namespace AnywhereWinUI.Services
                 }
                 catch { /* Plugin errors must not break subscription update */ }
 
+                foreach (var n in newNodes)
+                {
+                    n.SubscriptionId = subId;
+                }
+
+                var newEndpointKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var n in newNodes)
+                {
+                    newEndpointKeys.Add($"{n.Protocol}|{n.Host}");
+                }
+
                 // Replace old sub nodes in-place so manual ordering is preserved.
                 // Strategy:
                 //   1. Find the index of the first node belonging to this subscription.
@@ -345,7 +356,18 @@ namespace AnywhereWinUI.Services
                 //      brand-new nodes from the subscription are inserted at the end of
                 //      where the old subscription block was.
                 int insertIndex = Nodes.FindIndex(n => n.SubscriptionId == subId);
+                if (insertIndex < 0)
+                {
+                    insertIndex = Nodes.FindIndex(n =>
+                        !string.IsNullOrEmpty(n.SubscriptionId) &&
+                        !Subscriptions.Exists(s => s.Id == n.SubscriptionId) &&
+                        newEndpointKeys.Contains($"{n.Protocol}|{n.Host}"));
+                }
                 Nodes.RemoveAll(n => n.SubscriptionId == subId);
+                Nodes.RemoveAll(n =>
+                    !string.IsNullOrEmpty(n.SubscriptionId) &&
+                    !Subscriptions.Exists(s => s.Id == n.SubscriptionId) &&
+                    newEndpointKeys.Contains($"{n.Protocol}|{n.Host}"));
                 if (insertIndex < 0 || insertIndex > Nodes.Count)
                     insertIndex = Nodes.Count; // fallback: append at end
                 Nodes.InsertRange(insertIndex, newNodes);
