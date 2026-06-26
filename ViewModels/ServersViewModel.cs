@@ -73,6 +73,12 @@ namespace AnywhereWinUI.ViewModels
         {
             _latencyProbeService = new LatencyProbeService();
             _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+            
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("SelectedGroupFilterId", out var savedId) && !string.IsNullOrEmpty(savedId))
+            {
+                _selectedGroupFilterId = savedId;
+            }
+
             // LoadSubscriptions() → RebuildGroupFilters() 第1次
             // LoadServersList()   → RebuildGroupFilters() + ApplyFilters() 第2次
             // 不需要在此处额外再调用，避免三次重复重建
@@ -98,6 +104,7 @@ namespace AnywhereWinUI.ViewModels
 
         partial void OnSelectedGroupFilterIdChanged(string value)
         {
+            Helpers.LocalSettingsHelper.SetValue("SelectedGroupFilterId", value ?? AllFilterId);
             ApplyFilters();
         }
 

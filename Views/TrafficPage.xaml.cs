@@ -18,11 +18,13 @@ namespace AnywhereWinUI.Views
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+            ViewModel?.OnPageActivated();
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
+            ViewModel?.OnPageDeactivated();
         }
 
         private void HeatmapDailyBtn_Checked(object sender, RoutedEventArgs e)

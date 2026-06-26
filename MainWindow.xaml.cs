@@ -21,6 +21,8 @@ namespace AnywhereWinUI
         
         private readonly WindowManager _windowManager;
         private bool _isHiddenToTray;
+        public static bool IsVisibleToUser { get; private set; } = true;
+        public static event EventHandler<bool>? VisibilityToUserChanged;
         
         public bool MinimizeOnClose { get; set; } = true;
 
@@ -655,6 +657,8 @@ namespace AnywhereWinUI
             if (_isHiddenToTray) return;
 
             _isHiddenToTray = true;
+            IsVisibleToUser = false;
+            VisibilityToUserChanged?.Invoke(this, false);
             AppWindow.IsShownInSwitchers = false;
             AppWindow.Hide();
             // BUG-12 fix: 不再 collapse 根视觉树，避免触发全局 Unloaded 和动画关闭异常
@@ -668,6 +672,8 @@ namespace AnywhereWinUI
             {
                 if (!AppWindow.IsVisible)
                 {
+                    IsVisibleToUser = true;
+                    VisibilityToUserChanged?.Invoke(this, true);
                     Activate();
                     AppWindow.Show();
                 }
@@ -675,6 +681,8 @@ namespace AnywhereWinUI
             }
 
             _isHiddenToTray = false;
+            IsVisibleToUser = true;
+            VisibilityToUserChanged?.Invoke(this, true);
             // BUG-12 fix: 对应删除了 HideToTray 中的 Collapsed，此处不再需要 restore Visibility
             AppWindow.IsShownInSwitchers = true;
             Activate();

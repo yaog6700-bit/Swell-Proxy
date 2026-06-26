@@ -18,6 +18,13 @@ namespace AnywhereWinUI.Views
         // Guard so animations only run once per page lifetime
         private bool _animationsStarted = false;
 
+        // Reusable timer for InfoBar auto-dismiss — avoids creating a new timer on every call
+        private DispatcherTimer? _infoBarTimer;
+
+        // Pre-allocated status dot brushes — only 2 states, no need to allocate on every toggle
+        private static readonly SolidColorBrush _dotRunning = new(Microsoft.UI.Colors.MediumSeaGreen);
+        private static readonly SolidColorBrush _dotStopped = new(Microsoft.UI.Colors.Gray);
+
         public DashboardPage()
         {
             ViewModel = ((App)Application.Current).Services
@@ -197,10 +204,7 @@ namespace AnywhereWinUI.Views
         private void UpdateStatusDot(bool running)
         {
             if (HeroStatusDot == null) return;
-
-            HeroStatusDot.Fill = running
-                ? new SolidColorBrush(Microsoft.UI.Colors.MediumSeaGreen)
-                : new SolidColorBrush(Microsoft.UI.Colors.Gray);
+            HeroStatusDot.Fill = running ? _dotRunning : _dotStopped;
         }
 
         // ─────────────────────────────────────────────────────────
@@ -214,14 +218,21 @@ namespace AnywhereWinUI.Views
             StatusInfoBar.Severity = severity;
             StatusInfoBar.IsOpen   = true;
 
-            // Auto-dismiss after 4 seconds
-            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
-            timer.Tick += (s, e) =>
+            // Reuse a single timer — stop any previous countdown first to avoid timer accumulation
+            if (_infoBarTimer == null)
             {
-                timer.Stop();
-                StatusInfoBar.IsOpen = false;
-            };
-            timer.Start();
+                _infoBarTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+                _infoBarTimer.Tick += (s, e) =>
+                {
+                    _infoBarTimer!.Stop();
+                    StatusInfoBar.IsOpen = false;
+                };
+            }
+            else
+            {
+                _infoBarTimer.Stop();
+            }
+            _infoBarTimer.Start();
         }
     }
 }

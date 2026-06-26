@@ -173,16 +173,21 @@ namespace AnywhereWinUI.ViewModels
         public string SubUsedPercent => $"{SubProgress:F0}%";
 
         /// <summary>
-        /// Color-coded brush for the ProgressBar:
-        ///   green  (< 60%)  — plenty of quota left
+        /// Color-coded brush for the ProgressBar — pre-allocated as static instances
+        /// to avoid creating a new SolidColorBrush on every binding refresh.
+        ///   green  (&lt; 60%)  — plenty of quota left
         ///   amber  (60-80%) — getting low
         ///   red    (≥ 80%)  — nearly exhausted
         /// </summary>
+        private static readonly SolidColorBrush _subBrushGreen = new(Color.FromArgb(255, 16,  185, 129)); // #10B981 emerald
+        private static readonly SolidColorBrush _subBrushAmber = new(Color.FromArgb(255, 245, 158,  11)); // #F59E0B amber
+        private static readonly SolidColorBrush _subBrushRed   = new(Color.FromArgb(255, 239,  68,  68)); // #EF4444 red
+
         public SolidColorBrush SubProgressBrush => SubProgress switch
         {
-            < 60 => new SolidColorBrush(Color.FromArgb(255, 16,  185, 129)), // #10B981 emerald
-            < 80 => new SolidColorBrush(Color.FromArgb(255, 245, 158,  11)), // #F59E0B amber
-            _    => new SolidColorBrush(Color.FromArgb(255, 239,  68,  68))  // #EF4444 red
+            < 60 => _subBrushGreen,
+            < 80 => _subBrushAmber,
+            _    => _subBrushRed
         };
 
         [ObservableProperty]

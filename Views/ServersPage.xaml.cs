@@ -140,45 +140,29 @@ namespace AnywhereWinUI.Views
 
         public string DisplayProtocol => Protocol.ToUpper();
 
-        public Brush ProtocolBrush
-        {
-            get
+        // Pre-allocated brushes keyed by protocol name — avoids hex parsing + new SolidColorBrush
+        // on every binding refresh of the server list.
+        private static readonly System.Collections.Generic.Dictionary<string, SolidColorBrush> _protocolBrushes =
+            new(System.StringComparer.OrdinalIgnoreCase)
             {
-                string hex = Protocol.ToUpper() switch
-                {
-                    "VLESS" => "#34D399",
-                    "VMESS" => "#A78BFA",
-                    "SHADOWSOCKS" => "#60A5FA",
-                    "TROJAN" => "#F87171",
-                    "HYSTERIA 2" => "#FB923C",
-                    "HYSTERIA" => "#FB923C",
-                    "TUIC" => "#06B6D4",
-                    "NAIVEPROXY" => "#EC4899",
-                    "NAIVE" => "#EC4899",
-                    "SOCKS" => "#64748B",
-                    "ANYTLS" => "#EAB308",
-                    "SNELL" => "#C084FC",
-                    _ => "#94A8A0"
-                };
-                return ParseColorBrush(hex);
-            }
-        }
+                ["VLESS"]       = new SolidColorBrush(ColorHelper.FromArgb(255,  52, 211, 153)),
+                ["VMESS"]       = new SolidColorBrush(ColorHelper.FromArgb(255, 167, 139, 250)),
+                ["SHADOWSOCKS"] = new SolidColorBrush(ColorHelper.FromArgb(255,  96, 165, 250)),
+                ["TROJAN"]      = new SolidColorBrush(ColorHelper.FromArgb(255, 248, 113, 113)),
+                ["HYSTERIA 2"]  = new SolidColorBrush(ColorHelper.FromArgb(255, 251, 146,  60)),
+                ["HYSTERIA"]    = new SolidColorBrush(ColorHelper.FromArgb(255, 251, 146,  60)),
+                ["TUIC"]        = new SolidColorBrush(ColorHelper.FromArgb(255,   6, 182, 212)),
+                ["NAIVEPROXY"]  = new SolidColorBrush(ColorHelper.FromArgb(255, 236,  72, 153)),
+                ["NAIVE"]       = new SolidColorBrush(ColorHelper.FromArgb(255, 236,  72, 153)),
+                ["SOCKS"]       = new SolidColorBrush(ColorHelper.FromArgb(255, 100, 116, 139)),
+                ["ANYTLS"]      = new SolidColorBrush(ColorHelper.FromArgb(255, 234, 179,   8)),
+                ["SNELL"]       = new SolidColorBrush(ColorHelper.FromArgb(255, 192, 132, 252)),
+            };
+        private static readonly SolidColorBrush _protocolBrushFallback =
+            new SolidColorBrush(ColorHelper.FromArgb(255, 148, 168, 160));
 
-        private static Brush ParseColorBrush(string hex)
-        {
-            try
-            {
-                hex = hex.Replace("#", "");
-                byte r = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
-                byte g = byte.Parse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
-                byte b = byte.Parse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
-                return new SolidColorBrush(Color.FromArgb(255, r, g, b));
-            }
-            catch
-            {
-                return new SolidColorBrush(Colors.Gray);
-            }
-        }
+        public Brush ProtocolBrush =>
+            _protocolBrushes.TryGetValue(Protocol, out var b) ? b : _protocolBrushFallback;
     }
 
     public sealed partial class ServersPage : Page

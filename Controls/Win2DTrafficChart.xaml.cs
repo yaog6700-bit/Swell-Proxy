@@ -62,7 +62,7 @@ namespace AnywhereWinUI.Controls
         // No slide animation needed — data updates every 1s which matches animation duration,
         // causing a constant back-and-forth jitter. Direct draw is cleaner for real-time data.
 
-        private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             lock (_dataLock)
             {
@@ -73,32 +73,112 @@ namespace AnywhereWinUI.Controls
             }
         }
 
-        private DispatcherTimer _timer;
+        private DispatcherTimer? _timer;
+        private bool _isSubscribedToWindowVisibility;
 
         public Win2DTrafficChart()
         {
             this.InitializeComponent();
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-            _timer.Tick += Timer_Tick;
-            _timer.Start();
+            this.Loaded += UserControl_Loaded;
+            StartTimer();
+            SubscribeToWindowVisibility();
         }
 
-        private void Timer_Tick(object sender, object e)
+        private void Timer_Tick(object? sender, object e)
         {
             if (ChartCanvas == null) return;
             ChartCanvas.Invalidate();
         }
 
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            SubscribeToWindowVisibility();
+            ResubscribeToTraffic();
+            if (MainWindow.IsVisibleToUser)
+            {
+                StartTimer();
+            }
+        }
+
         private void UserControl_Unloaded(object sender, RoutedEventArgs e)
         {
-            if (_timer != null)
-            {
-                _timer.Stop();
-                _timer = null;
-            }
+            StopTimer();
+            UnsubscribeFromTraffic(UploadTraffic);
+            UnsubscribeFromTraffic(DownloadTraffic);
+            UnsubscribeFromWindowVisibility();
+
             if (ChartCanvas == null) return;
             ChartCanvas.RemoveFromVisualTree();
             ChartCanvas = null;
+        }
+
+        private void StartTimer()
+        {
+            if (_timer != null) return;
+
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+            _timer.Tick += Timer_Tick;
+            _timer.Start();
+        }
+
+        private void StopTimer()
+        {
+            if (_timer == null) return;
+
+            _timer.Stop();
+            _timer.Tick -= Timer_Tick;
+            _timer = null;
+        }
+
+        private void SubscribeToWindowVisibility()
+        {
+            if (_isSubscribedToWindowVisibility) return;
+
+            MainWindow.VisibilityToUserChanged += OnMainWindowVisibilityChanged;
+            _isSubscribedToWindowVisibility = true;
+        }
+
+        private void UnsubscribeFromWindowVisibility()
+        {
+            if (!_isSubscribedToWindowVisibility) return;
+
+            MainWindow.VisibilityToUserChanged -= OnMainWindowVisibilityChanged;
+            _isSubscribedToWindowVisibility = false;
+        }
+
+        private void OnMainWindowVisibilityChanged(object? sender, bool isVisible)
+        {
+            if (isVisible)
+            {
+                StartTimer();
+            }
+            else
+            {
+                StopTimer();
+            }
+        }
+
+        private void UnsubscribeFromTraffic(ObservableCollection<double>? collection)
+        {
+            if (collection != null)
+            {
+                collection.CollectionChanged -= OnCollectionChanged;
+            }
+        }
+
+        private void ResubscribeToTraffic()
+        {
+            if (UploadTraffic != null)
+            {
+                UploadTraffic.CollectionChanged -= OnCollectionChanged;
+                UploadTraffic.CollectionChanged += OnCollectionChanged;
+            }
+
+            if (DownloadTraffic != null)
+            {
+                DownloadTraffic.CollectionChanged -= OnCollectionChanged;
+                DownloadTraffic.CollectionChanged += OnCollectionChanged;
+            }
         }
 
         private void ChartCanvas_CreateResources(CanvasControl sender, Microsoft.Graphics.Canvas.UI.CanvasCreateResourcesEventArgs args)

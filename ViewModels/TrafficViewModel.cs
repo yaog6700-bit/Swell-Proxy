@@ -67,6 +67,15 @@ namespace AnywhereWinUI.ViewModels
         // 缓存 UI 线程 DispatcherQueue，避免事件回调时 GetForCurrentThread() 返回 null
         private readonly DispatcherQueue _dispatcherQueue;
 
+        // Chart / heatmap rebuild guard:
+        //   - Only rebuild when the Traffic page is actually visible to avoid
+        //     O(N) collection rebuilds every second while the page is hidden.
+        //   - Heatmap is throttled to once every 30 traffic ticks (~30 s) because
+        //     it iterates 365 days even when nothing meaningful has changed.
+        private bool _isPageActive = false;
+        private int  _heatmapThrottleCount = 0;
+        private const int HeatmapThrottleInterval = 30;
+
         private const string DailyTrafficKey = "daily_traffic_records";
 
         [ObservableProperty]
@@ -218,6 +227,10 @@ namespace AnywhereWinUI.ViewModels
             StatusText    = isRunning ? "活跃" : "未激活";
         }
 
+        // Called by TrafficPage when it navigates to/from this ViewModel
+        public void OnPageActivated()  { _isPageActive = true;  UpdateMonthAndChartUI(); UpdateHeatmapUI(); }
+        public void OnPageDeactivated() { _isPageActive = false; }
+
         private void ProcessDailyTraffic(long sessionUpload, long sessionDownload)
         {
             string today = DateTime.Now.ToString("yyyy-MM-dd");
@@ -230,8 +243,21 @@ namespace AnywhereWinUI.ViewModels
             }
 
             PersistToday(sessionUpload, sessionDownload);
+
+            // Only push chart/heatmap updates while the Traffic page is open.
+            // When hidden, skip the O(N) collection rebuilds — the page will
+            // call OnPageActivated() to force a refresh when it becomes visible.
+            if (!_isPageActive) return;
+
             UpdateMonthAndChartUI();
-            UpdateHeatmapUI();
+
+            // Heatmap iterates 365 cells; throttle to avoid running every second.
+            _heatmapThrottleCount++;
+            if (_heatmapThrottleCount >= HeatmapThrottleInterval)
+            {
+                _heatmapThrottleCount = 0;
+                UpdateHeatmapUI();
+            }
         }
 
         private void PersistToday(long sessionUpload, long sessionDownload)

@@ -46,6 +46,12 @@ namespace AnywhereWinUI.ViewModels
         private List<ClashConnectionNode> _lastConnections = new();
         private bool _isUpdating = false;
 
+        // Pre-allocated static brushes — avoids creating new Brush objects on every
+        // high-frequency connection update (which would accumulate rapidly in memory).
+        private static readonly SolidColorBrush _sourceBrush   = new(ColorHelper.FromArgb(255, 99,  102, 241)); // Indigo-500
+        private static readonly SolidColorBrush _middleBrush   = new(ColorHelper.FromArgb(255, 16,  185, 129)); // Emerald-500
+        private static readonly SolidColorBrush _outboundBrush = new(ColorHelper.FromArgb(255, 245, 158,  11)); // Amber-500
+
         public TopologyViewModel()
         {
             // BUG fix: 与 ConnectionsViewModel 保持一致，构造时缓存 DispatcherQueue。
@@ -110,7 +116,9 @@ namespace AnywhereWinUI.ViewModels
             var outboundsMap = new Dictionary<string, long>();
             long totalTraffic = 0;
 
+
             foreach (var conn in connections)
+
             {
                 long traffic = conn.Upload + conn.Download;
                 if (traffic < 1024) traffic = 1024; // Minimum weight for visibility
@@ -246,7 +254,7 @@ namespace AnywhereWinUI.ViewModels
                 Value = visualTotalTraffic,
                 X = PaddingLeft + shiftRight,
                 Height = Math.Max(4, visualTotalTraffic * scale),
-                Color = new SolidColorBrush(ColorHelper.FromArgb(255, 99, 102, 241)) // Indigo-500
+                Color = _sourceBrush
             };
             sourceNode.Y = (FixedHeight - sourceNode.Height) / 2;
             newNodes.Add(sourceNode);
@@ -259,7 +267,7 @@ namespace AnywhereWinUI.ViewModels
             var midNodeParams = new Dictionary<string, TopologyNode>();
             
             // Unified color for all middle nodes (Emerald 500)
-            var middleNodeColor = new SolidColorBrush(ColorHelper.FromArgb(255, 16, 185, 129));
+            var middleNodeColor = _middleBrush;
 
             foreach (var m in middleNodes)
             {
@@ -300,7 +308,7 @@ namespace AnywhereWinUI.ViewModels
                     X = outboundX,
                     Y = currentY,
                     Height = h,
-                    Color = new SolidColorBrush(ColorHelper.FromArgb(255, 245, 158, 11)) // Amber-500
+                    Color = _outboundBrush
                 };
                 newNodes.Add(node);
                 outNodeParams[o.Key] = node;
