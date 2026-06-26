@@ -11,9 +11,7 @@
     CloseButtonText="取消"
     DefaultButton="Primary">
 
-    <StackPanel Spacing="16" MinWidth="340" MaxWidth="400">
-
-        <!-- 类型 -->
+    <StackPanel Spacing="16" MinWidth="340" MaxWidth="420">
         <StackPanel Spacing="6">
             <TextBlock Text="规则类型"
                        FontSize="12"
@@ -21,13 +19,13 @@
             <ComboBox x:Name="TypeComboBox"
                       SelectedIndex="0"
                       HorizontalAlignment="Stretch">
-                <ComboBoxItem Content="域名（Domain）" Tag="domain" />
-                <ComboBoxItem Content="IP / CIDR"     Tag="ip" />
-                <ComboBoxItem Content="进程（Process）" Tag="process" />
+                <ComboBoxItem Content="域名" Tag="domain" />
+                <ComboBoxItem Content="IP / CIDR" Tag="ip" />
+                <ComboBoxItem Content="进程" Tag="process" />
+                <ComboBoxItem Content="混合" Tag="mixed" />
             </ComboBox>
         </StackPanel>
 
-        <!-- 匹配内容 -->
         <StackPanel Spacing="6">
             <TextBlock Text="匹配内容"
                        FontSize="12"
@@ -35,53 +33,43 @@
             <TextBox x:Name="MatchTextBox"
                      PlaceholderText="youtube.com 或 geosite:cn" />
 
-            <!-- 进程类型：浏览按钮 + 格式选项 -->
             <StackPanel x:Name="BrowsePanel"
                         Orientation="Horizontal"
                         Spacing="8"
                         Visibility="Collapsed">
                 <Button x:Name="BrowseButton">
                     <StackPanel Orientation="Horizontal" Spacing="4">
-                        <FontIcon x:Name="BrowseButtonIcon" Glyph="&#xE8E5;" FontSize="12" />
-                        <TextBlock x:Name="BrowseButtonText" Text="浏览 exe..." />
+                        <FontIcon Glyph="&#xE8E5;" FontSize="12" />
+                        <TextBlock Text="浏览 exe..." />
                     </StackPanel>
                 </Button>
                 <ComboBox x:Name="BrowseFormatComboBox"
                           SelectedIndex="0"
                           MinWidth="130">
-                    <ComboBoxItem Content="匹配同名进程" Tag="name" />
-                    <ComboBoxItem Content="匹配完整路径" Tag="path" />
-                    <ComboBoxItem Content="匹配整个目录" Tag="folder" />
+                    <ComboBoxItem Content="进程名" Tag="name" />
+                    <ComboBoxItem Content="完整路径" Tag="path" />
                 </ComboBox>
             </StackPanel>
 
             <TextBlock x:Name="HintTextBlock"
-                       Text="支持精确匹配、regexp:、geosite: 前缀"
+                       Text="支持精确域名、regex:、regexp:、domain_suffix:、geosite:、ruleset:https://.../*.srs 前缀。"
                        FontSize="11"
                        Opacity="0.6"
                        TextWrapping="Wrap" />
         </StackPanel>
 
-        <!-- 出站 -->
         <StackPanel Spacing="6">
             <TextBlock Text="出站方式"
                        FontSize="12"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <ComboBox x:Name="OutboundComboBox"
-                      SelectedIndex="0"
-                      HorizontalAlignment="Stretch">
-                <ComboBoxItem Content="proxy（代理）"  Tag="proxy" />
-                <ComboBoxItem Content="direct（直连）" Tag="direct" />
-                <ComboBoxItem Content="block（阻断）"  Tag="block" />
-            </ComboBox>
+                      HorizontalAlignment="Stretch" />
         </StackPanel>
 
-        <!-- 错误提示 -->
         <TextBlock x:Name="ErrorText"
-                   Text="请填写匹配内容"
+                   Text="请填写匹配内容。"
                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
                    FontSize="11"
                    Visibility="Collapsed" />
-
     </StackPanel>
 </ContentDialog>

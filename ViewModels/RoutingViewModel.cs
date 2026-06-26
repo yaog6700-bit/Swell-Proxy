@@ -2,57 +2,26 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
 using AnywhereWinUI.Services;
-using AnywhereWinUI.Helpers;
 
 namespace AnywhereWinUI.ViewModels
 {
-    public partial class RoutingViewModel : ObservableObject
+    public class RoutingViewModel
     {
         public ObservableCollection<RuleSetActionItem> AvailableActions { get; } = new();
 
-        [ObservableProperty]
-        private string _ruleGoogleAction;
-
-        [ObservableProperty]
-        private string _ruleTelegramAction;
-
-        [ObservableProperty]
-        private string _ruleNetflixAction;
-
-        [ObservableProperty]
-        private string _ruleYouTubeAction;
-
-        [ObservableProperty]
-        private string _ruleTikTokAction;
-
-        [ObservableProperty]
-        private string _ruleChatGPTAction;
-
-        [ObservableProperty]
-        private string _ruleClaudeAction;
-
         public RoutingViewModel()
         {
-            _ruleGoogleAction = AppSession.Instance.RuleGoogleAction;
-            _ruleTelegramAction = AppSession.Instance.RuleTelegramAction;
-            _ruleNetflixAction = AppSession.Instance.RuleNetflixAction;
-            _ruleYouTubeAction = AppSession.Instance.RuleYouTubeAction;
-            _ruleTikTokAction = AppSession.Instance.RuleTikTokAction;
-            _ruleChatGPTAction = AppSession.Instance.RuleChatGPTAction;
-            _ruleClaudeAction = AppSession.Instance.RuleClaudeAction;
-
             PopulateActions();
         }
 
         private void PopulateActions()
         {
             AvailableActions.Clear();
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE724", Label = "默认 (Proxy)", Tag = "proxy" });
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE945", Label = "直连 (Direct)", Tag = "direct" });
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE733", Label = "拦截 (Block)", Tag = "block" });
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE81C", Label = "自动优选 (Auto)", Tag = "urltest" });
+            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE724", Label = "默认代理", Tag = "proxy" });
+            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE945", Label = "直连", Tag = "direct" });
+            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE733", Label = "拦截", Tag = "block" });
+            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE81C", Label = "自动优选", Tag = "urltest" });
 
             var nodes = NodesManager.Instance.Nodes;
             if (nodes.Count > 0)
@@ -69,50 +38,6 @@ namespace AnywhereWinUI.ViewModels
                     });
                 }
             }
-        }
-
-        public void UpdateRuleAction(string ruleName, string tag)
-        {
-            switch (ruleName)
-            {
-                case "RuleGoogle":
-                    RuleGoogleAction = tag;
-                    AppSession.Instance.RuleGoogleAction = tag;
-                    Helpers.LocalSettingsHelper.SetValue("ruleGoogleAction", tag);
-                    break;
-                case "RuleTelegram":
-                    RuleTelegramAction = tag;
-                    AppSession.Instance.RuleTelegramAction = tag;
-                    Helpers.LocalSettingsHelper.SetValue("ruleTelegramAction", tag);
-                    break;
-                case "RuleNetflix":
-                    RuleNetflixAction = tag;
-                    AppSession.Instance.RuleNetflixAction = tag;
-                    Helpers.LocalSettingsHelper.SetValue("ruleNetflixAction", tag);
-                    break;
-                case "RuleYouTube":
-                    RuleYouTubeAction = tag;
-                    AppSession.Instance.RuleYouTubeAction = tag;
-                    Helpers.LocalSettingsHelper.SetValue("ruleYouTubeAction", tag);
-                    break;
-                case "RuleTikTok":
-                    RuleTikTokAction = tag;
-                    AppSession.Instance.RuleTikTokAction = tag;
-                    Helpers.LocalSettingsHelper.SetValue("ruleTikTokAction", tag);
-                    break;
-                case "RuleChatGPT":
-                    RuleChatGPTAction = tag;
-                    AppSession.Instance.RuleChatGPTAction = tag;
-                    Helpers.LocalSettingsHelper.SetValue("ruleChatGPTAction", tag);
-                    break;
-                case "RuleClaude":
-                    RuleClaudeAction = tag;
-                    AppSession.Instance.RuleClaudeAction = tag;
-                    Helpers.LocalSettingsHelper.SetValue("ruleClaudeAction", tag);
-                    break;
-            }
-
-            _ = TriggerCoreRestartIfNeeded();
         }
 
         public RuleSetActionItem ResolveItemForTag(string tag)

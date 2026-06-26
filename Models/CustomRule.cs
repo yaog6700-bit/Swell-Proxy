@@ -7,7 +7,15 @@ namespace AnywhereWinUI.Models
     /// </summary>
     public class CustomRule
     {
-        /// <summary>"domain" | "ip" | "process"</summary>
+        /// <summary>
+        /// 稳定标识符（"custom:xxxxxxxx..."），从 RoutingRuleItem.Id 传入并持久化，
+        /// 避免每次保存时重新生成新 GUID，保证规则身份稳定。
+        /// </summary>
+        public string Id { get; set; } = string.Empty;
+
+        public string Remark { get; set; } = string.Empty;
+
+        /// <summary>"domain" | "ip" | "process" | "mixed"</summary>
         public string Type { get; set; } = "domain";
 
         /// <summary>
@@ -25,10 +33,12 @@ namespace AnywhereWinUI.Models
 
         public CustomRule Clone() => new()
         {
-            Type       = Type,
-            Match      = Match,
+            Id          = Id,
+            Remark      = Remark,
+            Type        = Type,
+            Match       = Match,
             OutboundTag = OutboundTag,
-            IsEnabled  = IsEnabled,
+            IsEnabled   = IsEnabled,
         };
     }
 }

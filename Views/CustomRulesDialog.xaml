@@ -38,6 +38,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock x:Name="RuleCountText"
@@ -47,8 +48,18 @@
                        Text="共 0 条规则"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
+            <Button x:Name="TemplateRuleButton"
+                     Grid.Column="1"
+                    Margin="0,0,8,0"
+                    Click="TemplateRuleButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE8B7;" FontSize="12"/>
+                    <TextBlock Text="从模板添加"/>
+                </StackPanel>
+            </Button>
+
             <Button x:Name="AddRuleButton"
-                    Grid.Column="1"
+                    Grid.Column="2"
                     Style="{StaticResource AccentButtonStyle}"
                     Click="AddRuleButton_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -57,6 +68,14 @@
                 </StackPanel>
             </Button>
         </Grid>
+
+        <TextBox x:Name="SearchRuleTextBox"
+                 PlaceholderText="搜索备注、匹配内容、类型或出站"
+                 TextChanged="SearchRuleTextBox_TextChanged">
+            <TextBox.Resources>
+                <x:Double x:Key="TextControlThemeMinHeight">34</x:Double>
+            </TextBox.Resources>
+        </TextBox>
 
         <!-- 规则列表卡片 -->
         <Border x:Name="ListBorder"
@@ -106,6 +125,111 @@
 
     </StackPanel>
 
+    <StackPanel x:Name="TemplatePanel"
+                Spacing="16"
+                Width="360"
+                HorizontalAlignment="Center"
+                Visibility="Collapsed">
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="TemplateBackButton"
+                    Grid.Column="0"
+                    Style="{StaticResource SubtleButtonStyle}"
+                    Width="32" Height="32"
+                    Padding="0"
+                    VerticalAlignment="Center"
+                    Click="TemplateBackButton_Click"
+                    ToolTipService.ToolTip="返回列表">
+                <FontIcon Glyph="&#xE76B;" FontSize="13"/>
+            </Button>
+
+            <TextBlock Grid.Column="1"
+                       Text="从模板添加"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       Margin="8,0,0,0"/>
+        </Grid>
+
+        <Rectangle Height="1"
+                   HorizontalAlignment="Stretch"
+                   Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+        <StackPanel Spacing="6">
+            <TextBlock Text="规则模板"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <ComboBox x:Name="TemplateComboBox"
+                      HorizontalAlignment="Stretch"
+                      SelectionChanged="TemplateComboBox_SelectionChanged"/>
+        </StackPanel>
+
+        <Border CornerRadius="8"
+                BorderThickness="1"
+                Padding="10"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <StackPanel Spacing="6">
+                <TextBlock x:Name="TemplateDescriptionText"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="TemplateMatchText"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Spacing="6">
+            <TextBlock Text="出站方式"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <ComboBox x:Name="TemplateOutboundComboBox"
+                      HorizontalAlignment="Stretch"/>
+        </StackPanel>
+
+        <ToggleSwitch x:Name="TemplateEnabledSwitch"
+                      Header="添加后立即启用"
+                      IsOn="True"
+                      MinWidth="0"/>
+
+        <TextBlock x:Name="TemplateErrorText"
+                   Text="请选择规则模板"
+                   Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                   FontSize="12"
+                   Visibility="Collapsed"/>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="TemplateCancelButton"
+                    Grid.Column="1"
+                    Content="取消"
+                    MinWidth="80"
+                    Click="TemplateBackButton_Click"/>
+
+            <Button x:Name="TemplateConfirmButton"
+                    Grid.Column="2"
+                    Content="添加"
+                    MinWidth="80"
+                    Margin="8,0,0,0"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Click="TemplateConfirmButton_Click"/>
+        </Grid>
+    </StackPanel>
+
     <!-- ══ 面板 B：添加 / 编辑表单（内联，不嵌套 ContentDialog）══ -->
     <!--
         FormPanel 与 ListPanel 同级，通过 Visibility 互斥显示。
@@ -149,6 +273,16 @@
                    HorizontalAlignment="Stretch"
                    Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
 
+        <StackPanel Spacing="6">
+            <TextBlock Text="备注"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBox x:Name="FormRemarkTextBox"
+                     HorizontalAlignment="Stretch"
+                     PlaceholderText="例如：Microsoft、公司内网、游戏平台"/>
+        </StackPanel>
+
         <!-- 规则类型 -->
         <StackPanel Spacing="6">
             <TextBlock Text="规则类型"
@@ -162,6 +296,7 @@
                 <ComboBoxItem Content="域名 (Domain)" Tag="domain"/>
                 <ComboBoxItem Content="IP / CIDR"     Tag="ip"/>
                 <ComboBoxItem Content="进程 (Process)" Tag="process"/>
+                <ComboBoxItem Content="混合 (Mixed)" Tag="mixed"/>
             </ComboBox>
         </StackPanel>
 
@@ -199,7 +334,7 @@
                        Opacity="0.55"
                        TextWrapping="Wrap"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                       Text="支持精确匹配、regexp:、geosite: 前缀"/>
+                       Text="支持精确匹配、regexp:、geosite:、ruleset:https://.../*.srs 前缀"/>
         </StackPanel>
 
         <!-- 出站方式 -->

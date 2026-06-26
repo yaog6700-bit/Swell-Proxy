@@ -14,6 +14,8 @@ namespace AnywhereWinUI.Models
     [JsonSerializable(typeof(List<DailyTraffic>))]
     [JsonSerializable(typeof(CustomRule))]
     [JsonSerializable(typeof(List<CustomRule>))]
+    [JsonSerializable(typeof(RoutingRuleItem))]
+    [JsonSerializable(typeof(List<RoutingRuleItem>))]
     [JsonSerializable(typeof(Dictionary<string, object>))]
     [JsonSerializable(typeof(string))]
     [JsonSerializable(typeof(bool))]

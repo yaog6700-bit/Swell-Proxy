@@ -653,19 +653,32 @@ namespace AnywhereWinUI.Views
                     Directory.CreateDirectory(dir);
                 }
 
-                using var http = new System.Net.Http.HttpClient();
-                
-                var geositeUrl = "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs";
-                var geositeBytes = await http.GetByteArrayAsync(geositeUrl);
-                await File.WriteAllBytesAsync(Path.Combine(dir, "geosite-cn.srs"), geositeBytes);
+                var proxyUrl = CoreManager.Instance.IsRunning
+                    ? $"socks5://127.0.0.1:{AppSession.Instance.MixedPort}"
+                    : null;
 
-                var geoipUrl = "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs";
-                var geoipBytes = await http.GetByteArrayAsync(geoipUrl);
-                await File.WriteAllBytesAsync(Path.Combine(dir, "geoip-cn.srs"), geoipBytes);
+                using var http = CreateGeoUpdateHttpClient(proxyUrl);
 
-                var adsUrl = "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs";
-                var adsBytes = await http.GetByteArrayAsync(adsUrl);
-                await File.WriteAllBytesAsync(Path.Combine(dir, "geosite-category-ads-all.srs"), adsBytes);
+                await DownloadGeoRuleAsync(
+                    http,
+                    "geosite-cn.srs",
+                    "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
+                    Path.Combine(dir, "geosite-cn.srs"),
+                    proxyUrl);
+
+                await DownloadGeoRuleAsync(
+                    http,
+                    "geoip-cn.srs",
+                    "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+                    Path.Combine(dir, "geoip-cn.srs"),
+                    proxyUrl);
+
+                await DownloadGeoRuleAsync(
+                    http,
+                    "geosite-category-ads-all.srs",
+                    "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs",
+                    Path.Combine(dir, "geosite-category-ads-all.srs"),
+                    proxyUrl);
 
                 var dialog = new ContentDialog
                 {
@@ -691,6 +704,50 @@ namespace AnywhereWinUI.Views
             {
                 UpdateGeoButton.Content = originalContent;
                 UpdateGeoButton.IsEnabled = true;
+            }
+        }
+
+        private static System.Net.Http.HttpClient CreateGeoUpdateHttpClient(string? proxyUrl)
+        {
+            var handler = new System.Net.Http.HttpClientHandler();
+            if (!string.IsNullOrWhiteSpace(proxyUrl))
+            {
+                handler.Proxy = new System.Net.WebProxy(proxyUrl);
+                handler.UseProxy = true;
+            }
+            else
+            {
+                handler.UseProxy = false;
+            }
+
+            var client = new System.Net.Http.HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromSeconds(45)
+            };
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("SwellProxy/GeoUpdater");
+            return client;
+        }
+
+        private static async Task DownloadGeoRuleAsync(
+            System.Net.Http.HttpClient http,
+            string fileName,
+            string url,
+            string destinationPath,
+            string? proxyUrl)
+        {
+            try
+            {
+                using var response = await http.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                await File.WriteAllBytesAsync(destinationPath, bytes);
+            }
+            catch (Exception ex)
+            {
+                var proxyText = string.IsNullOrWhiteSpace(proxyUrl) ? "未使用本地代理" : $"使用本地代理 {proxyUrl}";
+                throw new InvalidOperationException(
+                    $"下载 {fileName} 失败。\nURL: {url}\n{proxyText}\n原因: {ex.Message}",
+                    ex);
             }
         }
 

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using AnywhereWinUI.Models;
 
 namespace AnywhereWinUI.Services
 {
@@ -35,6 +37,15 @@ namespace AnywhereWinUI.Services
                 ruleTikTokAction,
                 ruleClaudeAction
             };
+            if (session.EnableAdvancedRouting)
+            {
+                foreach (var routingRule in RoutingRulesService.LoadRules())
+                {
+                    if (routingRule.IsEnabled && !string.IsNullOrWhiteSpace(routingRule.OutboundTag))
+                        actions.Add(routingRule.OutboundTag);
+                }
+            }
+
             if (selectedNode == null)
             {
                 selectedNode = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
@@ -88,7 +99,7 @@ namespace AnywhereWinUI.Services
                 ["dns"] = BuildDns(bypassChina, blockIPv6, routingMode, enableTun),
                 ["inbounds"] = await BuildInboundsAsync(enableTun, selectedNode),
                 ["outbounds"] = BuildOutbounds(selectedNode, enableTun, outboundInterface, actions.ToArray()),
-                ["route"] = BuildRoute(routingMode, bypassChina, blockAds, enableTun, outboundInterface),
+                ["route"] = BuildRoute(routingMode, bypassChina, blockAds, enableTun, outboundInterface, isSingbox114OrAbove),
                 ["experimental"] = new JsonObject
                 {
                     ["clash_api"] = new JsonObject
@@ -988,7 +999,13 @@ namespace AnywhereWinUI.Services
             return clean.Contains(':') ? $"[{clean}]" : clean;
         }
 
-        private static JsonObject BuildRoute(string routingMode, bool bypassChina, bool blockAds, bool enableTun = false, string? outboundInterface = null)
+        private static JsonObject BuildRoute(
+            string routingMode,
+            bool bypassChina,
+            bool blockAds,
+            bool enableTun = false,
+            string? outboundInterface = null,
+            bool isSingbox114OrAbove = false)
         {
             var rules = new JsonArray
             {
@@ -1074,12 +1091,6 @@ namespace AnywhereWinUI.Services
 
             if (bypassChina)
             {
-                rules.Add(new JsonObject
-                {
-                    ["rule_set"] = new JsonArray { (JsonNode)"geosite-cn", (JsonNode)"geoip-cn" },
-                    ["outbound"] = "direct"
-                });
-
                 ruleSets.Add(new JsonObject
                 {
                     ["type"] = "local",
@@ -1104,246 +1115,27 @@ namespace AnywhereWinUI.Services
             // ── Custom user-defined rules & App rules (Injected only if Advanced Routing is enabled) ──
             if (AppSession.Instance.EnableAdvancedRouting)
             {
-                var customRules = AppSession.Instance.CustomRules;
-                if (customRules != null && customRules.Count > 0)
+                var addedRuleSetTags = new HashSet<string>();
+                foreach (var existingRs in ruleSets)
                 {
-                    var addedRuleSetTags = new System.Collections.Generic.HashSet<string>();
-
-                    // Collect existing rule_set tags to avoid duplicates
-                    foreach (var existingRs in ruleSets)
-                    {
-                        if (existingRs is System.Text.Json.Nodes.JsonObject rsObj &&
-                            rsObj["tag"]?.ToString() is string existingTag)
-                            addedRuleSetTags.Add(existingTag);
-                    }
-
-                    foreach (var cr in customRules)
-                    {
-                        if (!cr.IsEnabled) continue;
-                        if (string.IsNullOrWhiteSpace(cr.Match)) continue;
-
-                        string outbound = ResolveOutbound(cr.OutboundTag ?? "proxy");
-                        var entries = cr.Match
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-                        if (cr.Type == "domain")
-                        {
-                            // Separate geosite: entries from regular domains
-                            var geositeEntries = new System.Collections.Generic.List<string>();
-                            var domainSuffixes  = new System.Collections.Generic.List<string>();
-                            var domainRegexes   = new System.Collections.Generic.List<string>();
-
-                            foreach (var entry in entries)
-                            {
-                                if (entry.StartsWith("geosite:", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    geositeEntries.Add(entry.Substring(8).ToLower());
-                                }
-                                else if (entry.StartsWith("regex:", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    domainRegexes.Add(entry.Substring(6));
-                                }
-                                else
-                                {
-                                    domainSuffixes.Add(entry.ToLower());
-                                }
-                            }
-
-                            // Emit one rule per geosite tag (uses rule_set)
-                            foreach (var gsTag in geositeEntries)
-                            {
-                                string rsTag = $"geosite-{gsTag}";
-                                rules.Add(new System.Text.Json.Nodes.JsonObject
-                                {
-                                    ["rule_set"] = new System.Text.Json.Nodes.JsonArray { (JsonNode)rsTag },
-                                    ["outbound"] = outbound
-                                });
-
-                                if (addedRuleSetTags.Add(rsTag))
-                                {
-                                    ruleSets.Add(new System.Text.Json.Nodes.JsonObject
-                                    {
-                                        ["type"]   = "local",
-                                        ["tag"]    = rsTag,
-                                        ["format"] = "binary",
-                                        ["path"]   = System.IO.Path.Combine(ruleSetDir, $"{rsTag}.srs") // Requires user to have the .srs file downloaded in the directory, or we can use a remote rule_set. For now, local.
-                                    });
-                                }
-                            }
-
-                            if (domainSuffixes.Count > 0)
-                            {
-                                var arr = new System.Text.Json.Nodes.JsonArray();
-                                foreach (var d in domainSuffixes) arr.Add((JsonNode)d);
-                                rules.Add(new System.Text.Json.Nodes.JsonObject
-                                {
-                                    ["domain_suffix"] = arr,
-                                    ["outbound"]      = outbound
-                                });
-                            }
-
-                            if (domainRegexes.Count > 0)
-                            {
-                                var arr = new System.Text.Json.Nodes.JsonArray();
-                                foreach (var d in domainRegexes) arr.Add((JsonNode)d);
-                                rules.Add(new System.Text.Json.Nodes.JsonObject
-                                {
-                                    ["domain_regex"] = arr,
-                                    ["outbound"]     = outbound
-                                });
-                            }
-                        }
-                        else if (cr.Type == "ip")
-                        {
-                            var geoipEntries = new System.Collections.Generic.List<string>();
-                            var cidrEntries  = new System.Collections.Generic.List<string>();
-
-                            foreach (var entry in entries)
-                            {
-                                if (entry.StartsWith("geoip:", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    geoipEntries.Add(entry.Substring(6).ToLower());
-                                }
-                                else
-                                {
-                                    cidrEntries.Add(entry.ToLower());
-                                }
-                            }
-
-                            foreach (var giTag in geoipEntries)
-                            {
-                                string rsTag = $"geoip-{giTag}";
-                                rules.Add(new System.Text.Json.Nodes.JsonObject
-                                {
-                                    ["rule_set"] = new System.Text.Json.Nodes.JsonArray { (JsonNode)rsTag },
-                                    ["outbound"] = outbound
-                                });
-
-                                if (addedRuleSetTags.Add(rsTag))
-                                {
-                                    ruleSets.Add(new System.Text.Json.Nodes.JsonObject
-                                    {
-                                        ["type"]   = "local",
-                                        ["tag"]    = rsTag,
-                                        ["format"] = "binary",
-                                        ["path"]   = System.IO.Path.Combine(ruleSetDir, $"{rsTag}.srs")
-                                    });
-                                }
-                            }
-
-                            if (cidrEntries.Count > 0)
-                            {
-                                var arr = new System.Text.Json.Nodes.JsonArray();
-                                foreach (var c in cidrEntries) arr.Add((JsonNode)c);
-                                rules.Add(new System.Text.Json.Nodes.JsonObject
-                                {
-                                    ["ip_cidr"]  = arr,
-                                    ["outbound"] = outbound
-                                });
-                            }
-                        }
-                        else if (cr.Type == "process")
-                        {
-                            var processNames = new System.Collections.Generic.List<string>();
-                            var processPaths = new System.Collections.Generic.List<string>();
-
-                            foreach (var entry in entries)
-                            {
-                                if (entry.Contains('\\') || entry.Contains('/'))
-                                    processPaths.Add(entry);
-                                else
-                                    processNames.Add(entry);
-                            }
-
-                            if (processNames.Count > 0)
-                            {
-                                var arr = new System.Text.Json.Nodes.JsonArray();
-                                foreach (var n in processNames) arr.Add((JsonNode)n);
-                                rules.Add(new System.Text.Json.Nodes.JsonObject
-                                {
-                                    ["process_name"] = arr,
-                                    ["outbound"]     = outbound
-                                });
-                            }
-
-                            if (processPaths.Count > 0)
-                            {
-                                var arr = new System.Text.Json.Nodes.JsonArray();
-                                foreach (var p in processPaths) arr.Add((JsonNode)p);
-                                rules.Add(new System.Text.Json.Nodes.JsonObject
-                                {
-                                    ["process_path"] = arr,
-                                    ["outbound"]     = outbound
-                                });
-                            }
-                        }
-                    }
+                    if (existingRs is JsonObject rsObj &&
+                        rsObj["tag"]?.ToString() is string existingTag)
+                        addedRuleSetTags.Add(existingTag);
                 }
 
-                // App RuleSets
-                if (!string.IsNullOrEmpty(AppSession.Instance.RuleGoogleAction))
+                foreach (var routingRule in RoutingRulesService.LoadRules())
                 {
-                    rules.Add(new JsonObject
-                    {
-                        ["domain_suffix"] = new JsonArray { (JsonNode)"google.com", (JsonNode)"googleapis.com", (JsonNode)"gstatic.com", (JsonNode)"googlevideo.com" },
-                        ["outbound"] = ResolveOutbound(AppSession.Instance.RuleGoogleAction)
-                    });
+                    AppendRoutingRule(rules, ruleSets, ruleSetDir, addedRuleSetTags, routingRule, ResolveOutbound, isSingbox114OrAbove);
                 }
+            }
 
-                if (!string.IsNullOrEmpty(AppSession.Instance.RuleTelegramAction))
+            if (bypassChina)
+            {
+                rules.Add(new JsonObject
                 {
-                    rules.Add(new JsonObject
-                    {
-                        ["domain_suffix"] = new JsonArray { (JsonNode)"telegram.org", (JsonNode)"t.me", (JsonNode)"tdesktop.com" },
-                        ["ip_cidr"] = new JsonArray { (JsonNode)"91.108.4.0/22", (JsonNode)"91.108.8.0/22", (JsonNode)"91.108.12.0/22", (JsonNode)"91.108.16.0/22", (JsonNode)"91.108.56.0/22", (JsonNode)"149.154.160.0/20" },
-                        ["outbound"] = ResolveOutbound(AppSession.Instance.RuleTelegramAction)
-                    });
-                }
-
-                if (!string.IsNullOrEmpty(AppSession.Instance.RuleNetflixAction))
-                {
-                    rules.Add(new JsonObject
-                    {
-                        ["domain_suffix"] = new JsonArray { (JsonNode)"netflix.com", (JsonNode)"netflix.net", (JsonNode)"nflximg.net", (JsonNode)"nflxext.com", (JsonNode)"nflxso.net", (JsonNode)"nflxvideo.net" },
-                        ["outbound"] = ResolveOutbound(AppSession.Instance.RuleNetflixAction)
-                    });
-                }
-
-                if (!string.IsNullOrEmpty(AppSession.Instance.RuleYouTubeAction))
-                {
-                    rules.Add(new JsonObject
-                    {
-                        ["domain_suffix"] = new JsonArray { (JsonNode)"youtube.com", (JsonNode)"youtu.be", (JsonNode)"ytimg.com", (JsonNode)"ggpht.com" },
-                        ["outbound"] = ResolveOutbound(AppSession.Instance.RuleYouTubeAction)
-                    });
-                }
-
-                if (!string.IsNullOrEmpty(AppSession.Instance.RuleTikTokAction))
-                {
-                    rules.Add(new JsonObject
-                    {
-                        ["domain_suffix"] = new JsonArray { (JsonNode)"tiktok.com", (JsonNode)"tiktokv.com", (JsonNode)"tiktokcdn.com", (JsonNode)"byteoversea.com" },
-                        ["outbound"] = ResolveOutbound(AppSession.Instance.RuleTikTokAction)
-                    });
-                }
-
-                if (!string.IsNullOrEmpty(AppSession.Instance.RuleChatGPTAction))
-                {
-                    rules.Add(new JsonObject
-                    {
-                        ["domain_suffix"] = new JsonArray { (JsonNode)"openai.com", (JsonNode)"chatgpt.com", (JsonNode)"ai.com", (JsonNode)"oaistatic.com", (JsonNode)"oaiusercontent.com" },
-                        ["outbound"] = ResolveOutbound(AppSession.Instance.RuleChatGPTAction)
-                    });
-                }
-
-                if (!string.IsNullOrEmpty(AppSession.Instance.RuleClaudeAction))
-                {
-                    rules.Add(new JsonObject
-                    {
-                        ["domain_suffix"] = new JsonArray { (JsonNode)"anthropic.com", (JsonNode)"claude.ai" },
-                        ["outbound"] = ResolveOutbound(AppSession.Instance.RuleClaudeAction)
-                    });
-                }
+                    ["rule_set"] = new JsonArray { (JsonNode)"geosite-cn", (JsonNode)"geoip-cn" },
+                    ["outbound"] = "direct"
+                });
             }
 
             var smartRoute = new JsonObject
@@ -1358,6 +1150,278 @@ namespace AnywhereWinUI.Services
             if (enableTun && !string.IsNullOrEmpty(outboundInterface))
                 smartRoute["default_interface"] = outboundInterface;
             return smartRoute;
+        }
+
+        private static void AppendRoutingRule(
+            JsonArray rules,
+            JsonArray ruleSets,
+            string ruleSetDir,
+            HashSet<string> addedRuleSetTags,
+            RoutingRuleItem routingRule,
+            Func<string, string> resolveOutbound,
+            bool isSingbox114OrAbove)
+        {
+            if (!routingRule.IsEnabled) return;
+            if (string.IsNullOrWhiteSpace(routingRule.Match)) return;
+
+            string outbound = resolveOutbound(string.IsNullOrWhiteSpace(routingRule.OutboundTag)
+                ? "proxy"
+                : routingRule.OutboundTag);
+
+            var geositeEntries = new List<string>();
+            var geoipEntries = new List<string>();
+            var domainSuffixes = new List<string>();
+            var domainExacts = new List<string>();
+            var domainRegexes = new List<string>();
+            var cidrEntries = new List<string>();
+            var processNames = new List<string>();
+            var processPaths = new List<string>();
+            var remoteRuleSetUrls = new List<string>();
+
+            var entries = routingRule.Match
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            foreach (var rawEntry in entries)
+            {
+                var entry = rawEntry.Trim();
+                if (entry.Length == 0) continue;
+
+                if (TryRemoteSrsRuleSet(entry, out var remoteRuleSetUrl))
+                {
+                    remoteRuleSetUrls.Add(remoteRuleSetUrl);
+                    continue;
+                }
+
+                string type = routingRule.Type?.ToLowerInvariant() ?? "domain";
+                if (type == "mixed")
+                    ClassifyMixedRuleEntry(entry);
+                else if (type == "ip")
+                    ClassifyIpRuleEntry(entry);
+                else if (type == "process")
+                    ClassifyProcessRuleEntry(entry);
+                else
+                    ClassifyDomainRuleEntry(entry);
+            }
+
+            foreach (var tag in geositeEntries)
+                AddRuleSetRule($"geosite-{tag}", outbound);
+
+            foreach (var tag in geoipEntries)
+                AddRuleSetRule($"geoip-{tag}", outbound);
+
+            foreach (var url in remoteRuleSetUrls)
+                AddRemoteRuleSetRule(CreateRemoteRuleSetTag(url), url, outbound);
+
+            AddArrayRule("domain_suffix", domainSuffixes, outbound);
+            AddArrayRule("domain", domainExacts, outbound);
+            AddArrayRule("domain_regex", domainRegexes, outbound);
+            AddArrayRule("ip_cidr", cidrEntries, outbound);
+            AddArrayRule("process_name", processNames, outbound);
+            AddArrayRule("process_path", processPaths, outbound);
+
+            void ClassifyMixedRuleEntry(string entry)
+            {
+                if (TryPrefix(entry, "geosite:", out var geosite))
+                    geositeEntries.Add(geosite.ToLowerInvariant());
+                else if (TryPrefix(entry, "geoip:", out var geoip))
+                    geoipEntries.Add(geoip.ToLowerInvariant());
+                else if (TryPrefix(entry, "domain_suffix:", out var suffix))
+                    domainSuffixes.Add(suffix.ToLowerInvariant());
+                else if (TryPrefix(entry, "domain:", out var exact))
+                    domainExacts.Add(exact.ToLowerInvariant());
+                else if (TryRegexPrefix(entry, out var regex))
+                    domainRegexes.Add(regex);
+                else if (TryPrefix(entry, "ip_cidr:", out var cidr))
+                    cidrEntries.Add(NormalizeIpCidr(cidr));
+                else if (TryPrefix(entry, "process_name:", out var processName))
+                    processNames.Add(processName);
+                else if (TryPrefix(entry, "process_path:", out var processPath))
+                    processPaths.Add(processPath);
+                else if (LooksLikeCidrOrIp(entry))
+                    cidrEntries.Add(NormalizeIpCidr(entry));
+                else
+                    domainSuffixes.Add(entry.ToLowerInvariant());
+            }
+
+            void ClassifyDomainRuleEntry(string entry)
+            {
+                if (TryPrefix(entry, "geosite:", out var geosite))
+                    geositeEntries.Add(geosite.ToLowerInvariant());
+                else if (TryPrefix(entry, "domain_suffix:", out var suffix))
+                    domainSuffixes.Add(suffix.ToLowerInvariant());
+                else if (TryPrefix(entry, "domain:", out var exact))
+                    domainExacts.Add(exact.ToLowerInvariant());
+                else if (TryRegexPrefix(entry, out var regex))
+                    domainRegexes.Add(regex);
+                else
+                    domainSuffixes.Add(entry.ToLowerInvariant());
+            }
+
+            void ClassifyIpRuleEntry(string entry)
+            {
+                if (TryPrefix(entry, "geoip:", out var geoip))
+                    geoipEntries.Add(geoip.ToLowerInvariant());
+                else if (TryPrefix(entry, "ip_cidr:", out var cidr))
+                    cidrEntries.Add(NormalizeIpCidr(cidr));
+                else
+                    cidrEntries.Add(NormalizeIpCidr(entry));
+            }
+
+            void ClassifyProcessRuleEntry(string entry)
+            {
+                if (TryPrefix(entry, "process_name:", out var processName))
+                    processNames.Add(processName);
+                else if (TryPrefix(entry, "process_path:", out var processPath))
+                    processPaths.Add(processPath);
+                else if (entry.Contains('\\') || entry.Contains('/'))
+                    processPaths.Add(entry);
+                else
+                    processNames.Add(entry);
+            }
+
+            void AddRuleSetRule(string tag, string ruleOutbound)
+            {
+                rules.Add(new JsonObject
+                {
+                    ["rule_set"] = new JsonArray { (JsonNode)tag },
+                    ["outbound"] = ruleOutbound
+                });
+
+                if (addedRuleSetTags.Add(tag))
+                {
+                    ruleSets.Add(new JsonObject
+                    {
+                        ["type"] = "local",
+                        ["tag"] = tag,
+                        ["format"] = "binary",
+                        ["path"] = System.IO.Path.Combine(ruleSetDir, $"{tag}.srs")
+                    });
+                }
+            }
+
+            void AddRemoteRuleSetRule(string tag, string url, string ruleOutbound)
+            {
+                rules.Add(new JsonObject
+                {
+                    ["rule_set"] = new JsonArray { (JsonNode)tag },
+                    ["outbound"] = ruleOutbound
+                });
+
+                if (!addedRuleSetTags.Add(tag))
+                    return;
+
+                var ruleSet = new JsonObject
+                {
+                    ["type"] = "remote",
+                    ["tag"] = tag,
+                    ["format"] = "binary",
+                    ["url"] = url,
+                    ["update_interval"] = "1d"
+                };
+
+                if (isSingbox114OrAbove)
+                {
+                    ruleSet["http_client"] = new JsonObject
+                    {
+                        ["detour"] = "proxy"
+                    };
+                }
+                else
+                {
+                    ruleSet["download_detour"] = "proxy";
+                }
+
+                ruleSets.Add(ruleSet);
+            }
+
+            void AddArrayRule(string key, List<string> values, string ruleOutbound)
+            {
+                if (values.Count == 0) return;
+
+                var arr = new JsonArray();
+                foreach (var value in values)
+                    arr.Add((JsonNode)value);
+
+                rules.Add(new JsonObject
+                {
+                    [key] = arr,
+                    ["outbound"] = ruleOutbound
+                });
+            }
+        }
+
+        private static bool TryRegexPrefix(string entry, out string value)
+            => TryPrefix(entry, "domain_regex:", out value) ||
+               TryPrefix(entry, "regex:", out value) ||
+               TryPrefix(entry, "regexp:", out value);
+
+        private static bool TryRemoteSrsRuleSet(string entry, out string url)
+        {
+            if (TryPrefix(entry, "ruleset:", out url) ||
+                TryPrefix(entry, "rule_set:", out url) ||
+                TryPrefix(entry, "srs:", out url))
+            {
+                return IsRemoteSrsUrl(url);
+            }
+
+            url = entry.Trim();
+            return IsRemoteSrsUrl(url);
+        }
+
+        private static bool IsRemoteSrsUrl(string value)
+        {
+            if (!Uri.TryCreate(value, UriKind.Absolute, out var uri))
+                return false;
+
+            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+                return false;
+
+            return uri.AbsolutePath.EndsWith(".srs", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string CreateRemoteRuleSetTag(string url)
+        {
+            var bytes = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url.Trim().ToLowerInvariant()));
+            return $"remote-srs-{Convert.ToHexString(bytes).Substring(0, 16).ToLowerInvariant()}";
+        }
+
+        private static bool TryPrefix(string entry, string prefix, out string value)
+        {
+            if (entry.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                value = entry.Substring(prefix.Length).Trim();
+                return value.Length > 0;
+            }
+
+            value = string.Empty;
+            return false;
+        }
+
+        private static string NormalizeIpCidr(string value)
+        {
+            var clean = value.Trim().ToLowerInvariant();
+            var slashIndex = clean.IndexOf('/');
+            var ipPart = slashIndex >= 0 ? clean.Substring(0, slashIndex) : clean;
+
+            if (!System.Net.IPAddress.TryParse(ipPart, out var ipAddress))
+                return clean;
+
+            if (slashIndex >= 0)
+                return clean;
+
+            return ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6
+                ? $"{clean}/128"
+                : $"{clean}/32";
+        }
+
+        private static bool LooksLikeCidrOrIp(string value)
+        {
+            var ipPart = value;
+            var slashIndex = value.IndexOf('/');
+            if (slashIndex >= 0)
+                ipPart = value.Substring(0, slashIndex);
+
+            return System.Net.IPAddress.TryParse(ipPart, out _);
         }
     }
 }
