@@ -62,7 +62,8 @@ namespace AnywhereWinUI.Services
         public int     WgMtu { get; set; }             // 0 = use sing-box default (1408)
 
         // Snell
-        public int     SnellVersion { get; set; }      // Snell protocol version: 1-5 (default 4)
+        public int     SnellVersion { get; set; }      // Snell protocol version: 1-6 (default 4)
+        public string? SnellMode { get; set; }         // Snell v6 traffic shaping mode (default, unshaped, unsafe-raw)
 
         // Proxy Chain
         public string? ProxyChainId { get; set; }

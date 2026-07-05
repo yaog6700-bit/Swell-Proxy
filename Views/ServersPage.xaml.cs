@@ -1987,14 +1987,23 @@ namespace AnywhereWinUI.Views
                 ServerSnellPskInput.Password = node.Password ?? string.Empty;
                 int snellVerIdx = (node.SnellVersion > 0 ? node.SnellVersion : 4) switch
                 {
-                    4 => 0,
-                    5 => 1,
-                    3 => 2,
-                    2 => 3,
-                    1 => 4,
-                    _ => 0
+                    6 => 0,
+                    4 => 1,
+                    5 => 2,
+                    3 => 3,
+                    2 => 4,
+                    1 => 5,
+                    _ => 1
                 };
                 ServerSnellVersionInput.SelectedIndex = snellVerIdx;
+                
+                string snellMode = node.SnellMode?.ToLower() ?? "default";
+                ServerSnellModeInput.SelectedIndex = snellMode switch
+                {
+                    "unshaped" => 1,
+                    "unsafe-raw" => 2,
+                    _ => 0
+                };
                 // Load Snell obfs
                 string snellObfsMode = node.ObfsType?.ToLower() ?? "none";
                 ServerSnellObfsInput.SelectedIndex = snellObfsMode == "http" ? 1 : 0;
@@ -2266,6 +2275,11 @@ namespace AnywhereWinUI.Views
             {
                 snellVersion = parsedSnellVer;
             }
+            string snellMode = "default";
+            if (ServerSnellModeInput.SelectedItem is ComboBoxItem snellModeItem)
+            {
+                snellMode = snellModeItem.Content.ToString() ?? "default";
+            }
             string snellObfsMode = "none";
             if (ServerSnellObfsInput.SelectedItem is ComboBoxItem snellObfsItem)
             {
@@ -2311,7 +2325,8 @@ namespace AnywhereWinUI.Views
                     WgLocalAddress = wgLocalAddress,
                     WgPreSharedKey = wgPreSharedKey,
                     WgMtu = wgMtu,
-                    SnellVersion = snellVersion
+                    SnellVersion = snellVersion,
+                    SnellMode = proto == "SNELL" && snellVersion == 6 ? snellMode : null
                 };
                 NodesManager.Instance.AddManualNode(node);
             }
@@ -2357,6 +2372,7 @@ namespace AnywhereWinUI.Views
                     node.WgPreSharedKey = wgPreSharedKey;
                     node.WgMtu = wgMtu;
                     node.SnellVersion = snellVersion;
+                    node.SnellMode = proto == "SNELL" && snellVersion == 6 ? snellMode : null;
                     NodesManager.Instance.Save();
                 }
             }
@@ -2465,6 +2481,30 @@ namespace AnywhereWinUI.Views
             {
                 string obfs = item.Content.ToString() ?? "none";
                 ServerObfsPasswordInput.Visibility = (obfs != "none") ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        private void ServerSnellVersionInput_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (ServerSnellVersionInput == null || ServerSnellModeInput == null || ServerSnellObfsInput == null || ServerSnellObfsHostInput == null) return;
+            
+            bool isV6 = false;
+            if (ServerSnellVersionInput.SelectedItem is ComboBoxItem item && int.TryParse(item.Content?.ToString(), out int ver))
+            {
+                isV6 = ver == 6;
+            }
+
+            ServerSnellModeInput.Visibility = isV6 ? Visibility.Visible : Visibility.Collapsed;
+            ServerSnellObfsInput.Visibility = isV6 ? Visibility.Collapsed : Visibility.Visible;
+            
+            // If switching to v6, also hide the ObfsHostInput
+            if (isV6)
+            {
+                ServerSnellObfsHostInput.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                ServerSnellObfsInput_SelectionChanged(null!, null!);
             }
         }
 

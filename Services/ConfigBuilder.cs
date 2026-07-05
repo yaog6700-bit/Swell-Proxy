@@ -98,7 +98,7 @@ namespace AnywhereWinUI.Services
                 },
                 ["dns"] = BuildDns(bypassChina, blockIPv6, routingMode, enableTun),
                 ["inbounds"] = await BuildInboundsAsync(enableTun, selectedNode),
-                ["outbounds"] = BuildOutbounds(selectedNode, enableTun, outboundInterface, actions.ToArray()),
+                ["outbounds"] = BuildOutbounds(selectedNode, enableTun, outboundInterface, isSingbox114OrAbove, actions.ToArray()),
                 ["route"] = BuildRoute(routingMode, bypassChina, blockAds, enableTun, outboundInterface, isSingbox114OrAbove),
                 ["experimental"] = new JsonObject
                 {
@@ -429,7 +429,7 @@ namespace AnywhereWinUI.Services
             return await System.Threading.Tasks.Task.FromResult(list);
         }
 
-        private static JsonArray BuildOutbounds(PersistedNode selectedNode, bool enableTun, string? outboundInterface, params string[] appActions)
+        private static JsonArray BuildOutbounds(PersistedNode selectedNode, bool enableTun, string? outboundInterface, bool isSingbox114OrAbove, params string[] appActions)
         {
             var list = new JsonArray();
             var addedTags = new HashSet<string>();
@@ -438,7 +438,7 @@ namespace AnywhereWinUI.Services
             var (host, port) = NodeLinkParser.SplitHostPort(selectedNode.Host);
             if (port == 0) port = 443;
             
-            var mainOutbounds = GenerateOutboundsForNode(selectedNode, host, port, "proxy");
+            var mainOutbounds = GenerateOutboundsForNode(selectedNode, host, port, "proxy", isSingbox114OrAbove);
             foreach (var ob in mainOutbounds)
             {
                 list.Add(ob);
@@ -468,7 +468,7 @@ namespace AnywhereWinUI.Services
                         var (exHost, exPort) = NodeLinkParser.SplitHostPort(extraNode.Host);
                         if (exPort == 0) exPort = 443;
                         
-                        var extraOutbounds = GenerateOutboundsForNode(extraNode, exHost, exPort, extraNode.Id);
+                        var extraOutbounds = GenerateOutboundsForNode(extraNode, exHost, exPort, extraNode.Id, isSingbox114OrAbove);
                         foreach (var ob in extraOutbounds)
                         {
                             if (!addedTags.Contains(ob["tag"]?.ToString() ?? ""))
@@ -491,7 +491,7 @@ namespace AnywhereWinUI.Services
                         var (exHost, exPort) = NodeLinkParser.SplitHostPort(node.Host);
                         if (exPort == 0) exPort = 443;
 
-                        var extraOutbounds = GenerateOutboundsForNode(node, exHost, exPort, node.Id);
+                        var extraOutbounds = GenerateOutboundsForNode(node, exHost, exPort, node.Id, isSingbox114OrAbove);
                         foreach (var ob in extraOutbounds)
                         {
                             if (!addedTags.Contains(ob["tag"]?.ToString() ?? ""))
@@ -536,7 +536,7 @@ namespace AnywhereWinUI.Services
             return stack == "system" || stack == "gvisor" || stack == "mixed" ? stack : "mixed";
         }
 
-        private static List<JsonObject> GenerateOutboundsForNode(PersistedNode node, string host, int port, string baseTag)
+        private static List<JsonObject> GenerateOutboundsForNode(PersistedNode node, string host, int port, string baseTag, bool isSingbox114OrAbove)
         {
             var list = new List<JsonObject>();
 
@@ -548,7 +548,7 @@ namespace AnywhereWinUI.Services
             }
 
             // 1. Generate main proxy outbound
-            var proxyOutbound = BuildSingleOutbound(node, host, port, baseTag);
+            var proxyOutbound = BuildSingleOutbound(node, host, port, baseTag, isSingbox114OrAbove);
 
             if (node.IsShadowTls)
             {
@@ -601,7 +601,7 @@ namespace AnywhereWinUI.Services
                 var (chainHost, chainPort) = NodeLinkParser.SplitHostPort(chainNode.Host);
                 if (chainPort == 0) chainPort = 443;
 
-                var chainOutbound = BuildSingleOutbound(chainNode, chainHost, chainPort, $"{baseTag}-chain-proxy");
+                var chainOutbound = BuildSingleOutbound(chainNode, chainHost, chainPort, $"{baseTag}-chain-proxy", isSingbox114OrAbove);
 
                 list.Add(chainOutbound);
             }
@@ -610,7 +610,7 @@ namespace AnywhereWinUI.Services
             return list;
         }
 
-        private static JsonObject BuildSingleOutbound(PersistedNode node, string host, int port, string tag)
+        private static JsonObject BuildSingleOutbound(PersistedNode node, string host, int port, string tag, bool isSingbox114OrAbove)
         {
             var proxyOutbound = new JsonObject
             {
@@ -878,20 +878,44 @@ namespace AnywhereWinUI.Services
             }
             else if (protoLower == "snell")
             {
-                // Snell protocol (reF1nd/sing-box fork)
-                // psk = Password, version = SnellVersion (default 4), obfs via ObfsType/WsHost
                 proxyOutbound["type"] = "snell";
                 proxyOutbound["psk"] = passwordVal;
                 proxyOutbound["version"] = node.SnellVersion > 0 ? node.SnellVersion : 4;
 
-                // Optional HTTP obfuscation
                 string snellObfs = !string.IsNullOrEmpty(node.ObfsType) ? node.ObfsType.ToLower() : "none";
-                if (snellObfs == "http")
+                string snellHost = !string.IsNullOrEmpty(node.WsHost) ? node.WsHost : "bing.com";
+                bool isSnellV6 = (proxyOutbound["version"]?.GetValue<int>() ?? 4) == 6;
+
+                if (isSingbox114OrAbove)
                 {
-                    var obfsObj = new JsonObject { ["mode"] = "http" };
-                    if (!string.IsNullOrEmpty(node.WsHost))
-                        obfsObj["host"] = node.WsHost;
-                    proxyOutbound["obfs"] = obfsObj;
+                    // Official sing-box 1.14.0+ format
+                    if (isSnellV6)
+                    {
+                        // Snell v6 uses `mode` for traffic shaping, no HTTP obfs
+                        string sMode = !string.IsNullOrEmpty(node.SnellMode) ? node.SnellMode.ToLower() : "default";
+                        if (sMode != "default")
+                        {
+                            proxyOutbound["mode"] = sMode;
+                        }
+                    }
+                    else if (snellObfs == "http")
+                    {
+                        // Snell v4/v5 flattened obfs
+                        proxyOutbound["obfs_mode"] = "http";
+                        proxyOutbound["obfs_host"] = snellHost;
+                    }
+                }
+                else
+                {
+                    // Legacy reF1nd fork format
+                    if (!isSnellV6 && snellObfs == "http")
+                    {
+                        proxyOutbound["obfs"] = new JsonObject 
+                        { 
+                            ["mode"] = "http", 
+                            ["host"] = snellHost 
+                        };
+                    }
                 }
             }
             else if (protoLower == "nowhere")

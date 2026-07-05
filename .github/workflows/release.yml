@@ -107,3 +107,4 @@ jobs:
             Swell-${{ matrix.rid }}.zip
             Swell-${{ matrix.rid }}.zip.sha256
           generate_release_notes: true
+          prerelease: true

@@ -539,14 +539,20 @@
                     <!-- Snell 设置 -->
                     <StackPanel x:Name="SnellPanel" Spacing="12" Visibility="Collapsed">
                         <PasswordBox x:Name="ServerSnellPskInput" Header="预共享密钥 (PSK)" PasswordChar="●" PlaceholderText="请输入 Snell PSK"/>
-                        <ComboBox x:Name="ServerSnellVersionInput" Header="Snell 版本 (Version)" HorizontalAlignment="Stretch">
+                        <ComboBox x:Name="ServerSnellVersionInput" Header="Snell 版本 (Version)" HorizontalAlignment="Stretch" SelectionChanged="ServerSnellVersionInput_SelectionChanged">
+                            <ComboBoxItem Content="6"/>
                             <ComboBoxItem Content="4" IsSelected="True"/>
                             <ComboBoxItem Content="5"/>
                             <ComboBoxItem Content="3"/>
                             <ComboBoxItem Content="2"/>
                             <ComboBoxItem Content="1"/>
                         </ComboBox>
-                        <ComboBox x:Name="ServerSnellObfsInput" Header="HTTP 混淆 (Obfs)" HorizontalAlignment="Stretch" SelectionChanged="ServerSnellObfsInput_SelectionChanged">
+                        <ComboBox x:Name="ServerSnellModeInput" Header="流量整形 (Mode) [仅 v6]" HorizontalAlignment="Stretch" Visibility="Collapsed">
+                            <ComboBoxItem Content="default" IsSelected="True"/>
+                            <ComboBoxItem Content="unshaped"/>
+                            <ComboBoxItem Content="unsafe-raw"/>
+                        </ComboBox>
+                        <ComboBox x:Name="ServerSnellObfsInput" Header="HTTP 混淆 (Obfs) [v1-v5]" HorizontalAlignment="Stretch" SelectionChanged="ServerSnellObfsInput_SelectionChanged">
                             <ComboBoxItem Content="关闭 (none)" IsSelected="True"/>
                             <ComboBoxItem Content="HTTP"/>
                         </ComboBox>
