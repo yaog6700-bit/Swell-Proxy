@@ -37,10 +37,16 @@ jobs:
         shell: pwsh
         run: |
           $tag = '${{ github.ref_name }}'
-          $ver = $tag -replace '^v',''
+          if ('${{ github.ref_type }}' -eq 'tag') {
+            $ver = $tag -replace '^v',''
+          } else {
+            $xml = [xml](Get-Content AnywhereWinUI.csproj)
+            $ver = ($xml.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -ExpandProperty Version)
+            if (-not $ver) { $ver = '1.0.0' }
+          }
           if ($ver -notmatch '^\d+(\.\d+){0,3}$') { $ver = '1.0.0' }
           "version=$ver" | Out-File $env:GITHUB_OUTPUT -Append
-          Write-Host "Resolved version: $ver (from tag $tag)"
+          Write-Host "Resolved version: $ver (from ref $tag)"
 
       - name: Publish App (${{ matrix.rid }})
         run: >
@@ -107,4 +113,4 @@ jobs:
             Swell-${{ matrix.rid }}.zip
             Swell-${{ matrix.rid }}.zip.sha256
           generate_release_notes: true
-          prerelease: true
+          prerelease: false

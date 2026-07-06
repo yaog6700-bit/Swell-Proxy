@@ -41,8 +41,63 @@ namespace AnywhereWinUI.Services
             else if (rawLink.StartsWith("https://",       StringComparison.OrdinalIgnoreCase)) parsed = ParseHttp(rawLink);
             // Note: http:// must come last among http* prefixes to avoid shadowing http2://
             else if (rawLink.StartsWith("http://",        StringComparison.OrdinalIgnoreCase)) parsed = ParseHttp(rawLink);
+            else if (rawLink.Contains("= snell,",         StringComparison.OrdinalIgnoreCase)) parsed = ParseSurgeSnell(rawLink);
 
             return IsValidParsedNode(parsed) ? parsed : null;
+        }
+
+        // ── Surge Snell ───────────────────────────────────────────────────────
+
+        private static PersistedNode? ParseSurgeSnell(string link)
+        {
+            try
+            {
+                // Example: Snell6 = snell, 47.239.125.83, 58051, psk = XXX, version = 6, mode = default
+                var parts = link.Split(new[] { '=' }, 2);
+                if (parts.Length < 2) return null;
+                
+                string name = parts[0].Trim();
+                string details = parts[1].Trim();
+                
+                var tokens = details.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                if (tokens.Length < 3) return null;
+                
+                string type = tokens[0].Trim();
+                if (!type.Equals("snell", StringComparison.OrdinalIgnoreCase)) return null;
+                
+                string host = tokens[1].Trim();
+                if (!int.TryParse(tokens[2].Trim(), out int port)) return null;
+                
+                var node = new PersistedNode
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Name = name,
+                    Protocol = "snell",
+                    Host = $"{host}:{port}"
+                };
+                
+                for (int i = 3; i < tokens.Length; i++)
+                {
+                    var kv = tokens[i].Split(new[] { '=' }, 2);
+                    if (kv.Length == 2)
+                    {
+                        string k = kv[0].Trim().ToLower();
+                        string v = kv[1].Trim();
+                        
+                        if (k == "psk") node.Password = v;
+                        else if (k == "version") { if (int.TryParse(v, out int ver)) node.SnellVersion = ver; }
+                        else if (k == "obfs") node.ObfsType = v;
+                        else if (k == "obfs-host") node.WsHost = v;
+                        else if (k == "mode") node.SnellMode = v;
+                    }
+                }
+                
+                return node;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         // ── Shadowsocks ───────────────────────────────────────────────────────
