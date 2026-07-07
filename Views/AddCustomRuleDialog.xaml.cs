@@ -84,14 +84,14 @@ namespace AnywhereWinUI.Views
 
                 case "mixed":
                     BrowsePanel.Visibility = Visibility.Collapsed;
-                    MatchTextBox.PlaceholderText = "domain_suffix:youtube.com, geosite:youtube, ip_cidr:1.1.1.1/32";
-                    HintTextBlock.Text = "支持 domain_suffix:、domain:、domain_regex:、geosite:、geoip:、ip_cidr:、process_name:、process_path:、ruleset:https://.../*.srs。";
+                    MatchTextBox.PlaceholderText = "domain_suffix:youtube.com, domain_keyword:google, geosite:youtube, ip_cidr:1.1.1.1/32";
+                    HintTextBlock.Text = "支持 domain_suffix:、domain:、domain_keyword:、domain_regex:、geosite:、geoip:、ip_cidr:、process_name:、process_path:、ruleset:https://.../*.srs。";
                     break;
 
                 default:
                     BrowsePanel.Visibility = Visibility.Collapsed;
-                    MatchTextBox.PlaceholderText = "youtube.com 或 geosite:cn";
-                    HintTextBlock.Text = "支持精确域名、regex:、regexp:、domain_suffix:、geosite:、ruleset:https://.../*.srs 前缀。";
+                    MatchTextBox.PlaceholderText = "youtube.com 或 domain_keyword:google";
+                    HintTextBlock.Text = "支持精确域名、domain_keyword:（关键词）、regex:、regexp:、domain_suffix:、geosite:、ruleset:https://.../*.srs 前缀。";
                     break;
             }
         }

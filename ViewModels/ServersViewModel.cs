@@ -145,6 +145,11 @@ namespace AnywhereWinUI.ViewModels
                 };
                 AllServers.Add(item);
             }
+            // NOTE: RebuildGroupFilters() must be called AFTER AllServers is fully populated.
+            // Calling it before (e.g. right after Clear()) means AllServers is empty, so
+            // IsManualOrDetached checks always return false and "自建列表" is never added to
+            // GroupFilters.  That causes the saved "__manual__" filter ID to be silently
+            // reset to "__all__" every time the app restarts.
             RebuildGroupFilters();
             ApplyFilters();
         }
@@ -223,7 +228,11 @@ namespace AnywhereWinUI.ViewModels
                 });
             }
 
-            if (!GroupFilters.Any(g => g.Id == selected))
+            // Only fall back to AllFilter when AllServers is fully loaded.
+            // If AllServers is still empty (called from LoadSubscriptions() before
+            // LoadServersList() has run), skip the reset so the user's saved filter
+            // ID (如 __manual__) is not prematurely overwritten.
+            if (AllServers.Count > 0 && !GroupFilters.Any(g => g.Id == selected))
             {
                 selected = AllFilterId;
             }

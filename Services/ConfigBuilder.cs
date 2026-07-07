@@ -1197,6 +1197,7 @@ namespace AnywhereWinUI.Services
             var domainSuffixes = new List<string>();
             var domainExacts = new List<string>();
             var domainRegexes = new List<string>();
+            var domainKeywords = new List<string>();
             var cidrEntries = new List<string>();
             var processNames = new List<string>();
             var processPaths = new List<string>();
@@ -1239,6 +1240,7 @@ namespace AnywhereWinUI.Services
             AddArrayRule("domain_suffix", domainSuffixes, outbound);
             AddArrayRule("domain", domainExacts, outbound);
             AddArrayRule("domain_regex", domainRegexes, outbound);
+            AddArrayRule("domain_keyword", domainKeywords, outbound);
             AddArrayRule("ip_cidr", cidrEntries, outbound);
             AddArrayRule("process_name", processNames, outbound);
             AddArrayRule("process_path", processPaths, outbound);
@@ -1251,6 +1253,8 @@ namespace AnywhereWinUI.Services
                     geoipEntries.Add(geoip.ToLowerInvariant());
                 else if (TryPrefix(entry, "domain_suffix:", out var suffix))
                     domainSuffixes.Add(suffix.ToLowerInvariant());
+                else if (TryPrefix(entry, "domain_keyword:", out var keyword))
+                    domainKeywords.Add(keyword.ToLowerInvariant());
                 else if (TryPrefix(entry, "domain:", out var exact))
                     domainExacts.Add(exact.ToLowerInvariant());
                 else if (TryRegexPrefix(entry, out var regex))
@@ -1273,6 +1277,8 @@ namespace AnywhereWinUI.Services
                     geositeEntries.Add(geosite.ToLowerInvariant());
                 else if (TryPrefix(entry, "domain_suffix:", out var suffix))
                     domainSuffixes.Add(suffix.ToLowerInvariant());
+                else if (TryPrefix(entry, "domain_keyword:", out var keyword))
+                    domainKeywords.Add(keyword.ToLowerInvariant());
                 else if (TryPrefix(entry, "domain:", out var exact))
                     domainExacts.Add(exact.ToLowerInvariant());
                 else if (TryRegexPrefix(entry, out var regex))
