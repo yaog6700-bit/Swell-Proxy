@@ -1,167 +1,154 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace AnywhereWinUI.Helpers
 {
     /// <summary>
-    /// 提供基于 Win32 IFileOpenDialog 的文件选择对话框，
-    /// 解决 WinUI 3 <see cref="Windows.Storage.Pickers.FileOpenPicker"/>
-    /// 在管理员（elevated）进程下（如启用 TUN 模式时）抛出
-    /// <see cref="System.Runtime.InteropServices.COMException"/> 0x80004005 的问题。
+    /// 基于 Win32 GetOpenFileNameW 的文件选择器。
+    /// 不依赖 COM 激活，不受 PublishTrimmed 影响，在普通进程和管理员进程中均可正常弹出对话框。
+    /// WinUI3 FileOpenPicker 在 elevated 进程（如 TUN 模式）下会抛出 COMException 0x80004005，
+    /// 此帮助类彻底绕开该问题。
     /// </summary>
     public static class Win32FilePickerHelper
     {
-        // ── COM interfaces ────────────────────────────────────────────────────
+        // ── Native struct ─────────────────────────────────────────────────────
 
-        [ComImport]
-        [Guid("42f85136-db7e-439c-85f1-e4075d135fc8")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IFileOpenDialog
+        /// <summary>Maps to native OPENFILENAMEW (commdlg.h).</summary>
+        [StructLayout(LayoutKind.Sequential)]
+        private struct OPENFILENAME
         {
-            // IModalWindow
-            [PreserveSig] int Show(IntPtr parent);
-
-            // IFileDialog
-            void SetFileTypes(uint cFileTypes, [MarshalAs(UnmanagedType.LPArray)] COMDLG_FILTERSPEC[] rgFilterSpec);
-            void SetFileTypeIndex(uint iFileType);
-            void GetFileTypeIndex(out uint piFileType);
-            void Advise(IntPtr pfde, out uint pdwCookie);
-            void Unadvise(uint dwCookie);
-            void SetOptions(uint fos);
-            void GetOptions(out uint pfos);
-            void SetDefaultFolder(IShellItem psi);
-            void SetFolder(IShellItem psi);
-            void GetFolder(out IShellItem ppsi);
-            void GetCurrentSelection(out IShellItem ppsi);
-            void SetFileName([MarshalAs(UnmanagedType.LPWStr)] string pszName);
-            void GetFileName([MarshalAs(UnmanagedType.LPWStr)] out string pszName);
-            void SetTitle([MarshalAs(UnmanagedType.LPWStr)] string pszTitle);
-            void SetOkButtonLabel([MarshalAs(UnmanagedType.LPWStr)] string pszText);
-            void SetFileNameLabel([MarshalAs(UnmanagedType.LPWStr)] string pszLabel);
-            void GetResult(out IShellItem ppsi);
-            void AddPlace(IShellItem psi, uint fdap);
-            void SetDefaultExtension([MarshalAs(UnmanagedType.LPWStr)] string pszDefaultExtension);
-            void Close(int hr);
-            void SetClientGuid([In] ref Guid guid);
-            void ClearClientData();
-            void SetFilter(IntPtr pFilter);
-
-            // IFileOpenDialog
-            void GetResults(out IShellItemArray ppenum);
-            void GetSelectedItems(out IShellItemArray ppsai);
+            public int    lStructSize;
+            public IntPtr hwndOwner;
+            public IntPtr hInstance;
+            public IntPtr lpstrFilter;       // double-null-terminated wide string
+            public IntPtr lpstrCustomFilter;
+            public int    nMaxCustFilter;
+            public int    nFilterIndex;
+            public IntPtr lpstrFile;         // writable path buffer (wide chars)
+            public int    nMaxFile;
+            public IntPtr lpstrFileTitle;
+            public int    nMaxFileTitle;
+            public IntPtr lpstrInitialDir;
+            public IntPtr lpstrTitle;        // dialog title (wide string)
+            public int    Flags;
+            public short  nFileOffset;
+            public short  nFileExtension;
+            public IntPtr lpstrDefExt;
+            public IntPtr lCustData;
+            public IntPtr lpfnHook;
+            public IntPtr lpTemplateName;
+            public IntPtr pvReserved;
+            public int    dwReserved;
+            public int    FlagsEx;
         }
 
-        [ComImport]
-        [Guid("43826d1e-e718-42ee-bc55-a1e261c37bfe")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IShellItem
-        {
-            void BindToHandler(IntPtr pbc, [In] ref Guid bhid, [In] ref Guid riid, out IntPtr ppv);
-            void GetParent(out IShellItem ppsi);
-            void GetDisplayName(uint sigdnName, [MarshalAs(UnmanagedType.LPWStr)] out string ppszName);
-            void GetAttributes(uint sfgaoMask, out uint psfgaoAttribs);
-            void Compare(IShellItem psi, uint hint, out int piOrder);
-        }
+        // ── P/Invoke ──────────────────────────────────────────────────────────
 
-        [ComImport]
-        [Guid("b63ea76d-1f85-456f-a19c-48159efa858b")]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IShellItemArray
-        {
-            void BindToHandler(IntPtr pbc, [In] ref Guid bhid, [In] ref Guid riid, out IntPtr ppv);
-            void GetPropertyStore(uint flags, [In] ref Guid riid, out IntPtr ppv);
-            void GetPropertyDescriptionList(IntPtr keyType, [In] ref Guid riid, out IntPtr ppv);
-            void GetAttributes(uint AttribFlags, uint sfgaoMask, out uint psfgaoAttribs);
-            void GetCount(out uint pdwNumItems);
-            void GetItemAt(uint dwIndex, out IShellItem ppsi);
-            void EnumItems(out IntPtr ppenumShellItems);
-        }
+        [DllImport("comdlg32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetOpenFileNameW(ref OPENFILENAME lpofn);
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        private struct COMDLG_FILTERSPEC
-        {
-            [MarshalAs(UnmanagedType.LPWStr)] public string pszName;
-            [MarshalAs(UnmanagedType.LPWStr)] public string pszSpec;
-        }
+        // ── Flags ─────────────────────────────────────────────────────────────
 
-        // SIGDN_FILESYSPATH = 0x80058000
-        private const uint SIGDN_FILESYSPATH = 0x80058000;
-        // FOS_FILEMUSTEXIST = 0x1000, FOS_PATHMUSTEXIST = 0x800
-        private const uint FOS_FILEMUSTEXIST = 0x1000;
-        private const uint FOS_PATHMUSTEXIST = 0x0800;
-
-        [DllImport("shell32.dll")]
-        private static extern int SHCreateItemFromParsingName(
-            [MarshalAs(UnmanagedType.LPWStr)] string pszPath,
-            IntPtr pbc,
-            ref Guid riid,
-            out IShellItem ppv);
-
-        // CLSID_FileOpenDialog
-        private static readonly Guid CLSID_FileOpenDialog = new("DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7");
+        private const int OFN_FILEMUSTEXIST = 0x00001000;
+        private const int OFN_PATHMUSTEXIST = 0x00000800;
+        private const int OFN_NOCHANGEDIR   = 0x00000008;
+        private const int OFN_EXPLORER      = 0x00080000;
+        private const int MAX_PATH_CHARS    = 32768;   // extended-length path
 
         // ── Public API ────────────────────────────────────────────────────────
 
         /// <summary>
-        /// 以 Win32 IFileOpenDialog 打开文件选择对话框，兼容 elevated 进程。
+        /// 弹出文件选择对话框（在 UI/STA 线程上同步运行，兼容 elevated 进程）。
         /// </summary>
-        /// <param name="hwnd">父窗口句柄，使用 <c>WindowNative.GetWindowHandle(MainWindow.Instance)</c>。</param>
-        /// <param name="filters">
-        /// 文件类型过滤器列表，每项为 (显示名, 通配符)，例如 ("可执行文件", "*.exe")。
-        /// 传入空列表或 null 则不过滤（显示所有文件）。
-        /// </param>
-        /// <param name="title">对话框标题，null 则使用系统默认。</param>
-        /// <returns>用户选择的文件完整路径；用户取消则返回 null。</returns>
+        /// <param name="hwnd">父窗口句柄。</param>
+        /// <param name="filters">文件类型过滤器，每项为 (显示名, 通配符)，例如 ("可执行文件", "*.exe")。</param>
+        /// <param name="title">对话框标题；null 使用系统默认。</param>
+        /// <returns>用户选择的文件完整路径；取消或失败返回 null。</returns>
         public static Task<string?> PickSingleFileAsync(
             IntPtr hwnd,
             IReadOnlyList<(string Name, string Spec)>? filters = null,
             string? title = null)
         {
-            // 注意：必须在 STA 线程（即 UI 线程）上直接调用，不能用 Task.Run（线程池是 MTA）。
-            // IFileOpenDialog 是 STA COM 对象，在 MTA 线程上调用会导致对话框无声失败。
-            // 调用方（async void 事件处理器）已在 WinUI UI 线程（STA）上，直接同步运行即可。
+            IntPtr filterPtr  = IntPtr.Zero;
+            IntPtr fileBuffer = IntPtr.Zero;
+            IntPtr titlePtr   = IntPtr.Zero;
+
             try
             {
-                // Create the COM dialog object
-                var dialog = (IFileOpenDialog)Activator.CreateInstance(
-                    Type.GetTypeFromCLSID(CLSID_FileOpenDialog)!)!;
-
-                // Set options
-                dialog.GetOptions(out uint opts);
-                dialog.SetOptions(opts | FOS_FILEMUSTEXIST | FOS_PATHMUSTEXIST);
-
-                // Set title
-                if (!string.IsNullOrWhiteSpace(title))
-                    dialog.SetTitle(title);
-
-                // Set filters
+                // ── Build double-null-terminated filter string ────────────────
+                // Format: "Display1\0*.ext1\0Display2\0*.ext2\0\0"
+                var sb = new StringBuilder();
                 if (filters != null && filters.Count > 0)
                 {
-                    var specs = new COMDLG_FILTERSPEC[filters.Count];
-                    for (int i = 0; i < filters.Count; i++)
-                        specs[i] = new COMDLG_FILTERSPEC
-                        {
-                            pszName = filters[i].Name,
-                            pszSpec = filters[i].Spec
-                        };
-                    dialog.SetFileTypes((uint)specs.Length, specs);
+                    foreach (var (name, spec) in filters)
+                        sb.Append(name).Append('\0').Append(spec).Append('\0');
+                }
+                else
+                {
+                    sb.Append("所有文件").Append('\0').Append("*.*").Append('\0');
+                }
+                sb.Append('\0'); // final double-null terminator
+
+                char[] filterChars = sb.ToString().ToCharArray();
+                int    filterBytes = filterChars.Length * 2; // UTF-16LE: 2 bytes per char
+                filterPtr = Marshal.AllocHGlobal(filterBytes);
+                Marshal.Copy(filterChars, 0, filterPtr, filterChars.Length);
+
+                // ── File result buffer (zero-initialised) ─────────────────────
+                int bufferBytes = MAX_PATH_CHARS * 2;
+                fileBuffer = Marshal.AllocHGlobal(bufferBytes);
+                // Zero the entire buffer so we detect an empty result reliably
+                for (int i = 0; i < bufferBytes; i += 2)
+                    Marshal.WriteInt16(fileBuffer, i, 0);
+
+                // ── Optional dialog title ─────────────────────────────────────
+                if (title != null)
+                    titlePtr = Marshal.StringToHGlobalUni(title);
+
+                // ── Fill OPENFILENAME ─────────────────────────────────────────
+                var ofn = new OPENFILENAME
+                {
+                    lStructSize  = Marshal.SizeOf<OPENFILENAME>(),
+                    hwndOwner    = hwnd,
+                    lpstrFilter  = filterPtr,
+                    nFilterIndex = 1,
+                    lpstrFile    = fileBuffer,
+                    nMaxFile     = MAX_PATH_CHARS,
+                    lpstrTitle   = titlePtr,
+                    Flags        = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER,
+                };
+
+                // ── Show dialog ───────────────────────────────────────────────
+                bool ok = GetOpenFileNameW(ref ofn);
+                if (!ok)
+                {
+                    // User cancelled (CommDlgExtendedError == 0) or a real error.
+                    Debug.WriteLine($"[Win32FilePickerHelper] 取消或错误，CommDlgExtendedError={CommDlgExtendedError()}");
+                    return Task.FromResult<string?>(null);
                 }
 
-                // Show dialog — S_OK = 0, HRESULT_FROM_WIN32(ERROR_CANCELLED) = 0x800704C7
-                int hr = dialog.Show(hwnd);
-                if (hr != 0) return Task.FromResult<string?>(null); // user cancelled or error
-
-                dialog.GetResult(out IShellItem item);
-                item.GetDisplayName(SIGDN_FILESYSPATH, out string path);
-                return Task.FromResult<string?>(path);
+                string path = Marshal.PtrToStringUni(fileBuffer) ?? string.Empty;
+                return Task.FromResult<string?>(string.IsNullOrEmpty(path) ? null : path);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[Win32FilePickerHelper] PickSingleFileAsync 失败: {ex.Message}");
+                Debug.WriteLine($"[Win32FilePickerHelper] 异常: {ex}");
                 return Task.FromResult<string?>(null);
             }
+            finally
+            {
+                if (filterPtr  != IntPtr.Zero) Marshal.FreeHGlobal(filterPtr);
+                if (fileBuffer != IntPtr.Zero) Marshal.FreeHGlobal(fileBuffer);
+                if (titlePtr   != IntPtr.Zero) Marshal.FreeHGlobal(titlePtr);
+            }
         }
+
+        [DllImport("comdlg32.dll")]
+        private static extern int CommDlgExtendedError();
     }
 }
