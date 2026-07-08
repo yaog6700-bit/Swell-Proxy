@@ -119,49 +119,49 @@ namespace AnywhereWinUI.Helpers
             IReadOnlyList<(string Name, string Spec)>? filters = null,
             string? title = null)
         {
-            return Task.Run(() =>
+            // 注意：必须在 STA 线程（即 UI 线程）上直接调用，不能用 Task.Run（线程池是 MTA）。
+            // IFileOpenDialog 是 STA COM 对象，在 MTA 线程上调用会导致对话框无声失败。
+            // 调用方（async void 事件处理器）已在 WinUI UI 线程（STA）上，直接同步运行即可。
+            try
             {
-                try
+                // Create the COM dialog object
+                var dialog = (IFileOpenDialog)Activator.CreateInstance(
+                    Type.GetTypeFromCLSID(CLSID_FileOpenDialog)!)!;
+
+                // Set options
+                dialog.GetOptions(out uint opts);
+                dialog.SetOptions(opts | FOS_FILEMUSTEXIST | FOS_PATHMUSTEXIST);
+
+                // Set title
+                if (!string.IsNullOrWhiteSpace(title))
+                    dialog.SetTitle(title);
+
+                // Set filters
+                if (filters != null && filters.Count > 0)
                 {
-                    // Create the COM dialog object
-                    var dialog = (IFileOpenDialog)Activator.CreateInstance(
-                        Type.GetTypeFromCLSID(CLSID_FileOpenDialog)!)!;
-
-                    // Set options
-                    dialog.GetOptions(out uint opts);
-                    dialog.SetOptions(opts | FOS_FILEMUSTEXIST | FOS_PATHMUSTEXIST);
-
-                    // Set title
-                    if (!string.IsNullOrWhiteSpace(title))
-                        dialog.SetTitle(title);
-
-                    // Set filters
-                    if (filters != null && filters.Count > 0)
-                    {
-                        var specs = new COMDLG_FILTERSPEC[filters.Count];
-                        for (int i = 0; i < filters.Count; i++)
-                            specs[i] = new COMDLG_FILTERSPEC
-                            {
-                                pszName = filters[i].Name,
-                                pszSpec = filters[i].Spec
-                            };
-                        dialog.SetFileTypes((uint)specs.Length, specs);
-                    }
-
-                    // Show dialog — S_OK = 0, HRESULT_FROM_WIN32(ERROR_CANCELLED) = 0x800704C7
-                    int hr = dialog.Show(hwnd);
-                    if (hr != 0) return null; // user cancelled or error
-
-                    dialog.GetResult(out IShellItem item);
-                    item.GetDisplayName(SIGDN_FILESYSPATH, out string path);
-                    return path;
+                    var specs = new COMDLG_FILTERSPEC[filters.Count];
+                    for (int i = 0; i < filters.Count; i++)
+                        specs[i] = new COMDLG_FILTERSPEC
+                        {
+                            pszName = filters[i].Name,
+                            pszSpec = filters[i].Spec
+                        };
+                    dialog.SetFileTypes((uint)specs.Length, specs);
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Win32FilePickerHelper] PickSingleFileAsync 失败: {ex.Message}");
-                    return null;
-                }
-            });
+
+                // Show dialog — S_OK = 0, HRESULT_FROM_WIN32(ERROR_CANCELLED) = 0x800704C7
+                int hr = dialog.Show(hwnd);
+                if (hr != 0) return Task.FromResult<string?>(null); // user cancelled or error
+
+                dialog.GetResult(out IShellItem item);
+                item.GetDisplayName(SIGDN_FILESYSPATH, out string path);
+                return Task.FromResult<string?>(path);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Win32FilePickerHelper] PickSingleFileAsync 失败: {ex.Message}");
+                return Task.FromResult<string?>(null);
+            }
         }
     }
 }
