@@ -785,6 +785,39 @@ namespace AnywhereWinUI.Services
                             node.Network = "tcp";
                             break;
                         }
+                        case "snell":
+                        {
+                            string psk = ob.TryGetProperty("psk", out var pskProp) ? pskProp.GetString() ?? "" : "";
+                            int version = ob.TryGetProperty("version", out var verProp) ? verProp.GetInt32() : 4;
+
+                            node.Protocol = "Snell";
+                            node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
+                            node.Password = psk;
+                            node.SnellVersion = version;
+                            node.Network = "tcp";
+
+                            if (version == 6)
+                            {
+                                // v6: 流量整形 mode
+                                node.SnellMode = ob.TryGetProperty("mode", out var modeProp) ? modeProp.GetString() ?? "default" : "default";
+                            }
+                            else
+                            {
+                                // v4/v5: 新格式扁平化 obfs_mode / obfs_host（官方 sing-box 1.14+）
+                                if (ob.TryGetProperty("obfs_mode", out var obfsModeProp))
+                                {
+                                    node.ObfsType = obfsModeProp.GetString() ?? "none";
+                                    node.WsHost = ob.TryGetProperty("obfs_host", out var obfsHostProp) ? obfsHostProp.GetString() ?? "" : "";
+                                }
+                                // 旧格式嵌套 obfs 对象（reF1nd fork 兼容）
+                                else if (ob.TryGetProperty("obfs", out var obfsEl) && obfsEl.ValueKind == JsonValueKind.Object)
+                                {
+                                    node.ObfsType = obfsEl.TryGetProperty("mode", out var modeProp2) ? modeProp2.GetString() ?? "none" : "none";
+                                    node.WsHost = obfsEl.TryGetProperty("host", out var hostProp) ? hostProp.GetString() ?? "" : "";
+                                }
+                            }
+                            break;
+                        }
                         default:
                             // 未知协议，跳过
                             continue;

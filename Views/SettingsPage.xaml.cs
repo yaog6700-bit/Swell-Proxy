@@ -261,22 +261,19 @@ namespace AnywhereWinUI.Views
             var confirmResult = await confirmDialog.WithAppTheme().ShowAsync();
             if (confirmResult != ContentDialogResult.Primary) return;
 
-            var picker = new FileOpenPicker();
-            picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-            picker.FileTypeFilter.Add(".zip");
-
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
-            var file = await picker.PickSingleFileAsync();
-            if (file != null)
+            var backupFilePath = await Helpers.Win32FilePickerHelper.PickSingleFileAsync(
+                hwnd,
+                filters: [("Swell Proxy 备份", "*.zip")],
+                title: "选择备份文件");
+            if (backupFilePath != null)
             {
                 try
                 {
                     ImportBackupButton.IsEnabled = false;
                     ImportBackupButton.Content = "导入中...";
 
-                    await NodesManager.Instance.ImportBackupAsync(file.Path);
+                    await NodesManager.Instance.ImportBackupAsync(backupFilePath);
 
                     // Re-load UI states from newly imported config
                     ViewModel.LoadSettings();
@@ -554,15 +551,16 @@ namespace AnywhereWinUI.Views
 
         private async void ReplaceCoreButton_Click(object sender, RoutedEventArgs e)
         {
-            var picker = new FileOpenPicker();
-            picker.SuggestedStartLocation = PickerLocationId.ComputerFolder;
-            picker.FileTypeFilter.Add(".exe");
-
+            // 使用 Win32 IFileOpenDialog 替代 WinUI3 FileOpenPicker：
+            // 当应用以管理员权限运行时（TUN 模式需要 elevated 权限），
+            // FileOpenPicker 会抛出 COMException 0x80004005。
+            // Win32FilePickerHelper 直接调用 Shell32 COM 接口，不受此限制。
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
-            var file = await picker.PickSingleFileAsync();
-            if (file == null) return;
+            var filePath = await Helpers.Win32FilePickerHelper.PickSingleFileAsync(
+                hwnd,
+                filters: [("可执行文件", "*.exe")],
+                title: "选择 sing-box 核心文件");
+            if (filePath == null) return;
 
             var isRunning = CoreManager.Instance.IsRunning;
             if (isRunning)
@@ -581,7 +579,7 @@ namespace AnywhereWinUI.Views
                     Directory.CreateDirectory(dir);
                 }
 
-                File.Copy(file.Path, targetPath, overwrite: true);
+                File.Copy(filePath, targetPath, overwrite: true);
 
                 var ver = GetLocalSingboxVersionText();
                 SingboxVersionText.Text = $"当前版本: {ver}";
@@ -589,7 +587,7 @@ namespace AnywhereWinUI.Views
                 var dialog = new ContentDialog
                 {
                     Title = "内核替换成功",
-                    Content = $"已成功替换内核驱动文件为:\n{file.Name}\n\n请返回仪表盘重新连接代理以应用最新内核。",
+                    Content = $"已成功替换内核驱动文件为:\n{System.IO.Path.GetFileName(filePath)}\n\n请返回仪表盘重新连接代理以应用最新内核。",
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };

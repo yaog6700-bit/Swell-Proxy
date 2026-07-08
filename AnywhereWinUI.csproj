@@ -23,7 +23,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>3.2.4</Version>
+    <Version>3.2.5</Version>
   </PropertyGroup>
 
   <!-- Publish & Optimization Properties for Ultra-Low Resource Usage -->
