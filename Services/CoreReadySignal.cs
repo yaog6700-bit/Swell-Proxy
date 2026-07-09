@@ -54,16 +54,20 @@ namespace AnywhereWinUI.Services
                 signal._outcome.TrySetResult(Outcome.Exited);
             };
 
-            // Primary: TCP port polling on a background task
-            _ = signal.PollPortAsync(mixedPort);
+            // Primary: TCP port polling on a background task.
+            // Wrapped in a top-level try/catch so any unexpected exception is
+            // swallowed instead of becoming an unobserved Task exception.
+            _ = Task.Run(async () =>
+            {
+                try { await signal.PollPortAsync(mixedPort).ConfigureAwait(false); }
+                catch { /* intentionally swallowed */ }
+            });
 
             return signal;
         }
 
         private void OnLine(string? line)
         {
-            // Belt-and-suspenders: if sing-box is at info level and outputs a
-            // startup message, treat it as ready immediately.
             if (!string.IsNullOrEmpty(line))
                 _outcome.TrySetResult(Outcome.Ready);
         }
@@ -71,8 +75,6 @@ namespace AnywhereWinUI.Services
         private async Task PollPortAsync(int port)
         {
             var ct = _cts.Token;
-            // Give the process a small head-start before we start hammering
-            // the port — typically sing-box needs ~100-300 ms to bind.
             await Task.Delay(100, ct).ConfigureAwait(false);
 
             while (!ct.IsCancellationRequested)
@@ -80,22 +82,20 @@ namespace AnywhereWinUI.Services
                 try
                 {
                     using var tcp = new TcpClient();
-                    // Short per-attempt timeout so we don't block the loop
-                    await tcp.ConnectAsync("127.0.0.1", port)
-                              .WaitAsync(TimeSpan.FromMilliseconds(150), ct)
-                              .ConfigureAwait(false);
+                    // Pass ct directly to ConnectAsync so cancellation throws
+                    // OperationCanceledException cleanly without leaving a
+                    // dangling Task that produces an unobserved SocketException.
+                    await tcp.ConnectAsync("127.0.0.1", port, ct).ConfigureAwait(false);
 
-                    // Connected → sing-box is accepting traffic
                     _outcome.TrySetResult(Outcome.Ready);
                     return;
                 }
                 catch (OperationCanceledException)
                 {
-                    return; // process exited or outer cap elapsed
+                    return;
                 }
                 catch
                 {
-                    // Port not ready yet — wait before retrying
                     try { await Task.Delay(100, ct).ConfigureAwait(false); }
                     catch (OperationCanceledException) { return; }
                 }
