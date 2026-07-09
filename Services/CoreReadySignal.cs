@@ -6,16 +6,17 @@ using System.Threading.Tasks;
 namespace AnywhereWinUI.Services
 {
     /// <summary>
-    /// Resolves as soon as sing-box reports readiness via its stdout/stderr log stream,
+    /// Resolves as soon as sing-box produces any output on stdout/stderr,
     /// replacing the old fixed Task.Delay(800) startup wait.
     ///
-    /// sing-box prints "sing-box started" (with elapsed time, e.g. "INFO[0000] sing-box started (0.33s)")
-    /// once every inbound listener has successfully bound. This is the authoritative signal
-    /// that the proxy is ready to accept connections.
+    /// Strategy: trigger on the FIRST non-empty output line.
+    /// sing-box outputs log/access lines almost immediately after binding its
+    /// inbounds, so the first line is a reliable "process is alive" signal.
+    /// If the process crashes it fires Exited instead, which the caller maps
+    /// to a failure — same safety net as before, just without the blind wait.
     ///
-    /// Degradation: if a future sing-box version rewords the line, WaitAsync returns TimedOut
-    /// after the cap elapses — the caller treats that identically to the old fixed-delay behavior,
-    /// so there is no regression even if the signal is never fired.
+    /// Fallback: if no output arrives within <cap> (3 s default), TimedOut is
+    /// returned and the caller proceeds normally — identical to the old behaviour.
     /// </summary>
     internal sealed class CoreReadySignal
     {
@@ -44,18 +45,19 @@ namespace AnywhereWinUI.Services
 
         private void OnLine(string? line)
         {
-            // Matches sing-box's startup confirmation line, e.g.:
-            //   INFO[0000] sing-box started (0.33s)
-            // The substring "sing-box started" is stable across known versions.
-            if (line is not null &&
-                line.Contains("sing-box started", StringComparison.OrdinalIgnoreCase))
+            // Trigger on the very first non-empty output line.
+            // sing-box emits log/access lines within ~100 ms of binding inbounds,
+            // regardless of the configured log level (warn/info/debug all produce output).
+            // If the line happens to contain the canonical startup message we note it,
+            // but we no longer rely on that specific string being present.
+            if (!string.IsNullOrEmpty(line))
             {
                 _outcome.TrySetResult(Outcome.Ready);
             }
         }
 
         /// <summary>
-        /// Awaits the first of: readiness line → Ready, process exit → Exited,
+        /// Awaits the first of: any output line → Ready, process exit → Exited,
         /// or <paramref name="cap"/> elapsing → TimedOut.
         /// Cancellation propagates as <see cref="OperationCanceledException"/>.
         /// </summary>

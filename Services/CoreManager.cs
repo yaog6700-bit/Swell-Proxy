@@ -208,7 +208,7 @@ namespace AnywhereWinUI.Services
                     // Wait for sing-box to confirm readiness instead of a fixed 800 ms delay.
                     // Typical cold-start is ~200–400 ms → user sees the proxy active noticeably faster.
                     // TimedOut (cap = 10 s) degrades gracefully to the old fixed-delay behaviour.
-                    var signalOutcome = await readySignal.WaitAsync(TimeSpan.FromSeconds(10));
+                    var signalOutcome = await readySignal.WaitAsync(TimeSpan.FromSeconds(3));
 
                     if (signalOutcome == CoreReadySignal.Outcome.Exited || _process.HasExited)
                     {
