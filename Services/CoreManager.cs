@@ -195,7 +195,7 @@ namespace AnywhereWinUI.Services
 
                     // Attach the ready signal BEFORE Start() so no output line is missed.
                     // sing-box prints "sing-box started (Xs)" once every inbound is bound.
-                    var readySignal = CoreReadySignal.Attach(_process);
+                    var readySignal = CoreReadySignal.Attach(_process, AppSession.Instance.MixedPort);
 
                     _process.Start();
                     ChildProcessTracker.AddProcess(_process);
