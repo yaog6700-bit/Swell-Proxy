@@ -16,8 +16,8 @@ namespace AnywhereWinUI.Services
 
         public string ExePath => Path.Combine(AppContext.BaseDirectory, "Assets", "sing-box.exe");
         public string ConfigPath => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
-            "SwellProxy", 
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SwellProxy",
             "singbox_config.json"
         );
 
@@ -110,141 +110,152 @@ namespace AnywhereWinUI.Services
                 LastError = string.Empty;
                 lock (_startupLogLock) { _startupLog.Clear(); }
 
-            // Ensure directory exists
-            var localDir = Path.GetDirectoryName(ConfigPath);
-            if (localDir != null)
-            {
-                Directory.CreateDirectory(localDir);
-                
-                // Self-healing: Copy local binary rule-sets (*.srs) from Assets/rules to LocalAppData/SwellProxy
-                var sourceRulesDir = Path.Combine(AppContext.BaseDirectory, "Assets", "rules");
-                if (Directory.Exists(sourceRulesDir))
+                // Ensure directory exists
+                var localDir = Path.GetDirectoryName(ConfigPath);
+                if (localDir != null)
                 {
-                    foreach (var file in Directory.GetFiles(sourceRulesDir, "*.srs"))
+                    Directory.CreateDirectory(localDir);
+
+                    // Self-healing: Copy local binary rule-sets (*.srs) from Assets/rules to LocalAppData/SwellProxy
+                    var sourceRulesDir = Path.Combine(AppContext.BaseDirectory, "Assets", "rules");
+                    if (Directory.Exists(sourceRulesDir))
                     {
-                        var destFile = Path.Combine(localDir, Path.GetFileName(file));
-                        try
+                        foreach (var file in Directory.GetFiles(sourceRulesDir, "*.srs"))
                         {
-                            File.Copy(file, destFile, overwrite: true);
+                            var destFile = Path.Combine(localDir, Path.GetFileName(file));
+                            try
+                            {
+                                File.Copy(file, destFile, overwrite: true);
+                            }
+                            catch { }
                         }
-                        catch { }
                     }
                 }
-            }
 
-            // Write configuration
-            await File.WriteAllTextAsync(ConfigPath, configJson);
+                // Write configuration
+                await File.WriteAllTextAsync(ConfigPath, configJson);
 
-            // In a real scenario, make sure ExePath exists.
-            // For now, we allow simulation if it is missing, or we can handle it gracefully.
-            if (!File.Exists(ExePath))
-            {
-                // Standalone Simulation fallback for visual UI demo when sing-box is not copied yet
-                AppendLog("[系统] 未在 Assets 文件夹下检测到 sing-box.exe。启用独立 UI 仿真模式。");
-                AppendLog("[启动] 仿真引擎启动成功...");
-                RunningChanged?.Invoke(this, true);
-                return true;
-            }
-
-            try
-            {
-                var psi = new ProcessStartInfo
+                // In a real scenario, make sure ExePath exists.
+                // For now, we allow simulation if it is missing, or we can handle it gracefully.
+                if (!File.Exists(ExePath))
                 {
-                    FileName = ExePath,
-                    Arguments = $"run -c \"{ConfigPath}\"",
-                    WorkingDirectory = Path.GetDirectoryName(ExePath)!,
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    StandardOutputEncoding = Encoding.UTF8,
-                    StandardErrorEncoding = Encoding.UTF8
-                };
+                    // Standalone Simulation fallback for visual UI demo when sing-box is not copied yet
+                    AppendLog("[系统] 未在 Assets 文件夹下检测到 sing-box.exe。启用独立 UI 仿真模式。");
+                    AppendLog("[启动] 仿真引擎启动成功...");
+                    RunningChanged?.Invoke(this, true);
+                    return true;
+                }
 
-                _process = new Process { StartInfo = psi, EnableRaisingEvents = true };
-
-                _process.OutputDataReceived += (_, e) =>
+                try
                 {
-                    if (e.Data is null) return;
-                    lock (_startupLogLock) { _startupLog.AppendLine(e.Data); }
-                    AppendLog("[sing-box] " + e.Data);
-                };
-
-                _process.ErrorDataReceived += (_, e) =>
-                {
-                    if (e.Data is null) return;
-                    lock (_startupLogLock) { _startupLog.AppendLine(e.Data); }
-                    AppendLog("[sing-box] " + e.Data);
-                };
-
-                _process.Exited += (_, _) =>
-                {
-                    AppendLog("[sing-box 进程已退出]");
-                    _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStopped);
-                    if (AppSession.Instance.EnableTunMode)
+                    var psi = new ProcessStartInfo
                     {
-                        var tunService = new TunService();
-                        tunService.CleanupTunRoutes(AppSession.Instance.LastTunServerHost);
+                        FileName = ExePath,
+                        Arguments = $"run -c \"{ConfigPath}\"",
+                        WorkingDirectory = Path.GetDirectoryName(ExePath)!,
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        StandardOutputEncoding = Encoding.UTF8,
+                        StandardErrorEncoding = Encoding.UTF8
+                    };
+
+                    _process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+
+                    _process.OutputDataReceived += (_, e) =>
+                    {
+                        if (e.Data is null) return;
+                        lock (_startupLogLock) { _startupLog.AppendLine(e.Data); }
+                        AppendLog("[sing-box] " + e.Data);
+                    };
+
+                    _process.ErrorDataReceived += (_, e) =>
+                    {
+                        if (e.Data is null) return;
+                        lock (_startupLogLock) { _startupLog.AppendLine(e.Data); }
+                        AppendLog("[sing-box] " + e.Data);
+                    };
+
+                    _process.Exited += (_, _) =>
+                    {
+                        AppendLog("[sing-box 进程已退出]");
+                        _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStopped);
+                        if (AppSession.Instance.EnableTunMode)
+                        {
+                            var tunService = new TunService();
+                            tunService.CleanupTunRoutes(AppSession.Instance.LastTunServerHost);
+                        }
+                        if (AppSession.Instance.EnableSystemProxy)
+                        {
+                            SystemProxyManager.DisableProxy();
+                        }
+                        RunningChanged?.Invoke(this, false);
+                    };
+
+                    // Attach the ready signal BEFORE Start() so no output line is missed.
+                    // sing-box prints "sing-box started (Xs)" once every inbound is bound.
+                    var readySignal = CoreReadySignal.Attach(_process);
+
+                    _process.Start();
+                    ChildProcessTracker.AddProcess(_process);
+                    _process.BeginOutputReadLine();
+                    _process.BeginErrorReadLine();
+
+                    AppendLog($"[启动] {ExePath}");
+                    AppendLog($"[配置] {ConfigPath}");
+
+                    // Wait for sing-box to confirm readiness instead of a fixed 800 ms delay.
+                    // Typical cold-start is ~200–400 ms → user sees the proxy active noticeably faster.
+                    // TimedOut (cap = 10 s) degrades gracefully to the old fixed-delay behaviour.
+                    var signalOutcome = await readySignal.WaitAsync(TimeSpan.FromSeconds(10));
+
+                    if (signalOutcome == CoreReadySignal.Outcome.Exited || _process.HasExited)
+                    {
+                        lock (_startupLogLock)
+                        {
+                            LastError = _startupLog.Length > 0
+                                ? _startupLog.ToString().Trim()
+                                : $"sing-box 立即退出（退出码 {_process.ExitCode}）";
+                        }
+                        AppendLog("[错误] 启动失败：" + LastError);
+                        return false;
                     }
+
+                    AppendLog(signalOutcome == CoreReadySignal.Outcome.Ready
+                        ? "[启动] sing-box 就绪信号已收到"
+                        : "[启动] 等待超时，假设 sing-box 已就绪");
+
+                    RunningChanged?.Invoke(this, true);
+                    _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStarted);
+                    StartStatsPolling();
                     if (AppSession.Instance.EnableSystemProxy)
+                    {
+                        SystemProxyManager.EnableProxy("127.0.0.1", AppSession.Instance.MixedPort);
+                        AppendLog("[SystemProxy] 系统代理已开启");
+                    }
+                    else
                     {
                         SystemProxyManager.DisableProxy();
                     }
-                    RunningChanged?.Invoke(this, false);
-                };
 
-                _process.Start();
-                ChildProcessTracker.AddProcess(_process);
-                _process.BeginOutputReadLine();
-                _process.BeginErrorReadLine();
-
-                AppendLog($"[启动] {ExePath}");
-                AppendLog($"[配置] {ConfigPath}");
-
-                await Task.Delay(800);
-
-                if (_process.HasExited)
-                {
-                    lock (_startupLogLock)
+                    if (AppSession.Instance.EnableTunMode)
                     {
-                        LastError = _startupLog.Length > 0
-                            ? _startupLog.ToString().Trim()
-                            : $"sing-box 立即退出（退出码 {_process.ExitCode}）";
+                        AppendLog("[TUN] TUN 模式已激活");
                     }
-                    AppendLog("[错误] 启动失败：" + LastError);
+                    else if (!AppSession.Instance.EnableSystemProxy)
+                    {
+                        AppendLog("[Local] 仅本地代理运行");
+                    }
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    LastError = ex.Message;
+                    AppendLog("[异常] " + ex.Message);
                     return false;
                 }
-
-                RunningChanged?.Invoke(this, true);
-                _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStarted);
-                StartStatsPolling();
-                if (AppSession.Instance.EnableSystemProxy)
-                {
-                    SystemProxyManager.EnableProxy("127.0.0.1", AppSession.Instance.MixedPort);
-                    AppendLog("[SystemProxy] 系统代理已开启");
-                }
-                else
-                {
-                    SystemProxyManager.DisableProxy();
-                }
-
-                if (AppSession.Instance.EnableTunMode)
-                {
-                    AppendLog("[TUN] TUN 模式已激活");
-                }
-                else if (!AppSession.Instance.EnableSystemProxy)
-                {
-                    AppendLog("[Local] 仅本地代理运行");
-                }
-                return true;
             }
-            catch (Exception ex)
-            {
-                LastError = ex.Message;
-                AppendLog("[异常] " + ex.Message);
-                return false;
-            }
-            } // Close the outer try block
             finally
             {
                 _stateLock.Release();
@@ -334,7 +345,7 @@ namespace AnywhereWinUI.Services
                     try
                     {
                         await Task.Delay(1000, token);
-                        
+
                         var (down, up) = GetCurrentNetworkBytes();
                         var now = DateTime.Now;
                         var elapsed = (now - _lastStatsTime).TotalSeconds;
