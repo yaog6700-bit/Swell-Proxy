@@ -134,7 +134,8 @@
                     </NavigationViewItem>
                 </NavigationView.MenuItems>
 
-                <Frame x:Name="ContentFrame" Margin="0,48,0,0" CacheSize="0"/>
+                <!-- CacheSize keeps recently visited pages alive with NavigationCacheMode on each Page -->
+                <Frame x:Name="ContentFrame" Margin="0,48,0,0" CacheSize="10"/>
             </NavigationView>
 
             <StackPanel x:Name="LogoStackPanel" Orientation="Horizontal" VerticalAlignment="Top" Margin="48,0,0,0" Height="48" Spacing="8" HorizontalAlignment="Left" IsHitTestVisible="False">

@@ -11,22 +11,14 @@ namespace AnywhereWinUI.Views
 
         public LogsPage()
         {
+            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
             ViewModel = ((App)Application.Current).Services.GetService(typeof(LogsViewModel)) as LogsViewModel;
             this.InitializeComponent();
 
+            // Subscribe for page instance lifetime; NavigationCache reuses this page so do not
+            // unsubscribe on Unloaded (visual detach is not final destroy).
             if (ViewModel != null)
-            {
                 ViewModel.LogFlushed += OnLogFlushed;
-                this.Unloaded += LogsPage_Unloaded;
-            }
-        }
-
-        private void LogsPage_Unloaded(object sender, RoutedEventArgs e)
-        {
-            if (ViewModel != null)
-            {
-                ViewModel.LogFlushed -= OnLogFlushed;
-            }
         }
 
         private void OnLogFlushed(object? sender, (int Received, int PrevCount, int NewCount) args)

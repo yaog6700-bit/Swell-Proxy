@@ -10,6 +10,7 @@ namespace AnywhereWinUI.Views
 
         public ConnectionsPage()
         {
+            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
             this.InitializeComponent();
             ViewModel = App.Current.Services.GetRequiredService<ConnectionsViewModel>();
         }

@@ -11,6 +11,7 @@ namespace AnywhereWinUI.Views
 
         public TrafficPage()
         {
+            NavigationCacheMode = NavigationCacheMode.Enabled;
             ViewModel = ((App)Application.Current).Services.GetService(typeof(TrafficViewModel)) as TrafficViewModel;
             this.InitializeComponent();
         }

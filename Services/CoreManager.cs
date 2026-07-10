@@ -40,9 +40,8 @@ namespace AnywhereWinUI.Services
         public event EventHandler<(long Down, long Up, long DownSpeed, long UpSpeed)>? TrafficUpdated;
 
         private CancellationTokenSource? _statsCts;
-        private long _lastDown;
-        private long _lastUp;
         private DateTime _lastStatsTime;
+        private readonly ProxyTrafficTracker _proxyTraffic = new();
 
         private CoreManager()
         {
@@ -180,6 +179,8 @@ namespace AnywhereWinUI.Services
                     _process.Exited += (_, _) =>
                     {
                         AppendLog("[sing-box 进程已退出]");
+                        StopStatsPolling();
+                        AppSession.Instance.ClashApiSecret = string.Empty;
                         _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStopped);
                         if (AppSession.Instance.EnableTunMode)
                         {
@@ -228,6 +229,7 @@ namespace AnywhereWinUI.Services
 
                     RunningChanged?.Invoke(this, true);
                     _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStarted);
+                    // Traffic from Clash downloadTotal/uploadTotal (proxy session), not whole-NIC counters.
                     StartStatsPolling();
                     if (AppSession.Instance.EnableSystemProxy)
                     {
@@ -278,6 +280,7 @@ namespace AnywhereWinUI.Services
         private Task StopInternalAsync()
         {
             StopStatsPolling();
+            AppSession.Instance.ClashApiSecret = string.Empty;
             if (AppSession.Instance.EnableTunMode)
             {
                 var tunService = new TunService();
@@ -328,39 +331,53 @@ namespace AnywhereWinUI.Services
         {
             _statsCts?.Cancel();
             _statsCts = new CancellationTokenSource();
-            _lastDown = 0;
-            _lastUp = 0;
+            _proxyTraffic.Reset();
             _lastStatsTime = DateTime.Now;
-
-            // Seed initial baseline to avoid sudden traffic spikes
-            var (initDown, initUp) = GetCurrentNetworkBytes();
-            _lastDown = initDown;
-            _lastUp = initUp;
+            bool seeded = false;
 
             _ = Task.Run(async () =>
             {
                 var token = _statsCts.Token;
+                // Brief wait so clash_api is listening after ready signal.
+                try { await Task.Delay(400, token); } catch (TaskCanceledException) { return; }
+
                 while (!token.IsCancellationRequested)
                 {
                     try
                     {
+                        // Full /connections snapshot — classify each conn as proxy vs direct.
+                        // Do NOT use downloadTotal/uploadTotal: those include domestic direct
+                        // traffic that still enters the core under system proxy / TUN.
+                        var message = await SingboxApiClient.Instance.FetchConnectionsAsync(token);
+                        if (message != null)
+                        {
+                            var now = DateTime.Now;
+
+                            if (!seeded)
+                            {
+                                _proxyTraffic.Seed(message);
+                                seeded = true;
+                                _lastStatsTime = now;
+                                TrafficUpdated?.Invoke(this, (0, 0, 0, 0));
+                            }
+                            else
+                            {
+                                var elapsed = (now - _lastStatsTime).TotalSeconds;
+                                if (elapsed <= 0) elapsed = 1;
+                                _lastStatsTime = now;
+
+                                var (down, up, downSpeed, upSpeed) = _proxyTraffic.Apply(message, elapsed);
+                                TrafficUpdated?.Invoke(this, (down, up, downSpeed, upSpeed));
+                            }
+                        }
+
                         await Task.Delay(1000, token);
-
-                        var (down, up) = GetCurrentNetworkBytes();
-                        var now = DateTime.Now;
-                        var elapsed = (now - _lastStatsTime).TotalSeconds;
-                        if (elapsed <= 0) elapsed = 1;
-
-                        long downSpeed = _lastDown > 0 ? (long)Math.Max(0, (down - _lastDown) / elapsed) : 0;
-                        long upSpeed = _lastUp > 0 ? (long)Math.Max(0, (up - _lastUp) / elapsed) : 0;
-
-                        _lastDown = down;
-                        _lastUp = up;
-                        _lastStatsTime = now;
-
-                        TrafficUpdated?.Invoke(this, (down, up, downSpeed, upSpeed));
                     }
                     catch (TaskCanceledException)
+                    {
+                        break;
+                    }
+                    catch (OperationCanceledException)
                     {
                         break;
                     }
@@ -376,8 +393,8 @@ namespace AnywhereWinUI.Services
         }
 
         /// <summary>
-        /// Returns the current cumulative received/sent byte counts across all active non-loopback NICs.
-        /// Made public so TrafficViewModel can snapshot a baseline when a proxy session starts.
+        /// Legacy NIC-wide counters. Prefer Clash API totals via TrafficUpdated.
+        /// Kept for any external callers that still snapshot baselines.
         /// </summary>
         public static (long received, long sent) GetCurrentNetworkBytes()
         {

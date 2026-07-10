@@ -116,7 +116,7 @@ namespace AnywhereWinUI.Controls
         {
             if (_timer != null) return;
 
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += Timer_Tick;
             _timer.Start();
         }

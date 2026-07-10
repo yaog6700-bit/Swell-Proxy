@@ -22,6 +22,8 @@ namespace AnywhereWinUI.Views
 
         public RoutingPage()
         {
+            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
+
             ViewModel = ((App)Application.Current).Services.GetService(typeof(RoutingViewModel)) as RoutingViewModel
                 ?? new RoutingViewModel();
 

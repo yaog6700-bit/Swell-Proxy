@@ -61,6 +61,7 @@ namespace AnywhereWinUI.Views
 
         public SettingsPage()
         {
+            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
             ViewModel = ((App)Application.Current).Services.GetService(typeof(ViewModels.SettingsViewModel)) as ViewModels.SettingsViewModel;
             MainViewModel = ((App)Application.Current).Services.GetService(typeof(ViewModels.MainViewModel)) as ViewModels.MainViewModel;
             this.InitializeComponent();

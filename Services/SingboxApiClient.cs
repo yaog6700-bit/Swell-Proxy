@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -74,13 +75,14 @@ namespace AnywhereWinUI.Services
     }
 
     /// <summary>
-    /// 通过 HTTP 轮询 sing-box Clash 兼容 API 的 /connections 端点获取活动连接。
-    /// sing-box 的 Clash API 不支持 WebSocket 推送，需使用 REST 轮询方式。
+    /// 通过 HTTP 轮询 sing-box Clash 兼容 API 的 /connections 端点获取活动连接与累计流量。
     /// </summary>
     public class SingboxApiClient : IDisposable
     {
         private static readonly Lazy<SingboxApiClient> _instance = new(() => new SingboxApiClient());
         public static SingboxApiClient Instance => _instance.Value;
+
+        public const string ConnectionsUrl = "http://127.0.0.1:9090/connections";
 
         private static readonly HttpClient _httpClient = new HttpClient
         {
@@ -119,10 +121,56 @@ namespace AnywhereWinUI.Services
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// One-shot fetch of /connections (includes downloadTotal/uploadTotal).
+        /// Used by CoreManager traffic stats and the connections poll loop.
+        /// </summary>
+        public async Task<ClashConnectionsMessage?> FetchConnectionsAsync(CancellationToken token = default)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, ConnectionsUrl);
+            ApplyAuth(request);
+
+            using var response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var json = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
+            var message = JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.ClashConnectionsMessage);
+            if (message != null)
+                message.Connections ??= new List<ClashConnectionNode>();
+            return message;
+        }
+
+        /// <summary>
+        /// Returns proxy-session traffic totals from Clash API, or null if unavailable.
+        /// </summary>
+        public async Task<(long downloadTotal, long uploadTotal)?> TryGetTrafficTotalsAsync(CancellationToken token = default)
+        {
+            try
+            {
+                var message = await FetchConnectionsAsync(token).ConfigureAwait(false);
+                if (message == null) return null;
+                return (message.DownloadTotal, message.UploadTotal);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        internal static void ApplyAuth(HttpRequestMessage request)
+        {
+            var secret = AppSession.Instance.ClashApiSecret;
+            if (string.IsNullOrEmpty(secret)) return;
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
+        }
+
         private async Task PollLoopAsync(CancellationToken token)
         {
-            const string url = "http://127.0.0.1:9090/connections";
-
             // 等待 sing-box 完全启动后再开始轮询
             await Task.Delay(500, token).ConfigureAwait(false);
 
@@ -130,18 +178,9 @@ namespace AnywhereWinUI.Services
             {
                 try
                 {
-                    var response = await _httpClient.GetAsync(url, token).ConfigureAwait(false);
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var json = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
-                        var message = JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.ClashConnectionsMessage);
-                        if (message != null)
-                        {
-                            // 若 connections 字段为 null，补充空列表防止后续 NullReferenceException
-                            message.Connections ??= new List<ClashConnectionNode>();
-                            ConnectionsUpdated?.Invoke(this, message);
-                        }
-                    }
+                    var message = await FetchConnectionsAsync(token).ConfigureAwait(false);
+                    if (message != null)
+                        ConnectionsUpdated?.Invoke(this, message);
                 }
                 catch (OperationCanceledException)
                 {

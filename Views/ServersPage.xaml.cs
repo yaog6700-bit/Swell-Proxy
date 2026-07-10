@@ -196,6 +196,8 @@ namespace AnywhereWinUI.Views
 
         public ServersPage()
         {
+            NavigationCacheMode = NavigationCacheMode.Enabled;
+
             ViewModel = App.Current.Services.GetRequiredService<ServersViewModel>();
             this.DataContext = ViewModel;
 
@@ -205,14 +207,11 @@ namespace AnywhereWinUI.Views
             GroupFilterComboBox.SelectedValue = ViewModel.SelectedGroupFilterId;
             UpdateGroupFilterButtonToolTip();
             UpdateSortMenuCheckedState();
-            
+
+            // Keep subscriptions for page lifetime (NavigationCache reuses this instance;
+            // Unloaded can fire when detaching from the visual tree and must not tear them down).
             CoreManager.Instance.RunningChanged += CoreManager_RunningChanged;
             CoreManager.Instance.TrafficUpdated += CoreManager_TrafficUpdated;
-            this.Unloaded += (s, e) =>
-            {
-                CoreManager.Instance.RunningChanged -= CoreManager_RunningChanged;
-                CoreManager.Instance.TrafficUpdated -= CoreManager_TrafficUpdated;
-            };
 
             UpdateControlBarUI();
             UpdateProxyModeUI();

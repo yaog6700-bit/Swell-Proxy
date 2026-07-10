@@ -36,9 +36,15 @@ namespace AnywhereWinUI.Services
         public bool EnableClassicDashboard { get; set; } = false;
         public bool EnablePlugins { get; set; } = false;
         
-        // Privacy Mode
+        // Privacy Mode (PrivacyPassword is a salted hash; never store plaintext)
         public bool IsPrivacyModeActive { get; set; } = false;
         public string PrivacyPassword { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Clash / sing-box experimental API bearer secret for the current core session.
+        /// Regenerated every time a config is built; empty when core is not configured.
+        /// </summary>
+        public string ClashApiSecret { get; set; } = string.Empty;
 
         // Application Rule Sets
         public string RuleNetflixAction { get; set; } = "proxy";
@@ -88,7 +94,14 @@ namespace AnywhereWinUI.Services
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableClassicDashboard", out var ecd)) EnableClassicDashboard = ecd;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enablePlugins", out var ep)) EnablePlugins = ep;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("isPrivacyModeActive", out var ipm)) IsPrivacyModeActive = ipm;
-            if (Helpers.LocalSettingsHelper.TryGetValue<string>("privacyPassword", out var pwd) && !string.IsNullOrEmpty(pwd)) PrivacyPassword = pwd;
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("privacyPassword", out var pwd) && !string.IsNullOrEmpty(pwd))
+            {
+                // Migrate legacy plaintext passwords to salted hashes on first load
+                var hashed = Helpers.PrivacyPasswordHelper.EnsureHashed(pwd);
+                PrivacyPassword = hashed;
+                if (!string.Equals(pwd, hashed, StringComparison.Ordinal))
+                    Helpers.LocalSettingsHelper.SetValue("privacyPassword", hashed);
+            }
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("blockAds", out var ba)) BlockAds = ba;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("blockIPv6", out var bi)) BlockIPv6 = bi;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("flushDNS", out var fd)) FlushDNS = fd;

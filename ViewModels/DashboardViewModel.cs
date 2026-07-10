@@ -11,7 +11,7 @@ using Windows.UI;
 
 namespace AnywhereWinUI.ViewModels
 {
-    public partial class DashboardViewModel : ObservableObject
+    public partial class DashboardViewModel : ObservableObject, IDisposable
     {
         [ObservableProperty]
         private bool _isCoreRunning;
@@ -360,6 +360,12 @@ namespace AnywhereWinUI.ViewModels
         private void RefreshSub()
         {
             // Mock refresh action
+        }
+
+        public void Dispose()
+        {
+            CoreManager.Instance.RunningChanged -= CoreManager_RunningChanged;
+            CoreManager.Instance.TrafficUpdated -= CoreManager_TrafficUpdated;
         }
     }
 }

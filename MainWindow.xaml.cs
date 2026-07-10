@@ -229,13 +229,14 @@ namespace AnywhereWinUI
                 };
             }
 
-            if (pageType != null)
-            {
-                ContentFrame.Navigate(pageType);
-                // Clear back-stack so Frame doesn't keep old pages in memory.
-                // Each navigation creates a fresh page instance; no stale references accumulate.
-                ContentFrame.BackStack.Clear();
-            }
+            if (pageType == null) return;
+
+            // Skip rebuild when already on this page (tab re-click / programmatic reselect).
+            if (ContentFrame.CurrentSourcePageType == pageType) return;
+
+            ContentFrame.Navigate(pageType);
+            // Keep journal shallow while Frame.CacheSize + Page.NavigationCacheMode retain instances.
+            ContentFrame.BackStack.Clear();
         }
 
         public ElementTheme GetActiveTheme() => ViewModel.CurrentTheme;

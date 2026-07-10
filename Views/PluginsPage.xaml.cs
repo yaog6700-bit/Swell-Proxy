@@ -14,6 +14,7 @@ namespace AnywhereWinUI.Views
     {
         public PluginsPage()
         {
+            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
             InitializeComponent();
             Loaded += PluginsPage_Loaded;
         }

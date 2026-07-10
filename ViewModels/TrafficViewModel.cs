@@ -52,13 +52,13 @@ namespace AnywhereWinUI.ViewModels
         private List<DailyTraffic> _dailyRecords = new();
         private string _currentDateStr = string.Empty;
 
-        // 当前会话净增量（相对于代理启动时的网卡基准）
+        // 当前会话净增量（仅代理出站；由 CoreManager 的 ProxyTrafficTracker 累计）
         private long _sessionUpload = 0;
         private long _sessionDownload = 0;
 
-        // 上一次记录的网卡读数（用于计算每秒差值）
-        private long _lastNicDown = -1;
-        private long _lastNicUp = -1;
+        // 上一次上报的代理会话累计（用于差分）
+        private long _lastTotalDown = -1;
+        private long _lastTotalUp = -1;
 
         // 历史基准（今日已持久化的流量，用于跨会话累加）
         private long _todayBaseUpload = 0;
@@ -75,6 +75,10 @@ namespace AnywhereWinUI.ViewModels
         private bool _isPageActive = false;
         private int  _heatmapThrottleCount = 0;
         private const int HeatmapThrottleInterval = 30;
+
+        // Disk write throttle: persist at most once every 60 s while the core is running.
+        private int  _saveThrottleCount = 0;
+        private const int SaveThrottleInterval = 60;
 
         private const string DailyTrafficKey = "daily_traffic_records";
 
@@ -152,28 +156,29 @@ namespace AnywhereWinUI.ViewModels
             _todayBaseUpload = todayRecord?.ProxyUpload ?? 0;
             _todayBaseDownload = todayRecord?.ProxyDownload ?? 0;
 
-            _lastNicDown = -1;
-            _lastNicUp = -1;
+            _lastTotalDown = -1;
+            _lastTotalUp = -1;
         }
 
         private void OnTrafficUpdated(object? sender, (long Down, long Up, long DownSpeed, long UpSpeed) e)
         {
-            if (_lastNicDown == -1 || _lastNicUp == -1)
+            // e.Down/Up = absolute proxy-outbound session totals (direct/block excluded).
+            if (_lastTotalDown == -1 || _lastTotalUp == -1)
             {
-                _lastNicDown = e.Down;
-                _lastNicUp = e.Up;
+                _lastTotalDown = e.Down;
+                _lastTotalUp = e.Up;
                 return; // 第一次仅初始化基准，无增量
             }
 
-            long deltaDown = e.Down - _lastNicDown;
-            long deltaUp   = e.Up - _lastNicUp;
+            long deltaDown = e.Down - _lastTotalDown;
+            long deltaUp   = e.Up - _lastTotalUp;
 
-            // 应对网卡断开重连导致的累计字节数清零问题
+            // Core restart or counter reset
             if (deltaDown < 0) deltaDown = 0;
             if (deltaUp < 0) deltaUp = 0;
 
-            _lastNicDown = e.Down;
-            _lastNicUp = e.Up;
+            _lastTotalDown = e.Down;
+            _lastTotalUp = e.Up;
 
             _dispatcherQueue?.TryEnqueue(() =>
             {
@@ -204,6 +209,8 @@ namespace AnywhereWinUI.ViewModels
                 if (!isRunning)
                 {
                     PersistToday(_sessionUpload, _sessionDownload);
+                    SaveRecords(); // flush on core stop regardless of throttle counter
+                    _saveThrottleCount = 0;
                     ResetSessionState();
                     SessionUploadText     = "0.0 B";
                     SessionDownloadText   = "0.0 B";
@@ -236,13 +243,26 @@ namespace AnywhereWinUI.ViewModels
             string today = DateTime.Now.ToString("yyyy-MM-dd");
             if (today != _currentDateStr)
             {
+                // Day rolled over — flush to disk before resetting base counters.
                 PersistToday(sessionUpload, sessionDownload);
+                SaveRecords();
                 _currentDateStr = today;
                 _todayBaseUpload = 0;
                 _todayBaseDownload = 0;
+                _saveThrottleCount = 0;
             }
 
-            PersistToday(sessionUpload, sessionDownload);
+            // Update in-memory record every tick; disk write is throttled below.
+            PersistTodayInMemory(sessionUpload, sessionDownload);
+
+            // Flush to disk at most once every SaveThrottleInterval ticks (~60 s).
+            // The record is also flushed on core stop via OnRunningChanged.
+            _saveThrottleCount++;
+            if (_saveThrottleCount >= SaveThrottleInterval)
+            {
+                _saveThrottleCount = 0;
+                SaveRecords();
+            }
 
             // Only push chart/heatmap updates while the Traffic page is open.
             // When hidden, skip the O(N) collection rebuilds — the page will
@@ -258,6 +278,36 @@ namespace AnywhereWinUI.ViewModels
                 _heatmapThrottleCount = 0;
                 UpdateHeatmapUI();
             }
+        }
+
+        /// <summary>
+        /// Updates the in-memory daily record without touching disk.
+        /// Called every traffic tick. <see cref="SaveRecords"/> is called on a
+        /// throttled schedule (once per minute) and on core stop.
+        /// </summary>
+        private void PersistTodayInMemory(long sessionUpload, long sessionDownload)
+        {
+            long todayUp   = _todayBaseUpload   + sessionUpload;
+            long todayDown = _todayBaseDownload + sessionDownload;
+
+            var existingRecord = _dailyRecords.FirstOrDefault(r => r.Date == _currentDateStr);
+            if (existingRecord != null)
+            {
+                existingRecord.ProxyUpload   = todayUp;
+                existingRecord.ProxyDownload = todayDown;
+            }
+            else
+            {
+                _dailyRecords.Add(new DailyTraffic
+                {
+                    Date          = _currentDateStr,
+                    ProxyUpload   = todayUp,
+                    ProxyDownload = todayDown
+                });
+            }
+
+            if (_dailyRecords.Count > 400)
+                _dailyRecords = _dailyRecords.OrderByDescending(r => r.Date).Take(400).ToList();
         }
 
         private void PersistToday(long sessionUpload, long sessionDownload)
@@ -283,8 +333,6 @@ namespace AnywhereWinUI.ViewModels
 
             if (_dailyRecords.Count > 400)
                 _dailyRecords = _dailyRecords.OrderByDescending(r => r.Date).Take(400).ToList();
-
-            SaveRecords();
         }
 
         private void UpdateMonthAndChartUI()

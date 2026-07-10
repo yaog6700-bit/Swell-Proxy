@@ -27,13 +27,14 @@ namespace AnywhereWinUI.Views
 
         public DashboardPage()
         {
+            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
+
             ViewModel = ((App)Application.Current).Services
                 .GetService(typeof(ViewModels.DashboardViewModel))
                 as ViewModels.DashboardViewModel;
 
             this.InitializeComponent();
-            this.Loaded   += DashboardPage_Loaded;
-            this.Unloaded += DashboardPage_Unloaded;
+            this.Loaded += DashboardPage_Loaded;
         }
 
         // ─────────────────────────────────────────────────────────
@@ -42,29 +43,30 @@ namespace AnywhereWinUI.Views
 
         private void DashboardPage_Loaded(object sender, RoutedEventArgs e)
         {
-            if (_animationsStarted) return;
-            _animationsStarted = true;
+            // PropertyChanged must re-attach when the page re-enters the visual tree (cache reuse).
+            if (ViewModel != null)
+            {
+                ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+                ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+            }
 
-            // Subscribe to ViewModel property changes
-            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+            if (!_animationsStarted)
+            {
+                _animationsStarted = true;
+                PlayStaggeredEntryAnimation();
+            }
 
-            // Play staggered card-entry animations
-            PlayStaggeredEntryAnimation();
-
-            // Sync UI state if core is already running on load
-            if (ViewModel.IsCoreRunning)
+            // Sync UI state if core is already running on load / return
+            if (ViewModel?.IsCoreRunning == true)
             {
                 StartPulseAnimation();
                 UpdateStatusDot(running: true);
             }
-        }
-
-        private void DashboardPage_Unloaded(object sender, RoutedEventArgs e)
-        {
-            if (ViewModel != null)
-                ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
-
-            StopPulseAnimation();
+            else
+            {
+                StopPulseAnimation();
+                UpdateStatusDot(running: false);
+            }
         }
 
         // ─────────────────────────────────────────────────────────

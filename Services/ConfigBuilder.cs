@@ -89,6 +89,10 @@ namespace AnywhereWinUI.Services
                 }
             }
 
+            // Per-session bearer secret for Clash / native API so local processes cannot control the core freely.
+            var apiSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+            session.ClashApiSecret = apiSecret;
+
             var config = new JsonObject
             {
                 ["log"] = new JsonObject
@@ -108,7 +112,7 @@ namespace AnywhereWinUI.Services
                         ["external_ui"] = "",
                         ["external_ui_download_url"] = "",
                         ["external_ui_download_detour"] = "direct",
-                        ["secret"] = "",
+                        ["secret"] = apiSecret,
                         ["default_mode"] = "rule"
                     }
                 }
@@ -127,7 +131,7 @@ namespace AnywhereWinUI.Services
                         ["tag"] = "sing-box dashboard",
                         ["listen"] = "127.0.0.1",
                         ["listen_port"] = 9091,
-                        ["secret"] = "",
+                        ["secret"] = apiSecret,
                         // 同时允许 http 和 https 两种协议的官方 Dashboard 域名
                         // 避免浏览器因混合内容（HTTPS 页面 → HTTP 本地端口）而拒绝请求
                         ["access_control_allow_origin"] = new JsonArray
