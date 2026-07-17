@@ -2592,9 +2592,9 @@ namespace AnywhereWinUI.Views
                 proto = (cbi.Content?.ToString() ?? "").ToUpper();
             }
 
-            // 1. Password Panel: visible for Shadowsocks, Trojan, Hysteria 2, TUIC, NaiveProxy, SOCKS, HTTP, NOWHERE
+            // 1. Password Panel: visible for Shadowsocks, Trojan, Hysteria 2, TUIC, NaiveProxy, SOCKS, HTTP, NOWHERE, ANYTLS
             bool showPassword = proto == "SHADOWSOCKS" || proto == "TROJAN" || proto == "HYSTERIA 2" || 
-                               proto == "TUIC" || proto == "NAIVEPROXY" || proto == "SOCKS" || proto == "HTTP" || proto == "NOWHERE";
+                               proto == "TUIC" || proto == "NAIVEPROXY" || proto == "SOCKS" || proto == "HTTP" || proto == "NOWHERE" || proto == "ANYTLS";
             PasswordPanel.Visibility = showPassword ? Visibility.Visible : Visibility.Collapsed;
 
             // 2. UUID Panel: visible for VLESS, VMess, TUIC, NaiveProxy, SOCKS, HTTP

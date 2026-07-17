@@ -131,7 +131,12 @@ namespace AnywhereWinUI.Services
                         ["tag"] = "sing-box dashboard",
                         ["listen"] = "127.0.0.1",
                         ["listen_port"] = 9091,
-                        ["secret"] = apiSecret,
+                        // 本机 loopback + 内置/官方 Dashboard：不设 secret。
+                        // 若写入与 clash_api 相同的随机 secret，浏览器打开 dashboard 时
+                        // 未填 Bearer 会直接报 "missing authorization"（官方 UI 需手动粘贴 secret，
+                        // 而本客户端并未把每次会话 secret 暴露给用户）。
+                        // clash_api（9090）仍保留 session secret，供应用内 API 客户端使用。
+                        ["secret"] = "",
                         // 同时允许 http 和 https 两种协议的官方 Dashboard 域名
                         // 避免浏览器因混合内容（HTTPS 页面 → HTTP 本地端口）而拒绝请求
                         ["access_control_allow_origin"] = new JsonArray
