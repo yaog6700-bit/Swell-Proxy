@@ -250,8 +250,9 @@ namespace AnywhereWinUI.Services
             var servers = new JsonArray { (JsonNode)proxyDnsObj, (JsonNode)localDnsObj, (JsonNode)bootstrapDnsObj };
             var rules = new JsonArray();
 
-            // TUN 模式下（非纯 IPv6）拦�?AAAA 查询，防止大量代理节点对 IPv6 兼容性差导致连接超时
-            if (enableTun && strategy != "ipv6_only")
+            // TUN 模式下（非纯 IPv6，且未开启"允许 IPv6 DNS 解析"选项）拦截 AAAA 查询
+            // 防止代理节点 IPv6 兼容性差导致连接超时；用户可在设置中手动开启以支持纯 IPv6 域名
+            if (enableTun && strategy != "ipv6_only" && !session.AllowIPv6Dns)
             {
                 rules.Add(new JsonObject
                 {
@@ -259,7 +260,7 @@ namespace AnywhereWinUI.Services
                     ["action"] = "reject"
                 });
             }
-            else if (blockIPv6)
+            else if (blockIPv6 && !session.AllowIPv6Dns)
             {
                 rules.Add(new JsonObject
                 {

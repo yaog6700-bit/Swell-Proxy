@@ -41,6 +41,9 @@ namespace AnywhereWinUI.ViewModels
         private bool _blockIPv6;
 
         [ObservableProperty]
+        private bool _allowIPv6Dns;
+
+        [ObservableProperty]
         private bool _flushDNS;
 
         [ObservableProperty]
@@ -143,6 +146,7 @@ namespace AnywhereWinUI.ViewModels
             _bypassChina = AppSession.Instance.BypassChina;
             _blockAds = AppSession.Instance.BlockAds;
             _blockIPv6 = AppSession.Instance.BlockIPv6;
+            _allowIPv6Dns = AppSession.Instance.AllowIPv6Dns;
             _flushDNS = AppSession.Instance.FlushDNS;
             _enableAdvancedRouting = AppSession.Instance.EnableAdvancedRouting;
 
@@ -233,6 +237,13 @@ namespace AnywhereWinUI.ViewModels
         {
             AppSession.Instance.BlockIPv6 = value;
             Helpers.LocalSettingsHelper.SetValue("blockIPv6", value);
+            _ = TriggerCoreRestartIfNeeded();
+        }
+
+        partial void OnAllowIPv6DnsChanged(bool value)
+        {
+            AppSession.Instance.AllowIPv6Dns = value;
+            Helpers.LocalSettingsHelper.SetValue("allowIPv6Dns", value);
             _ = TriggerCoreRestartIfNeeded();
         }
 
