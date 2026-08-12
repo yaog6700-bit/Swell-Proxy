@@ -63,6 +63,17 @@ Swell Proxy 是一款使用 **WinUI 3** 构建的 Windows 原生代理管理客�
 
 > 系统要求：Windows 10 版本 1809 (17763) 或更高版本，推荐 Windows 11。
 
+### 运行时依赖
+
+Swell Proxy 是免安装的独立应用，但需要以下系统运行时支持。若启动时出现闪退或无任何提示，请先确认以下组件已正确安装：
+
+| 组件 | 说明 | 下载 |
+| --- | --- | --- |
+| **Visual C++ 运行库** | WinUI 3 框架必须依赖，绝大多数系统已预装，但部分精简版系统可能缺失 | [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe) |
+| **WebView2 运行时** | WinUI 3 的必要组件，Windows 11 22H2 及更高版本已内置；21H2 及更早版本可能需要手动安装 | [WebView2 安装程序](https://go.microsoft.com/fwlink/p/?LinkId=2124703) |
+
+> **提示**：如果你使用的是 Windows 11 21H2（Build 22000）或 Windows 10，且启动后无任何反应，建议先安装上述两个运行时再重试。
+
 ## 快速开始
 
 1. 打开「服务器」页面，粘贴订阅链接或节点分享链接。
@@ -106,6 +117,15 @@ Swell Proxy 内置基于 JavaScript 的轻量插件系统，适合做节点整�
 ```
 
 ## 常见问题
+
+**双击后无任何反应 / 启动闪退怎么办？**
+
+这通常是系统缺少必要运行时导致的，请按以下步骤排查：
+
+1. 安装 [Visual C++ 运行库（x64）](https://aka.ms/vs/17/release/vc_redist.x64.exe)。
+2. 安装 [Microsoft Edge WebView2 运行时](https://go.microsoft.com/fwlink/p/?LinkId=2124703)。
+3. 安装完成后重启电脑，再次尝试运行。
+4. 若仍无法启动，请打开 **Windows 事件查看器**（`eventvwr.msc`）→「Windows 日志」→「应用程序」，查找报错详情并在 Issues 中反馈。
 
 **TUN 模式无法启动怎么办？**
 
