@@ -1,0 +1,32 @@
+{
+  "log": { "level": "info" },
+  "outbounds": [
+    {
+      "type": "shadowsocks",
+      "tag": "HK-SS-01",
+      "server": "hk1.example.com",
+      "server_port": 8388,
+      "method": "aes-256-gcm",
+      "password": "pass-ss"
+    },
+    {
+      "type": "vless",
+      "tag": "US-VLESS-Reality",
+      "server": "us1.example.com",
+      "server_port": 443,
+      "uuid": "66666666-7777-8888-9999-000000000000",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "www.microsoft.com",
+        "utls": { "enabled": true, "fingerprint": "chrome" },
+        "reality": {
+          "enabled": true,
+          "public_key": "pbk_base64_placeholder",
+          "short_id": "0123abcd"
+        }
+      }
+    },
+    { "type": "selector", "tag": "select", "outbounds": ["HK-SS-01"] }
+  ]
+}

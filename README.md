@@ -28,7 +28,7 @@ Swell Proxy 是一款使用 **WinUI 3** 构建的 Windows 原生代理管理客�
 | 多协议节点 | 支持 VLESS、VMess、Shadowsocks、Trojan、Hysteria 2、TUIC、WireGuard、SOCKS5、HTTP、NaiveProxy、AnyTLS、Snell、Nowhere 等常见协议 |
 | 多种代理模式 | 支持系统代理、TUN 虚拟网卡和仅手动代理，适配不同使用习惯 |
 | 路由分流 | 支持规则分流、全局代理、直连模式，并内置中国域名 / 中国 IP / 广告拦截规则集 |
-| 订阅与节点管理 | 支持订阅链接、节点分享链接、多行批量导入、延迟测试、节点编辑和协议颜色自定义 |
+| 订阅与节点管理 | 支持订阅链接、节点分享链接、多行批量导入、延迟测试、节点编辑和协议颜色自定义；订阅格式支持 Base64 / sing-box JSON / Clash YAML（Clash 格式仅导入节点，不导入分组和规则） |
 | 实时观测 | 提供仪表盘、连接列表、流量图表、日志面板和网络拓扑视图 |
 | AI 解锁检测 | 内置 OpenAI、Claude、Gemini 等服务的可用性检测能力 |
 | Tailscale Endpoint | 可将 sing-box 作为 Tailscale 节点接入私有网络，支持官方 Tailscale 或 Headscale 控制端 |
@@ -138,6 +138,12 @@ Swell Proxy 内置基于 JavaScript 的轻量插件系统，适合做节点整�
 **订阅更新后节点没有变化怎么办？**
 
 请查看「日志」页面是否有订阅解析错误；如果启用了插件，也可以暂时停用订阅类插件后重试。
+
+**Clash 订阅能用吗？**
+
+可以，客户端会读取 Clash / Clash Meta（mihomo）配置中的 `proxies` 列表并导入其中的节点。`proxy-groups`、`rules`、`rule-providers`、`dns` 等段落会被忽略，路由分流请使用客户端自带的规则模式。
+
+受节点模型限制，以下情况不会被导入：Shadowsocks 的 `obfs` / `v2ray-plugin` / `restls` 插件节点、Clash 的 SSR / Hysteria v1 / Mieru / SSH 等类型、TUIC v4（仅 `token`）、带 TLS 的 SOCKS5，以及只有 `proxy-providers` 而没有 `proxies` 的配置。Hysteria2 的端口跳跃会降级为单个端口。
 
 **规则集下载失败怎么办？**
 

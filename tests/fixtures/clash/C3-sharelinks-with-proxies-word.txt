@@ -1,0 +1,3 @@
+ss://YWVzLTI1Ni1nY206cGFzcw==@hk1.example.com:8388#proxies:%20this-is-a-node-name
+vmess://eyJ2IjoiMiIsInBzIjoicHJveGllczogdG9vIiwiYWRkIjoianAxLmV4YW1wbGUuY29tIiwicG9ydCI6IjQ0MyIsImlkIjoiMTExMTExMTEtMjIyMi0zMzMzLTQ0NDQtNTU1NTU1NTU1NTU1IiwiYWlkIjoiMCIsIm5ldCI6IndzIiwidHlwZSI6Im5vbmUiLCJob3N0IjoiY2RuLmV4YW1wbGUuY29tIiwicGF0aCI6Ii93cyIsInRscyI6InRscyJ9
+trojan://trojan-pass@tw1.example.com:443?sni=tw1.example.com&type=tcp#rules:%20also-a-node-name
