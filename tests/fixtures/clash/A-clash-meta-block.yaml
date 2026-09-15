@@ -1,6 +1,6 @@
 # Fixture A: block-style Clash Meta config.
 # Covers every supported proxy type plus sections that must be ignored.
-# Expected: 15 nodes imported, 3 skipped (ss+obfs, tuic v4, ssr).
+# Expected: 14 nodes imported, 3 skipped (ss+obfs, tuic v4, ssr).
 mixed-port: 7890
 allow-lan: false
 mode: rule
