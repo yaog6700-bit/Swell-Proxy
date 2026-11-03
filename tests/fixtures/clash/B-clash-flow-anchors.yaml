@@ -1,0 +1,13 @@
+# Fixture B: flow-style entries plus anchors/aliases, as shipped by many providers.
+# Expected: 4 nodes imported (B-vmess-copy resolves through the `<<` merge key).
+port: 7890
+socks-port: 7891
+proxies:
+  - {name: "A-ss", type: ss, server: a.example.com, port: 443, cipher: chacha20-ietf-poly1305, password: "p1", udp: true}
+  - &vm {name: "B-vmess", type: vmess, server: b.example.com, port: 443, uuid: 11111111-2222-3333-4444-555555555555, alterId: 0, cipher: auto, tls: true, network: ws, ws-opts: {path: "/path", headers: {Host: b.example.com}}}
+  - {<<: *vm, name: "B-vmess-copy", server: b2.example.com}
+  - {name: "C-trojan", type: trojan, server: c.example.com, port: 443, password: "p3", sni: c.example.com, skip-cert-verify: false, udp: true}
+proxy-groups:
+  - {name: "自动选择", type: url-test, proxies: ["A-ss", "B-vmess", "C-trojan"], url: "http://www.gstatic.com/generate_204", interval: 300}
+rules:
+  - MATCH,自动选择

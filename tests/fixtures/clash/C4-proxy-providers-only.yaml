@@ -1,0 +1,19 @@
+# Fixture C4: a Clash config that only uses proxy-providers, with no inline `proxies:` list.
+# LooksLikeClashYaml must not match, and the subscription must end up with 0 nodes.
+port: 7890
+socks-port: 7891
+allow-lan: false
+mode: rule
+log-level: warning
+proxy-providers:
+  air:
+    type: http
+    url: "https://example.com/sub.yaml"
+    interval: 3600
+    path: ./providers/air.yaml
+    health-check:
+      enable: true
+      url: http://www.gstatic.com/generate_204
+      interval: 300
+rules:
+  - MATCH,DIRECT
