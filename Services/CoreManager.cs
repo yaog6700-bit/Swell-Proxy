@@ -215,9 +215,17 @@ namespace AnywhereWinUI.Services
                     {
                         lock (_startupLogLock)
                         {
-                            LastError = _startupLog.Length > 0
+                            var rawErr = _startupLog.Length > 0
                                 ? _startupLog.ToString().Trim()
                                 : $"sing-box 立即退出（退出码 {_process.ExitCode}）";
+
+                            if (rawErr.Contains("nowhere", StringComparison.OrdinalIgnoreCase) &&
+                                rawErr.Contains("unknown", StringComparison.OrdinalIgnoreCase))
+                            {
+                                rawErr += "\n\n提示：官方原版 sing-box 内核不包含私有 nowhere 协议，请切换其他协议节点或在设置中恢复定制核心。";
+                            }
+
+                            LastError = rawErr;
                         }
                         AppendLog("[错误] 启动失败：" + LastError);
                         return false;

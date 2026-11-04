@@ -542,5 +542,104 @@ dns:
 
             Assert.Equal("h2,http/1.1", node.Alpn);
         }
+
+        [Fact]
+        public void Parse_MultiLevelNestedMergeKeys_PreservesOuterTemplateFields()
+        {
+            const string yaml = @"tls-base: &tls_base
+  tls: true
+  servername: sni.example.com
+  client-fingerprint: chrome
+
+ws-tls: &ws_tls
+  <<: *tls_base
+  network: ws
+  ws-opts:
+    path: /nested-ws
+    headers:
+      Host: cdn.example.com
+
+proxies:
+  - name: nested-vless
+    type: vless
+    server: 104.16.1.1
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+    <<: *ws_tls
+";
+            var node = Assert.Single(ClashSubscriptionParser.Parse(yaml, SubA));
+
+            Assert.Equal("tls", node.Security);
+            Assert.Equal("sni.example.com", node.Sni);
+            Assert.Equal("chrome", node.Fingerprint);
+            Assert.Equal("ws", node.Network);
+            Assert.Equal("/nested-ws", node.Path);
+            Assert.Equal("cdn.example.com", node.WsHost);
+        }
+
+        [Fact]
+        public void Parse_CyclicMergeKey_DoesNotStackOverflow()
+        {
+            const string yaml = @"proxies:
+  - &self
+    <<: *self
+    name: cyclic-ss
+    type: ss
+    server: cycle.example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: secret
+";
+            var node = Assert.Single(ClashSubscriptionParser.Parse(yaml, SubA));
+            Assert.Equal("cycle.example.com:8388", node.Host);
+        }
+
+        [Fact]
+        public void Parse_LeadingUtf8BomOnFirstLine_IsAccepted()
+        {
+            string yaml = "\uFEFFproxies:\n  - {name: bom-ss, type: ss, server: bom.example.com, port: 8388, cipher: aes-256-gcm, password: p}\n";
+
+            Assert.True(ClashSubscriptionParser.LooksLikeClashYaml(yaml));
+            var node = Assert.Single(ClashSubscriptionParser.Parse(yaml, SubA));
+            Assert.Equal("bom.example.com:8388", node.Host);
+        }
+
+        [Fact]
+        public void Parse_HttpUpgradeViaWsOptsFlagAndDedicatedOpts()
+        {
+            const string yaml = @"proxies:
+  - name: hu-via-ws-flag
+    type: vless
+    server: hu1.example.com
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+    tls: true
+    network: ws
+    ws-opts:
+      path: /up1
+      headers:
+        Host: h1.example.com
+      v2ray-http-upgrade: true
+  - name: hu-via-opts
+    type: trojan
+    server: hu2.example.com
+    port: 443
+    password: pass
+    network: httpupgrade
+    v2ray-http-upgrade-opts:
+      path: /up2
+      host: h2.example.com
+";
+            var nodes = ClashSubscriptionParser.Parse(yaml, SubA);
+            Assert.Equal(2, nodes.Count);
+
+            Assert.Equal("httpupgrade", nodes[0].Network);
+            Assert.Equal("/up1", nodes[0].Path);
+            Assert.Equal("h1.example.com", nodes[0].WsHost);
+
+            Assert.Equal("httpupgrade", nodes[1].Network);
+            Assert.Equal("/up2", nodes[1].Path);
+            Assert.Equal("h2.example.com", nodes[1].WsHost);
+        }
     }
 }

@@ -48,6 +48,9 @@ jobs:
           "version=$ver" | Out-File $env:GITHUB_OUTPUT -Append
           Write-Host "Resolved version: $ver (from ref $tag)"
 
+      - name: Run Parser Unit Tests
+        run: dotnet test tests/AnywhereWinUI.Parsers.Tests/AnywhereWinUI.Parsers.Tests.csproj -c Release -nologo
+
       - name: Publish App (${{ matrix.rid }})
         run: >
           dotnet publish AnywhereWinUI.csproj

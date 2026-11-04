@@ -45,6 +45,8 @@ namespace AnywhereWinUI.Services
             if (string.IsNullOrWhiteSpace(content))
                 return false;
 
+            content = content.TrimStart('\uFEFF');
+
             // JSON payloads are handled by the sing-box branch that runs before us.
             var head = content.TrimStart();
             if (head.StartsWith("{", StringComparison.Ordinal) || head.StartsWith("[", StringComparison.Ordinal))
@@ -59,6 +61,8 @@ namespace AnywhereWinUI.Services
             var nodes = new List<PersistedNode>();
             if (string.IsNullOrWhiteSpace(yaml))
                 return nodes;
+
+            yaml = yaml.TrimStart('\uFEFF');
 
             var skipped = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var warnings = new List<string>();
@@ -402,6 +406,7 @@ namespace AnywhereWinUI.Services
             node.AllowInsecure = Bool(p, "skip-cert-verify", false);
             node.Fingerprint = Trimmed(Str(p, "client-fingerprint"));
             ApplyAlpn(node, p);
+            ApplyReality(node, p);
 
             ApplyTransport(node, p);
             return node;
@@ -685,6 +690,10 @@ namespace AnywhereWinUI.Services
             var wsOpts = Map(p, "ws-opts");
             if (wsOpts != null)
             {
+                // Clash Meta represents HTTPUpgrade as network: ws + ws-opts.v2ray-http-upgrade: true.
+                if (node.Network == "ws" && Bool(wsOpts, "v2ray-http-upgrade", false))
+                    node.Network = "httpupgrade";
+
                 if (node.Path == null)
                     node.Path = Trimmed(Str(wsOpts, "path"));
 
@@ -694,6 +703,25 @@ namespace AnywhereWinUI.Services
                     node.WsHost = headers != null
                         ? Trimmed(Str(headers, "Host"))
                         : Trimmed(Str(wsOpts, "headers"));
+                }
+            }
+
+            var httpUpgradeOpts = Map(p, "v2ray-http-upgrade-opts") ?? Map(p, "httpupgrade-opts");
+            if (httpUpgradeOpts != null)
+            {
+                if (node.Path == null)
+                    node.Path = Trimmed(Str(httpUpgradeOpts, "path"));
+
+                if (node.WsHost == null)
+                {
+                    node.WsHost = Trimmed(Str(httpUpgradeOpts, "host"));
+                    if (node.WsHost == null)
+                    {
+                        var headers = Map(httpUpgradeOpts, "headers");
+                        node.WsHost = headers != null
+                            ? Trimmed(Str(headers, "Host"))
+                            : Trimmed(Str(httpUpgradeOpts, "headers"));
+                    }
                 }
             }
 
@@ -824,25 +852,34 @@ namespace AnywhereWinUI.Services
         /// literal "&lt;&lt;" entry. Later sources win; explicit keys beat merged ones.
         /// </summary>
         private static YamlMappingNode ResolveMergeKeys(YamlMappingNode map)
+            => ResolveMergeKeys(map, null);
+
+        private static YamlMappingNode ResolveMergeKeys(YamlMappingNode map, HashSet<YamlMappingNode>? visited)
         {
             if (!TryGetChild(map, "<<", out var mergeNode))
+                return map;
+
+            visited ??= new HashSet<YamlMappingNode>(ReferenceEqualityComparer.Instance);
+            if (!visited.Add(map))
                 return map;
 
             var sources = new List<YamlMappingNode>();
             switch (mergeNode)
             {
                 case YamlMappingNode single:
-                    sources.Add(single);
+                    sources.Add(ResolveMergeKeys(single, visited));
                     break;
 
                 case YamlSequenceNode sequence:
                     foreach (var child in sequence.Children)
                     {
                         if (child is YamlMappingNode childMapping)
-                            sources.Add(childMapping);
+                            sources.Add(ResolveMergeKeys(childMapping, visited));
                     }
                     break;
             }
+
+            visited.Remove(map);
 
             if (sources.Count == 0)
                 return map;

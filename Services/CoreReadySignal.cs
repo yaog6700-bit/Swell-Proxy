@@ -68,8 +68,14 @@ namespace AnywhereWinUI.Services
 
         private void OnLine(string? line)
         {
-            if (!string.IsNullOrEmpty(line))
+            // Only treat an explicit "sing-box started" message as Ready.
+            // Never treat WARN / ERROR / FATAL stderr output (such as deprecation warnings
+            // or config decode errors in sing-box 1.15+) as Ready before the port opens.
+            if (!string.IsNullOrEmpty(line) &&
+                line.Contains("sing-box started", StringComparison.OrdinalIgnoreCase))
+            {
                 _outcome.TrySetResult(Outcome.Ready);
+            }
         }
 
         private async Task PollPortAsync(int port)

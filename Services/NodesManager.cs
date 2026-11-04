@@ -202,33 +202,27 @@ namespace AnywhereWinUI.Services
             {
                 using var client = new HttpClient();
                 client.Timeout = TimeSpan.FromSeconds(15);
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("Anywhere-Client");
 
-                string content = await client.GetStringAsync(sub.Url);
-                content = content.Trim();
+                // 优先携带 clash.meta 兼容标识，让主流机场面板（V2Board / Xboard / SSPanel / Sub-Store）
+                // 下发包含 VLESS Reality / Hysteria2 / TUIC / AnyTLS 等现代协议在内的完整列表；
+                // 若返回内容解析出 0 个节点（例如纯 Naive / Nowhere 专有订阅），自动回退纯 Anywhere-Client 重试一次。
+                var newNodes = await FetchAndParseSubscriptionAsync(client, sub.Url, subId, "Anywhere-Client clash.meta/1.19");
+                if (newNodes.Count == 0)
+                {
+                    try
+                    {
+                        newNodes = await FetchAndParseSubscriptionAsync(client, sub.Url, subId, "Anywhere-Client");
+                    }
+                    catch { /* 回退重试失败时保留首次结果，走统一空节点提示 */ }
+                }
 
-                var newNodes = ParseSubscriptionContent(content, subId);
                 if (newNodes.Count == 0)
                     return "订阅内容解析失败：未找到任何有效节点（支持 Base64 分享链接列表、sing-box JSON 和 Clash YAML 格式）";
 
-                // Map old nodes by endpoint to preserve ID and IsFavorite
+                // 两阶段单次消费匹配：先按「协议|地址|名称」精确配对，再按「协议|地址」顺序配对未认领的旧节点。
+                // 既能在跨格式（Base64 ↔ Clash）或节点改名时保留收藏与 Id，又避免同入口多节点（如流量提示或优选 CDN）复用到重复 Id。
                 var oldNodes = Nodes.FindAll(n => n.SubscriptionId == subId);
-                var oldByEndpoint = new Dictionary<string, PersistedNode>(oldNodes.Count, StringComparer.OrdinalIgnoreCase);
-                foreach (var n in oldNodes)
-                {
-                    var key = $"{n.Protocol}|{n.Host}";
-                    oldByEndpoint[key] = n;
-                }
-
-                foreach (var n in newNodes)
-                {
-                    var key = $"{n.Protocol}|{n.Host}";
-                    if (oldByEndpoint.TryGetValue(key, out var match))
-                    {
-                        n.Id = match.Id;
-                        n.IsFavorite = match.IsFavorite;
-                    }
-                }
+                PreserveNodeIdentityAndFavorites(oldNodes, newNodes);
 
                 // ── OnSubscribe plugin hook ──────────────────────────────────
                 // Serialize nodes to JSON, let plugins filter/transform, then deserialize back.
@@ -350,9 +344,86 @@ namespace AnywhereWinUI.Services
                 out lastUpdated);
         }
 
-        private List<PersistedNode> ParseSubscriptionContent(string content, string subId)
+        private async Task<List<PersistedNode>> FetchAndParseSubscriptionAsync(
+            HttpClient client, string url, string subId, string userAgent)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.UserAgent.ParseAdd(userAgent);
+            using var resp = await client.SendAsync(req);
+            resp.EnsureSuccessStatusCode();
+            string content = (await resp.Content.ReadAsStringAsync()).Trim();
+            return ParseSubscriptionContent(content, subId);
+        }
+
+        public static void PreserveNodeIdentityAndFavorites(
+            IReadOnlyList<PersistedNode> oldNodes, IReadOnlyList<PersistedNode> newNodes)
+        {
+            if (oldNodes.Count == 0 || newNodes.Count == 0) return;
+
+            var claimedOldIndices = new HashSet<int>();
+            var matchedNewIndices = new HashSet<int>();
+
+            // 第一轮：协议 + Host + 名称完全一致时优先绑定
+            var exactQueues = new Dictionary<string, Queue<int>>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < oldNodes.Count; i++)
+            {
+                var exactKey = $"{oldNodes[i].Protocol}|{oldNodes[i].Host}|{oldNodes[i].Name}";
+                if (!exactQueues.TryGetValue(exactKey, out var q))
+                {
+                    q = new Queue<int>();
+                    exactQueues[exactKey] = q;
+                }
+                q.Enqueue(i);
+            }
+
+            for (int j = 0; j < newNodes.Count; j++)
+            {
+                var exactKey = $"{newNodes[j].Protocol}|{newNodes[j].Host}|{newNodes[j].Name}";
+                if (exactQueues.TryGetValue(exactKey, out var q) && q.Count > 0)
+                {
+                    int oldIdx = q.Dequeue();
+                    claimedOldIndices.Add(oldIdx);
+                    matchedNewIndices.Add(j);
+                    newNodes[j].Id = oldNodes[oldIdx].Id;
+                    newNodes[j].IsFavorite = oldNodes[oldIdx].IsFavorite;
+                }
+            }
+
+            // 第二轮：对尚未匹配的新节点，按协议 + Host 顺序认领剩余旧节点（跨格式/改名兼容）
+            var endpointQueues = new Dictionary<string, Queue<int>>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < oldNodes.Count; i++)
+            {
+                if (claimedOldIndices.Contains(i)) continue;
+                var epKey = $"{oldNodes[i].Protocol}|{oldNodes[i].Host}";
+                if (!endpointQueues.TryGetValue(epKey, out var q))
+                {
+                    q = new Queue<int>();
+                    endpointQueues[epKey] = q;
+                }
+                q.Enqueue(i);
+            }
+
+            for (int j = 0; j < newNodes.Count; j++)
+            {
+                if (matchedNewIndices.Contains(j)) continue;
+                var epKey = $"{newNodes[j].Protocol}|{newNodes[j].Host}";
+                if (endpointQueues.TryGetValue(epKey, out var q) && q.Count > 0)
+                {
+                    int oldIdx = q.Dequeue();
+                    claimedOldIndices.Add(oldIdx);
+                    newNodes[j].Id = oldNodes[oldIdx].Id;
+                    newNodes[j].IsFavorite = oldNodes[oldIdx].IsFavorite;
+                }
+            }
+        }
+
+        public List<PersistedNode> ParseSubscriptionContent(string content, string subId)
         {
             var list = new List<PersistedNode>();
+            if (string.IsNullOrWhiteSpace(content))
+                return list;
+
+            content = content.TrimStart('\uFEFF');
 
             // 1. 优先检测是否为 sing-box JSON 格式
             var trimmed0 = content.TrimStart();

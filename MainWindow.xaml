@@ -26,7 +26,7 @@
             <NavigationView x:Name="MainNav"
                             PaneDisplayMode="LeftMinimal"
                             IsPaneOpen="False"
-                            OpenPaneLength="240"
+                            OpenPaneLength="196"
                             IsBackButtonVisible="Collapsed"
                             IsSettingsVisible="False"
                             AlwaysShowHeader="False"
@@ -143,10 +143,10 @@
                 <TextBlock Text="Swell Proxy" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
             </StackPanel>
 
-            <!-- Custom Title Bar Area for dragging, placed in the remaining empty space (X = 240 to Width - 140) -->
-            <Grid x:Name="AppTitleBar" Height="48" Background="Transparent" VerticalAlignment="Top" Margin="240,0,140,0"/>
+            <!-- Custom Title Bar Area for dragging, placed in the remaining empty space (X = 200 to Width - 140) -->
+            <Grid x:Name="AppTitleBar" Height="48" Background="Transparent" VerticalAlignment="Top" Margin="200,0,140,0"/>
 
-            <!-- Mini Mode Toggle Button: aligned to the left of the 240px navigation drawer (x=48) -->
+            <!-- Mini Mode Toggle Button: aligned to the left of the 196px navigation drawer (x=48) -->
             <Button x:Name="MiniModeToggleButton"
                     VerticalAlignment="Top" HorizontalAlignment="Left"
                     Width="36" Height="36"
@@ -159,11 +159,11 @@
                 <FontIcon Glyph="&#xEA49;" FontSize="16"/>
             </Button>
 
-            <!-- Theme Toggle Button: aligned to the right side of the 240px navigation drawer (x=180, width=48) -->
+            <!-- Theme Toggle Button: aligned to the right side of the 196px navigation drawer -->
             <Button x:Name="ThemeToggleButton"
                     VerticalAlignment="Top" HorizontalAlignment="Left"
                     Width="36" Height="36"
-                    Margin="192,6,0,0"
+                    Margin="152,6,0,0"
                     CornerRadius="4"
                     Visibility="Collapsed"
                     Background="Transparent" BorderBrush="Transparent"

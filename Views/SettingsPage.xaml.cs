@@ -97,8 +97,8 @@ namespace AnywhereWinUI.Views
                 }
             }
 
-            // 3. Initialize Core version text
-            SingboxVersionText.Text = $"当前版本: {GetLocalSingboxVersionText()}";
+            // 3. Initialize Core version & 1.15 capability state
+            RefreshCoreVersionUI();
         }
 
         private void CategoriesListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -190,6 +190,39 @@ namespace AnywhereWinUI.Views
         private string GetLocalSingboxVersionText()
         {
             return Services.CoreUpdateService.GetLocalSingboxVersionText();
+        }
+
+        private void RefreshCoreVersionUI()
+        {
+            var verText = GetLocalSingboxVersionText();
+            var numVer = Services.CoreUpdateService.GetLocalSingboxNumericVersion();
+            bool is115OrAbove = numVer != null && numVer >= new Version(1, 15, 0);
+
+            if (SingboxVersionText != null)
+            {
+                SingboxVersionText.Text = is115OrAbove
+                    ? $"当前版本: {verText}（已启用 1.15 原生 TUN 协议栈适配）"
+                    : $"当前版本: {verText}";
+            }
+
+            if (RestoreCoreButton != null)
+            {
+                RestoreCoreButton.Visibility = Services.CoreUpdateService.HasBundledBackup
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
+
+            if (TunStackComboBox != null)
+            {
+                TunStackComboBox.IsEnabled = !is115OrAbove;
+            }
+
+            if (TunStackDescText != null)
+            {
+                TunStackDescText.Text = is115OrAbove
+                    ? "检测到 sing-box 1.15+ 内核：已自动切换为全新内置高性能 TCP/IP 栈（无需配置 stack）"
+                    : "选择 TUN 入站使用的网络栈，mixed 为推荐默认值（sing-box 1.15+ 自动启用全新内置协议栈）";
+            }
         }
 
         private void ResetColorsButton_Click(object sender, RoutedEventArgs e)
@@ -385,7 +418,7 @@ namespace AnywhereWinUI.Views
                     progressDialog.Hide();
                     await Task.Delay(50);
 
-                    SingboxVersionText.Text = $"当前版本: {GetLocalSingboxVersionText()}";
+                    RefreshCoreVersionUI();
 
                     var reconnectNote = proxyRunning ? "\n\n代理已停止，请返回主界面重新连接。" : string.Empty;
                     var successDialog = new ContentDialog
@@ -563,6 +596,27 @@ namespace AnywhereWinUI.Views
                 title: "选择 sing-box 核心文件");
             if (filePath == null) return;
 
+            var targetPath = Services.CoreUpdateService.SingboxExePath;
+            if (string.Equals(Path.GetFullPath(filePath), Path.GetFullPath(targetPath), StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            // 替换前先校验所选 exe 是否为合法可运行的 sing-box 内核
+            var probe = await Task.Run(() => Services.CoreUpdateService.ProbeSingboxExecutable(filePath));
+            if (!probe.IsValid)
+            {
+                var invalidDialog = new ContentDialog
+                {
+                    Title = "无效的核心文件",
+                    Content = $"所选文件无法通过 sing-box 版本校验（{probe.VersionDisplay}），已取消替换以保护现有核心。\n\n请选择有效的 sing-box.exe（支持 1.13 / 1.14 / 1.15+）。",
+                    CloseButtonText = "确定",
+                    XamlRoot = this.XamlRoot
+                };
+                await invalidDialog.WithAppTheme().ShowAsync();
+                return;
+            }
+
             var isRunning = CoreManager.Instance.IsRunning;
             if (isRunning)
             {
@@ -570,25 +624,42 @@ namespace AnywhereWinUI.Views
                 await Task.Delay(500);
             }
 
+            // 确保无残留 sing-box 进程占用文件锁
             try
             {
-                var targetPath = Path.Combine(AppContext.BaseDirectory, "Assets", "sing-box.exe");
+                foreach (var p in Process.GetProcessesByName("sing-box"))
+                {
+                    try { p.Kill(); } catch { }
+                }
+            }
+            catch { }
 
+            try
+            {
                 var dir = Path.GetDirectoryName(targetPath);
                 if (dir != null && !Directory.Exists(dir))
                 {
                     Directory.CreateDirectory(dir);
                 }
 
+                // 首次替换时自动备份自带原版核心，支持一键回滚恢复
+                if (!Services.CoreUpdateService.HasBundledBackup && File.Exists(targetPath))
+                {
+                    try { File.Copy(targetPath, Services.CoreUpdateService.BundledBackupExePath, overwrite: false); } catch { }
+                }
+
                 File.Copy(filePath, targetPath, overwrite: true);
 
-                var ver = GetLocalSingboxVersionText();
-                SingboxVersionText.Text = $"当前版本: {ver}";
+                RefreshCoreVersionUI();
+
+                var extra115Note = (probe.NumericVersion != null && probe.NumericVersion >= new Version(1, 15, 0))
+                    ? "\n• 已自动启用 sing-box 1.15 原生 TUN 协议栈与新规范配置适配"
+                    : string.Empty;
 
                 var dialog = new ContentDialog
                 {
                     Title = "内核替换成功",
-                    Content = $"已成功替换内核驱动文件为:\n{System.IO.Path.GetFileName(filePath)}\n\n请返回仪表盘重新连接代理以应用最新内核。",
+                    Content = $"已成功切换内核为：{probe.VersionDisplay}\n文件：{Path.GetFileName(filePath)}{extra115Note}\n\n请返回主界面重新连接代理以应用新内核。",
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
@@ -600,6 +671,55 @@ namespace AnywhereWinUI.Views
                 {
                     Title = "内核替换失败",
                     Content = $"覆盖内核文件时发生错误（可能文件被系统锁定占用）：\n{ex.Message}",
+                    CloseButtonText = "确定",
+                    XamlRoot = this.XamlRoot
+                };
+                await dialog.WithAppTheme().ShowAsync();
+            }
+        }
+
+        private async void RestoreCoreButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!Services.CoreUpdateService.HasBundledBackup) return;
+
+            var isRunning = CoreManager.Instance.IsRunning;
+            if (isRunning)
+            {
+                await CoreManager.Instance.StopAsync();
+                await Task.Delay(500);
+            }
+
+            try
+            {
+                foreach (var p in Process.GetProcessesByName("sing-box"))
+                {
+                    try { p.Kill(); } catch { }
+                }
+            }
+            catch { }
+
+            try
+            {
+                File.Copy(Services.CoreUpdateService.BundledBackupExePath, Services.CoreUpdateService.SingboxExePath, overwrite: true);
+                try { File.Delete(Services.CoreUpdateService.BundledBackupExePath); } catch { }
+
+                RefreshCoreVersionUI();
+
+                var dialog = new ContentDialog
+                {
+                    Title = "已恢复默认核心",
+                    Content = $"已成功恢复为原版核心（{GetLocalSingboxVersionText()}）。" + (isRunning ? "\n\n请返回主界面重新连接代理。" : string.Empty),
+                    CloseButtonText = "确定",
+                    XamlRoot = this.XamlRoot
+                };
+                await dialog.WithAppTheme().ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = "恢复核心失败",
+                    Content = ex.Message,
                     CloseButtonText = "确定",
                     XamlRoot = this.XamlRoot
                 };
@@ -1249,6 +1369,14 @@ namespace AnywhereWinUI.Views
 
             visual.StartAnimation("Scale.X", scaleX);
             visual.StartAnimation("Scale.Y", scaleY);
+        }
+
+        private void MixedPortInput_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is NumberBox nb && double.IsNaN(nb.Value))
+            {
+                nb.Value = ViewModel.MixedPort;
+            }
         }
     }
 }

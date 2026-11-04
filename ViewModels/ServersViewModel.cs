@@ -494,6 +494,28 @@ namespace AnywhereWinUI.ViewModels
         {
             if (string.IsNullOrWhiteSpace(text)) return (0, 0);
 
+            var trimmedWhole = text.TrimStart('\uFEFF').TrimStart();
+            bool startsWithHttpUrl =
+                trimmedWhole.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                trimmedWhole.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+            // 若直接粘贴了整份 sing-box JSON 或 Clash YAML 配置文本，直接批量解析导入手动节点
+            if (!startsWithHttpUrl &&
+                (trimmedWhole.StartsWith("{", StringComparison.Ordinal) ||
+                 trimmedWhole.StartsWith("[", StringComparison.Ordinal) ||
+                 ClashSubscriptionParser.LooksLikeClashYaml(trimmedWhole)))
+            {
+                var docNodes = NodesManager.Instance.ParseSubscriptionContent(trimmedWhole, string.Empty);
+                if (docNodes.Count > 0)
+                {
+                    NodesManager.Instance.Nodes.AddRange(docNodes);
+                    NodesManager.Instance.Save();
+                    LoadSubscriptions();
+                    LoadServersList();
+                    return (docNodes.Count, 0);
+                }
+            }
+
             var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             int addedNodesCount = 0;
             int addedSubsCount = 0;
@@ -538,6 +560,17 @@ namespace AnywhereWinUI.ViewModels
                         NodesManager.Instance.Nodes.Add(parsedNode);
                         addedNodesCount++;
                     }
+                }
+            }
+
+            // 兜底：若用户直接粘贴了未解码的整段 Base64 订阅内容
+            if (addedNodesCount == 0 && addedSubsCount == 0 && !startsWithHttpUrl)
+            {
+                var b64Nodes = NodesManager.Instance.ParseSubscriptionContent(trimmedWhole, string.Empty);
+                if (b64Nodes.Count > 0)
+                {
+                    NodesManager.Instance.Nodes.AddRange(b64Nodes);
+                    addedNodesCount = b64Nodes.Count;
                 }
             }
 

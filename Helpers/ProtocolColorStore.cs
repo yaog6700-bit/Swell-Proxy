@@ -26,7 +26,7 @@ namespace AnywhereWinUI.Helpers
             "ss" or "shadowsocks" => Ss,
             "vless"               => Vless,
             "vmess"               => Vmess,
-            "hysteria2"           => Hysteria2,
+            "hysteria2" or "hysteria 2" => Hysteria2,
             "trojan"              => Trojan,
             _                     => Fallback
         };

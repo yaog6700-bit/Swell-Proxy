@@ -1,4 +1,4 @@
-﻿<Page
+<Page
     x:Class="AnywhereWinUI.Views.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -594,9 +594,9 @@
                                     <FontIcon Grid.Column="0" Glyph="&#xE839;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="TUN Stack" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="选择 TUN 入站使用的网络栈，mixed 为推荐默认值" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Name="TunStackDescText" Text="选择 TUN 入站使用的网络栈，mixed 为推荐默认值（sing-box 1.15+ 自动启用全新内置协议栈）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
-                                    <ComboBox Grid.Column="2" Width="160" SelectedValuePath="Tag" SelectedValue="{x:Bind ViewModel.TunStack, Mode=TwoWay}" VerticalAlignment="Center">
+                                    <ComboBox x:Name="TunStackComboBox" Grid.Column="2" Width="160" SelectedValuePath="Tag" SelectedValue="{x:Bind ViewModel.TunStack, Mode=TwoWay}" VerticalAlignment="Center">
                                         <ComboBoxItem Content="mixed" Tag="mixed"/>
                                         <ComboBoxItem Content="system" Tag="system"/>
                                         <ComboBoxItem Content="gvisor" Tag="gvisor"/>
@@ -792,7 +792,7 @@
                                 </StackPanel>
                                 <NumberBox x:Name="MixedPortInput"
                                            Grid.Column="1"
-                                           Width="110"
+                                           Width="180"
                                            Minimum="1024"
                                            Maximum="65535"
                                            SpinButtonPlacementMode="Inline"
@@ -800,6 +800,7 @@
                                            LargeChange="100"
                                            PlaceholderText="2080"
                                            Value="{x:Bind ViewModel.MixedPort, Mode=TwoWay}"
+                                           LostFocus="MixedPortInput_LostFocus"
                                            VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
@@ -910,15 +911,16 @@
                                     CornerRadius="8">
                                 <StackPanel>
                                     <!-- Core settings line -->
-                                    <Grid ColumnDefinitions="*,Auto,Auto" Padding="16,16" ColumnSpacing="12">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" Padding="16,16" ColumnSpacing="8">
                                         <StackPanel Spacing="4" VerticalAlignment="Center">
                                             <TextBlock Text="Sing-box Core 运行核心" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                             <TextBlock x:Name="SingboxVersionText" Text="加载中..." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <Button x:Name="ReplaceCoreButton" Grid.Column="1" Padding="6" Background="Transparent" BorderBrush="Transparent" Click="ReplaceCoreButton_Click" ToolTipService.ToolTip="手动替换本地核心文件" VerticalAlignment="Center">
+                                        <Button x:Name="RestoreCoreButton" Grid.Column="1" Content="恢复默认核心" Padding="10,5" CornerRadius="4" Visibility="Collapsed" Click="RestoreCoreButton_Click" ToolTipService.ToolTip="恢复为客户端自带的原版 sing-box 核心" VerticalAlignment="Center"/>
+                                        <Button x:Name="ReplaceCoreButton" Grid.Column="2" Padding="6" Background="Transparent" BorderBrush="Transparent" Click="ReplaceCoreButton_Click" ToolTipService.ToolTip="手动替换本地核心文件（支持 sing-box 1.13 / 1.14 / 1.15+）" VerticalAlignment="Center">
                                             <FontIcon Glyph="&#xE8E5;" FontSize="15" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Button>
-                                        <Button x:Name="CheckUpdateButton" Grid.Column="2" Content="检查更新" Padding="12,5" CornerRadius="4" Click="CheckUpdateButton_Click" VerticalAlignment="Center"/>
+                                        <Button x:Name="CheckUpdateButton" Grid.Column="3" Content="检查更新" Padding="12,5" CornerRadius="4" Click="CheckUpdateButton_Click" VerticalAlignment="Center"/>
                                     </Grid>
 
                                     <Grid ColumnDefinitions="*,Auto,Auto" Padding="16,16" ColumnSpacing="12">

@@ -341,7 +341,7 @@ namespace AnywhereWinUI.ViewModels
         partial void OnMixedPortChanged(int value)
         {
             if (_isLoading) return;
-            if (value < 1 || value > 65535) return;
+            if (value < 1024 || value > 65535) return;
             AppSession.Instance.MixedPort = value;
             Helpers.LocalSettingsHelper.SetValue("mixedPort", value);
             UpdateLanProxyEndpoint();

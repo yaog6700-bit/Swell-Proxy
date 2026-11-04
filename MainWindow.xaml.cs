@@ -20,6 +20,8 @@ namespace AnywhereWinUI
         public MainViewModel ViewModel { get; }
         
         private readonly WindowManager _windowManager;
+        private Helpers.SystemTrayManager? _trayManager;
+        private Helpers.PaneMorphAnimator? _paneMorph;
         private bool _isHiddenToTray;
         public static bool IsVisibleToUser { get; private set; } = true;
         public static event EventHandler<bool>? VisibilityToUserChanged;
@@ -78,6 +80,9 @@ namespace AnywhereWinUI
             MainNav.PaneOpening += (s, e) => UpdateHeaderVisibility(true);
             MainNav.PaneClosing += (s, e) => UpdateHeaderVisibility(false);
             UpdateHeaderVisibility(false, animate: false); // Default to closed state on startup without animating
+
+            // Unigram-style morph: the nav drawer grows out of the hamburger button with staggered springs
+            _paneMorph = new Helpers.PaneMorphAnimator(MainNav, MiniModeToggleButton, ThemeToggleButton, LogoStackPanel);
 
             // Handle navigation selection
             MainNav.SelectionChanged += MainNav_SelectionChanged;
@@ -531,6 +536,8 @@ namespace AnywhereWinUI
 
         private void UpdateHeaderVisibility(bool isOpen, bool animate = true)
         {
+            if (animate && _paneMorph?.HandlesHeaderElements == true) return;
+
             if (ThemeToggleButton != null)
             {
                 if (animate)
@@ -592,44 +599,63 @@ namespace AnywhereWinUI
 
         private void ConfigureTray()
         {
-            UpdateAppIcon();
             this.Title = "Swell Proxy";
             this.AppWindow.Title = "Swell Proxy";
 
-            // Configure WinUIEx tray settings.
-            // WinUIEx 2.9.0 internally calls AppWindow.IsShownInSwitchers which throws
-            // NotImplementedException on some Windows App SDK 2.0.x builds / OS versions.
-            // Wrap it so a missing API doesn't crash the whole startup.
-            try
-            {
-                _windowManager.IsVisibleInTray = true;
-            }
-            catch (NotImplementedException)
-            {
-                // IsShownInSwitchers not supported on this build — tray icon unavailable,
-                // but the rest of the app can still run normally.
-            }
-            _windowManager.TrayIconSelected += (_, _) => RestoreFromTray();
-            _windowManager.TrayIconContextMenu += (_, e) =>
-            {
-                var flyout = new MenuFlyout();
+            // Use dedicated Win32 SystemTrayManager instead of WinUIEx's TrayIcon:
+            // - Owns dedicated HICON handles immune to AppWindow.SetIcon / WM_SETICON destruction
+            // - Works on all Windows 10 builds without AppWindow.IsShownInSwitchers exceptions
+            // - Receives Explorer's "TaskbarCreated" even when elevated (TUN Mode UIPI filter)
+            // - Automatically self-heals if Windows 10 resets or drops notification area icons
+            _trayManager = new Helpers.SystemTrayManager(
+                DispatcherQueue,
+                CoreManager.Instance.IsRunning,
+                onOpenRequested: RestoreFromTray,
+                contextMenuFactory: () =>
+                {
+                    var flyout = new MenuFlyout();
 
-                var openItem = new MenuFlyoutItem { Text = "显示主界面" };
-                openItem.Click += (_, _) => RestoreFromTray();
-                flyout.Items.Add(openItem);
-                
-                var privacyItem = new MenuFlyoutItem { Text = "锁定并隐藏" };
-                privacyItem.Click += async (_, _) => await ViewModel.TogglePrivacyModeAsync();
-                flyout.Items.Add(privacyItem);
+                    var openItem = new MenuFlyoutItem
+                    {
+                        Text = "显示主界面",
+                        Icon = new FontIcon { Glyph = "\uE8A7" }
+                    };
+                    openItem.Click += (_, _) => RestoreFromTray();
+                    flyout.Items.Add(openItem);
 
-                flyout.Items.Add(new MenuFlyoutSeparator());
+                    bool isLocked = ViewModel.IsPrivacyLocked;
+                    var privacyItem = new MenuFlyoutItem
+                    {
+                        Text = isLocked ? "解锁主界面" : "锁定并隐藏",
+                        Icon = new FontIcon { Glyph = isLocked ? "\uE785" : "\uE72E" }
+                    };
+                    privacyItem.Click += async (_, _) =>
+                    {
+                        if (ViewModel.IsPrivacyLocked)
+                        {
+                            RestoreFromTray();
+                        }
+                        else
+                        {
+                            await ViewModel.TogglePrivacyModeAsync();
+                        }
+                    };
+                    flyout.Items.Add(privacyItem);
 
-                var exitItem = new MenuFlyoutItem { Text = "退出程序" };
-                exitItem.Click += (_, _) => ExitApplication();
-                flyout.Items.Add(exitItem);
+                    flyout.Items.Add(new MenuFlyoutSeparator());
 
-                e.Flyout = flyout;
-            };
+                    var exitItem = new MenuFlyoutItem
+                    {
+                        Text = "退出程序",
+                        Icon = new FontIcon { Glyph = "\uE7E8" }
+                    };
+                    exitItem.Click += (_, _) => ExitApplication();
+                    flyout.Items.Add(exitItem);
+
+                    return flyout;
+                });
+
+            UpdateAppIcon();
 
             // Wire closing behavior: intercept close and hide to system tray
             AppWindow.Closing += (_, args) =>
@@ -648,10 +674,13 @@ namespace AnywhereWinUI
 
         private void UpdateAppIcon()
         {
+            bool isRunning = CoreManager.Instance.IsRunning;
+            _trayManager?.SetActiveState(isRunning);
+
             try
             {
                 // Dynamically load active or inactive icon state
-                string iconName = CoreManager.Instance.IsRunning ? "output.ico" : "output_grey.ico";
+                string iconName = isRunning ? "output.ico" : "output_grey.ico";
                 string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", iconName);
                 if (File.Exists(iconPath))
                 {
@@ -670,14 +699,48 @@ namespace AnywhereWinUI
             }
         }
 
+        private void SetShownInSwitchersSafe(bool show)
+        {
+            try
+            {
+                AppWindow.IsShownInSwitchers = show;
+            }
+            catch
+            {
+                // Fallback for Windows 10 builds where AppWindow.IsShownInSwitchers throws NotImplementedException
+                try
+                {
+                    IntPtr hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+                    if (hwnd != IntPtr.Zero)
+                    {
+                        const int GWL_EXSTYLE = -20;
+                        const long WS_EX_TOOLWINDOW = 0x00000080L;
+                        const long WS_EX_APPWINDOW = 0x00040000L;
+                        long exStyle = NativeMethods.GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
+                        if (show)
+                        {
+                            exStyle = (exStyle & ~WS_EX_TOOLWINDOW) | WS_EX_APPWINDOW;
+                        }
+                        else
+                        {
+                            exStyle = (exStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW;
+                        }
+                        NativeMethods.SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(exStyle));
+                    }
+                }
+                catch { }
+            }
+        }
+
         private void HideToTray()
         {
             if (_isHiddenToTray) return;
 
+            _trayManager?.EnsureVisible();
             _isHiddenToTray = true;
             IsVisibleToUser = false;
             VisibilityToUserChanged?.Invoke(this, false);
-            AppWindow.IsShownInSwitchers = false;
+            SetShownInSwitchersSafe(false);
             AppWindow.Hide();
             // BUG-12 fix: 不再 collapse 根视觉树，避免触发全局 Unloaded 和动画关闭异常
             // OS 在 Hide() 后会自动释放 GPU 资源，无需手动干预。
@@ -692,8 +755,10 @@ namespace AnywhereWinUI
                 {
                     IsVisibleToUser = true;
                     VisibilityToUserChanged?.Invoke(this, true);
-                    Activate();
+                    SetShownInSwitchersSafe(true);
                     AppWindow.Show();
+                    Activate();
+                    NativeMethods.SetForegroundWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
                 }
                 return;
             }
@@ -702,10 +767,11 @@ namespace AnywhereWinUI
             IsVisibleToUser = true;
             VisibilityToUserChanged?.Invoke(this, true);
             // BUG-12 fix: 对应删除了 HideToTray 中的 Collapsed，此处不再需要 restore Visibility
-            AppWindow.IsShownInSwitchers = true;
-            Activate();
+            SetShownInSwitchersSafe(true);
             AppWindow.Show();
+            Activate();
             AppWindow.MoveInZOrderAtTop();
+            NativeMethods.SetForegroundWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
         }
 
         private static void ReleaseUiResources()
@@ -1077,6 +1143,8 @@ namespace AnywhereWinUI
                 AnywhereWinUI.Plugins.PluginTrigger.OnShutdown);
 
             // Quit application process
+            _trayManager?.Dispose();
+            _trayManager = null;
             _windowManager.Dispose();
             Application.Current.Exit();
         }
@@ -1316,5 +1384,14 @@ namespace AnywhereWinUI
 
         [DllImport("user32.dll")]
         public static extern uint GetDpiForWindow(IntPtr hwnd);
+
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+        public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+        public static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
     }
 }

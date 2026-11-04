@@ -108,7 +108,8 @@ namespace AnywhereWinUI
             
             if (!createdNew)
             {
-                // Another instance is already running. Exit gracefully.
+                // Another instance is already running — ask it to restore from tray and exit gracefully.
+                Helpers.SystemTrayManager.NotifyExistingInstanceToShow();
                 Environment.Exit(0);
                 return;
             }

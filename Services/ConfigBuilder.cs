@@ -73,25 +73,23 @@ namespace AnywhereWinUI.Services
                 System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] TUN 出站网卡: {outboundInterface ?? "(未探测到)"}");
             }
 
-            // 检测本地 sing-box 内核版本，用于按版本生成不同的配置节
-            // 注意：预发布版本（如 v1.14.0-alpha.32）含非数字后缀，需先截断再解析
+            // 检测本地 sing-box 内核版本，用于按版本生成不同的配置节（兼容 1.13 / 1.14 / 1.15+）
             var coreVersionStr = CoreUpdateService.GetLocalSingboxVersionText();
-            bool isSingbox114OrAbove = false;
-            if (coreVersionStr.StartsWith("v"))
-            {
-                var versionPart = coreVersionStr.Substring(1);
-                // 截断 -alpha / -beta / -rc 等预发布标签，只保留纯数字部分
-                var dashIndex = versionPart.IndexOf('-');
-                if (dashIndex > 0) versionPart = versionPart.Substring(0, dashIndex);
-                if (System.Version.TryParse(versionPart, out var coreVersion))
-                {
-                    isSingbox114OrAbove = coreVersion >= new System.Version(1, 14, 0);
-                }
-            }
+            var coreVersion = CoreUpdateService.GetLocalSingboxNumericVersion();
+            bool isSingbox114OrAbove = coreVersion == null || coreVersion >= new System.Version(1, 14, 0);
+            bool isSingbox115OrAbove = coreVersion != null && coreVersion >= new System.Version(1, 15, 0);
 
             // Per-session bearer secret for Clash / native API so local processes cannot control the core freely.
             var apiSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
             session.ClashApiSecret = apiSecret;
+
+            var outbounds = BuildOutbounds(
+                selectedNode,
+                enableTun,
+                outboundInterface,
+                isSingbox114OrAbove,
+                out var wireGuardEndpoints,
+                actions.ToArray());
 
             var config = new JsonObject
             {
@@ -101,8 +99,8 @@ namespace AnywhereWinUI.Services
                     ["timestamp"] = true
                 },
                 ["dns"] = BuildDns(bypassChina, blockIPv6, routingMode, enableTun),
-                ["inbounds"] = await BuildInboundsAsync(enableTun, selectedNode),
-                ["outbounds"] = BuildOutbounds(selectedNode, enableTun, outboundInterface, isSingbox114OrAbove, actions.ToArray()),
+                ["inbounds"] = await BuildInboundsAsync(enableTun, selectedNode, isSingbox115OrAbove),
+                ["outbounds"] = outbounds,
                 ["route"] = BuildRoute(routingMode, bypassChina, blockAds, enableTun, outboundInterface, isSingbox114OrAbove),
                 ["experimental"] = new JsonObject
                 {
@@ -118,11 +116,26 @@ namespace AnywhereWinUI.Services
                 }
             };
 
-            // sing-box >= 1.14.0：额外注入原生 API 服务（gRPC，监听 9091）
-            // 同时保留 clash_api（9090）确保现有功能不受影响
-            // 注意：1.13.x 不识别顶级 "services" 字段，注入会导致内核启动失败，必须做版本判断
+            // sing-box >= 1.14.0：
+            // 1. 显式配置顶级 http_clients（配合 route.default_http_client），避免 1.15+ 因隐式默认 HTTP 客户端触发 FATAL
+            // 2. 注入原生 API 服务（监听 9091），同时保留 clash_api（9090）确保现有功能不受影响
+            // 注意：1.13.x 不识别顶级 "http_clients" 和 "services" 字段，必须做版本判断
             if (isSingbox114OrAbove)
             {
+                config["http_clients"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["tag"] = "default-http",
+                        ["detour"] = "proxy"
+                    },
+                    new JsonObject
+                    {
+                        ["tag"] = "direct-http",
+                        ["detour"] = "direct"
+                    }
+                };
+
                 config["services"] = new JsonArray
                 {
                     new JsonObject
@@ -152,17 +165,29 @@ namespace AnywhereWinUI.Services
                         ["dashboard"] = true
                     }
                 };
-                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 检测到 sing-box {coreVersionStr}，已启用原生 API（端口 9091）");
+                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 检测到 sing-box {coreVersionStr}，已启用 http_clients 与原生 API（端口 9091），1.15 原生 TUN={isSingbox115OrAbove}");
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 检测到 sing-box {coreVersionStr}（< 1.14.0），跳过原生 API 注入");
+                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 检测到 sing-box {coreVersionStr}（< 1.14.0），跳过 http_clients 与原生 API 注入");
             }
 
-            // 仅当用户启用 Tailscale 时，才注入 endpoints 字段
+            // 汇总所有 endpoints（WireGuard 节点端点 + Tailscale 端点）
+            var allEndpoints = new JsonArray();
+            foreach (var wgEp in wireGuardEndpoints)
+            {
+                if (wgEp != null) allEndpoints.Add(wgEp.DeepClone());
+            }
             if (session.EnableTailscale)
             {
-                config["endpoints"] = BuildEndpoints(session);
+                foreach (var tsEp in BuildEndpoints(session))
+                {
+                    if (tsEp != null) allEndpoints.Add(tsEp.DeepClone());
+                }
+            }
+            if (allEndpoints.Count > 0)
+            {
+                config["endpoints"] = allEndpoints;
             }
 
             var configJson = config.ToJsonString(JsonOpts);
@@ -341,7 +366,10 @@ namespace AnywhereWinUI.Services
             }
         }
 
-        private static async System.Threading.Tasks.Task<JsonArray> BuildInboundsAsync(bool enableTun = false, PersistedNode? selectedNode = null)
+        private static async System.Threading.Tasks.Task<JsonArray> BuildInboundsAsync(
+            bool enableTun = false,
+            PersistedNode? selectedNode = null,
+            bool isSingbox115OrAbove = false)
         {
             var list = new JsonArray();
 
@@ -355,9 +383,15 @@ namespace AnywhereWinUI.Services
                     ["auto_route"]   = true,
                     // 关闭 strict_route 避免 WFP 拦截导致 WSAEACCES 报错（我们已经在 direct 出站绑定了物理网卡防止死循环）
                     ["strict_route"] = false,
-                    ["stack"]        = NormalizeTunStack(AppSession.Instance.TunStack),
                     ["mtu"]          = 9000
                 };
+
+                // sing-box 1.15.0+ 的 sing-tun 默认使用全新内置高性能 TCP/IP 协议栈，stack 参数已废弃；
+                // 仅在 < 1.15.0 时写入 stack，使 1.15+ 自动启用新协议栈且无废弃警告。
+                if (!isSingbox115OrAbove)
+                {
+                    tunObj["stack"] = NormalizeTunStack(AppSession.Instance.TunStack);
+                }
 
                 // 排除私有地址段和代理服务器地址，防止 LAN 流量和出站流量被 TUN 截获造成 CPU 飙升
                 var excludeAddresses = new JsonArray();
@@ -439,20 +473,30 @@ namespace AnywhereWinUI.Services
             return await System.Threading.Tasks.Task.FromResult(list);
         }
 
-        private static JsonArray BuildOutbounds(PersistedNode selectedNode, bool enableTun, string? outboundInterface, bool isSingbox114OrAbove, params string[] appActions)
+        private static JsonArray BuildOutbounds(
+            PersistedNode selectedNode,
+            bool enableTun,
+            string? outboundInterface,
+            bool isSingbox114OrAbove,
+            out JsonArray wireGuardEndpoints,
+            params string[] appActions)
         {
             var list = new JsonArray();
+            wireGuardEndpoints = new JsonArray();
             var addedTags = new HashSet<string>();
 
-            // 1. Generate main proxy outbound
+            // 1. Generate main proxy outbound (or endpoint for WireGuard)
             var (host, port) = NodeLinkParser.SplitHostPort(selectedNode.Host);
             if (port == 0) port = 443;
             
-            var mainOutbounds = GenerateOutboundsForNode(selectedNode, host, port, "proxy", isSingbox114OrAbove);
+            var mainOutbounds = GenerateOutboundsForNode(selectedNode, host, port, "proxy", isSingbox114OrAbove, wireGuardEndpoints, addedTags);
             foreach (var ob in mainOutbounds)
             {
-                list.Add(ob);
-                addedTags.Add(ob["tag"]?.ToString() ?? "");
+                var tag = ob["tag"]?.ToString() ?? "";
+                if (addedTags.Add(tag))
+                {
+                    list.Add(ob);
+                }
             }
 
             bool needsUrlTest = false;
@@ -469,7 +513,7 @@ namespace AnywhereWinUI.Services
                 // Strip "node:" prefix if present to get the real node ID
                 string resolvedId = action.StartsWith("node:") ? action.Substring(5) : action;
 
-                if (resolvedId != "proxy" && resolvedId != "direct" && resolvedId != "block" && !addedTags.Contains(resolvedId))
+                if (resolvedId != "proxy" && resolvedId != "direct" && resolvedId != "block" && resolvedId != "reject" && !addedTags.Contains(resolvedId))
                 {
                     // Action is a Node ID
                     var extraNode = NodesManager.Instance.Nodes.Find(n => n.Id == resolvedId);
@@ -478,13 +522,13 @@ namespace AnywhereWinUI.Services
                         var (exHost, exPort) = NodeLinkParser.SplitHostPort(extraNode.Host);
                         if (exPort == 0) exPort = 443;
                         
-                        var extraOutbounds = GenerateOutboundsForNode(extraNode, exHost, exPort, extraNode.Id, isSingbox114OrAbove);
+                        var extraOutbounds = GenerateOutboundsForNode(extraNode, exHost, exPort, extraNode.Id, isSingbox114OrAbove, wireGuardEndpoints, addedTags);
                         foreach (var ob in extraOutbounds)
                         {
-                            if (!addedTags.Contains(ob["tag"]?.ToString() ?? ""))
+                            var tag = ob["tag"]?.ToString() ?? "";
+                            if (addedTags.Add(tag))
                             {
                                 list.Add(ob);
-                                addedTags.Add(ob["tag"]?.ToString() ?? "");
                             }
                         }
                     }
@@ -501,13 +545,13 @@ namespace AnywhereWinUI.Services
                         var (exHost, exPort) = NodeLinkParser.SplitHostPort(node.Host);
                         if (exPort == 0) exPort = 443;
 
-                        var extraOutbounds = GenerateOutboundsForNode(node, exHost, exPort, node.Id, isSingbox114OrAbove);
+                        var extraOutbounds = GenerateOutboundsForNode(node, exHost, exPort, node.Id, isSingbox114OrAbove, wireGuardEndpoints, addedTags);
                         foreach (var ob in extraOutbounds)
                         {
-                            if (!addedTags.Contains(ob["tag"]?.ToString() ?? ""))
+                            var tag = ob["tag"]?.ToString() ?? "";
+                            if (addedTags.Add(tag))
                             {
                                 list.Add(ob);
-                                addedTags.Add(ob["tag"]?.ToString() ?? "");
                             }
                         }
                     }
@@ -528,15 +572,14 @@ namespace AnywhereWinUI.Services
                 }
             }
 
-            // Add direct and block outbounds
-            // TUN strict_route 模式下必须绑定物理网卡，否则 direct 流量被重新截获进 TUN 形成路由环路
+            // Add direct outbound (legacy "block" outbound is migrated to route rule "action": "reject")
+            // TUN 模式下绑定物理网卡，防止 direct 流量被重新截获进 TUN 形成路由环路
             var directOutbound = new JsonObject { ["type"] = "direct", ["tag"] = "direct" };
             if (enableTun && !string.IsNullOrEmpty(outboundInterface))
             {
                 directOutbound["bind_interface"] = outboundInterface;
             }
             list.Add(directOutbound);
-            list.Add(new JsonObject { ["type"] = "block", ["tag"] = "block" });
 
             return list;
         }
@@ -546,7 +589,56 @@ namespace AnywhereWinUI.Services
             return stack == "system" || stack == "gvisor" || stack == "mixed" ? stack : "mixed";
         }
 
-        private static List<JsonObject> GenerateOutboundsForNode(PersistedNode node, string host, int port, string baseTag, bool isSingbox114OrAbove)
+        private static bool IsWireGuardNode(PersistedNode node)
+        {
+            var proto = node.Protocol?.ToLowerInvariant() ?? string.Empty;
+            return proto.Contains("wireguard") || proto == "wg";
+        }
+
+        private static JsonObject BuildWireGuardEndpoint(PersistedNode node, string host, int port, string tag, string? detourTag = null)
+        {
+            var addresses = new JsonArray();
+            var localAddr = !string.IsNullOrEmpty(node.WgLocalAddress) ? node.WgLocalAddress : "10.0.0.2/32";
+            foreach (var a in localAddr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                addresses.Add((JsonNode)a);
+
+            var peer = new JsonObject
+            {
+                ["address"]     = CleanHost(host),
+                ["port"]        = port,
+                ["public_key"]  = node.PublicKey ?? string.Empty,
+                ["allowed_ips"] = new JsonArray { (JsonNode)"0.0.0.0/0", (JsonNode)"::/0" }
+            };
+            if (!string.IsNullOrEmpty(node.WgPreSharedKey))
+                peer["pre_shared_key"] = node.WgPreSharedKey;
+
+            var endpoint = new JsonObject
+            {
+                ["type"]            = "wireguard",
+                ["tag"]             = tag,
+                ["address"]         = addresses,
+                ["private_key"]     = node.WgPrivateKey ?? string.Empty,
+                ["domain_resolver"] = "bootstrap-dns",
+                ["peers"]           = new JsonArray { peer }
+            };
+
+            if (node.WgMtu > 0)
+                endpoint["mtu"] = node.WgMtu;
+
+            if (!string.IsNullOrEmpty(detourTag))
+                endpoint["detour"] = detourTag;
+
+            return endpoint;
+        }
+
+        private static List<JsonObject> GenerateOutboundsForNode(
+            PersistedNode node,
+            string host,
+            int port,
+            string baseTag,
+            bool isSingbox114OrAbove,
+            JsonArray wireGuardEndpoints,
+            HashSet<string> addedTags)
         {
             var list = new List<JsonObject>();
 
@@ -555,6 +647,34 @@ namespace AnywhereWinUI.Services
             if (!string.IsNullOrEmpty(node.ProxyChainId))
             {
                 chainNode = NodesManager.Instance.Nodes.Find(n => n.Id == node.ProxyChainId);
+            }
+
+            // WireGuard 出站在 sing-box 1.13+ 已彻底移除，统一迁移至顶级 endpoints
+            if (IsWireGuardNode(node))
+            {
+                string? detourTag = chainNode != null ? $"{baseTag}-chain-proxy" : null;
+                if (addedTags.Add(baseTag))
+                {
+                    wireGuardEndpoints.Add(BuildWireGuardEndpoint(node, host, port, baseTag, detourTag));
+                }
+
+                if (chainNode != null)
+                {
+                    var (chainHost, chainPort) = NodeLinkParser.SplitHostPort(chainNode.Host);
+                    if (chainPort == 0) chainPort = 443;
+                    string chainTag = $"{baseTag}-chain-proxy";
+                    if (IsWireGuardNode(chainNode))
+                    {
+                        if (addedTags.Add(chainTag))
+                            wireGuardEndpoints.Add(BuildWireGuardEndpoint(chainNode, chainHost, chainPort, chainTag));
+                    }
+                    else
+                    {
+                        list.Add(BuildSingleOutbound(chainNode, chainHost, chainPort, chainTag, isSingbox114OrAbove));
+                    }
+                }
+
+                return list;
             }
 
             // 1. Generate main proxy outbound
@@ -605,15 +725,25 @@ namespace AnywhereWinUI.Services
                 list.Add(proxyOutbound);
             }
 
-            // 3. 如果有前置代理链，生成前置代理的出站配置 (chain-proxy)
+            // 3. 如果有前置代理链，生成前置代理的出站或端点配置 (chain-proxy)
             if (chainNode != null)
             {
                 var (chainHost, chainPort) = NodeLinkParser.SplitHostPort(chainNode.Host);
                 if (chainPort == 0) chainPort = 443;
+                string chainTag = $"{baseTag}-chain-proxy";
 
-                var chainOutbound = BuildSingleOutbound(chainNode, chainHost, chainPort, $"{baseTag}-chain-proxy", isSingbox114OrAbove);
-
-                list.Add(chainOutbound);
+                if (IsWireGuardNode(chainNode))
+                {
+                    if (addedTags.Add(chainTag))
+                    {
+                        wireGuardEndpoints.Add(BuildWireGuardEndpoint(chainNode, chainHost, chainPort, chainTag));
+                    }
+                }
+                else
+                {
+                    var chainOutbound = BuildSingleOutbound(chainNode, chainHost, chainPort, chainTag, isSingbox114OrAbove);
+                    list.Add(chainOutbound);
+                }
             }
 
 
@@ -680,6 +810,7 @@ namespace AnywhereWinUI.Services
                         };
                     }
 
+                    ApplyAlpnToTls(tlsObj, node.Alpn);
                     proxyOutbound["tls"] = tlsObj;
                 }
 
@@ -709,6 +840,7 @@ namespace AnywhereWinUI.Services
                             ["fingerprint"] = fingerprintVal
                         };
                     }
+                    ApplyAlpnToTls(tlsObj, node.Alpn);
                     proxyOutbound["tls"] = tlsObj;
                 }
 
@@ -725,6 +857,7 @@ namespace AnywhereWinUI.Services
                     ["server_name"] = sniVal,
                     ["insecure"] = allowInsecureVal
                 };
+                ApplyAlpnToTls(tlsObj, node.Alpn);
                 proxyOutbound["tls"] = tlsObj;
 
                 if (!string.IsNullOrEmpty(node.ObfsType) && node.ObfsType != "none")
@@ -749,6 +882,16 @@ namespace AnywhereWinUI.Services
                         ["server_name"] = sniVal,
                         ["insecure"] = allowInsecureVal
                     };
+                    if (securityVal == "reality")
+                    {
+                        tlsObj.Remove("insecure");
+                        tlsObj["reality"] = new JsonObject
+                        {
+                            ["enabled"] = true,
+                            ["public_key"] = !string.IsNullOrEmpty(node.PublicKey) ? node.PublicKey : "",
+                            ["short_id"] = !string.IsNullOrEmpty(node.ShortId) ? node.ShortId : ""
+                        };
+                    }
                     if (fingerprintVal != "none")
                     {
                         tlsObj["utls"] = new JsonObject
@@ -757,8 +900,11 @@ namespace AnywhereWinUI.Services
                             ["fingerprint"] = fingerprintVal
                         };
                     }
+                    ApplyAlpnToTls(tlsObj, node.Alpn);
                     proxyOutbound["tls"] = tlsObj;
                 }
+
+                ApplyTransportToOutbound(proxyOutbound, networkVal, pathVal, wsHostVal);
             }
             else if (protoLower.Contains("tuic"))
             {
@@ -825,6 +971,7 @@ namespace AnywhereWinUI.Services
                         ["fingerprint"] = fingerprintVal
                     };
                 }
+                ApplyAlpnToTls(tlsObj, node.Alpn);
                 proxyOutbound["tls"] = tlsObj;
             }
             else if (protoLower == "http" || protoLower == "https")
@@ -851,6 +998,7 @@ namespace AnywhereWinUI.Services
                             ["fingerprint"] = fingerprintVal
                         };
                     }
+                    ApplyAlpnToTls(tlsObj, node.Alpn);
                     proxyOutbound["tls"] = tlsObj;
                 }
             }
@@ -969,16 +1117,33 @@ namespace AnywhereWinUI.Services
             return proxyOutbound;
         }
 
+        private static void ApplyAlpnToTls(JsonObject tlsObj, string? alpn)
+        {
+            if (string.IsNullOrWhiteSpace(alpn)) return;
+            var alpnArr = new JsonArray();
+            foreach (var a in alpn.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                alpnArr.Add((JsonNode)a);
+            }
+            if (alpnArr.Count > 0)
+            {
+                tlsObj["alpn"] = alpnArr;
+            }
+        }
+
         private static void ApplyTransportToOutbound(JsonObject proxyOutbound, string networkVal, string pathVal, string wsHostVal)
         {
             if (networkVal == "ws")
             {
-                proxyOutbound["transport"] = new JsonObject
+                var transportObj = new JsonObject
                 {
-                    ["type"] = "ws",
-                    ["path"] = pathVal,
-                    ["headers"] = new JsonObject { ["Host"] = wsHostVal }
+                    ["type"] = "ws"
                 };
+                if (!string.IsNullOrEmpty(pathVal))
+                    transportObj["path"] = pathVal;
+                if (!string.IsNullOrEmpty(wsHostVal))
+                    transportObj["headers"] = new JsonObject { ["Host"] = wsHostVal };
+                proxyOutbound["transport"] = transportObj;
             }
             else if (networkVal == "httpupgrade")
             {
@@ -994,17 +1159,20 @@ namespace AnywhereWinUI.Services
             }
             else if (networkVal == "grpc")
             {
-                proxyOutbound["transport"] = new JsonObject
+                var transportObj = new JsonObject
                 {
-                    ["type"] = "grpc",
-                    ["service_name"] = pathVal
+                    ["type"] = "grpc"
                 };
+                if (!string.IsNullOrEmpty(pathVal))
+                    transportObj["service_name"] = pathVal;
+                proxyOutbound["transport"] = transportObj;
             }
             else if (networkVal == "xhttp" || networkVal == "h2")
             {
+                // sing-box uses "http" as the V2Ray HTTP/2 transport type
                 var transportObj = new JsonObject
                 {
-                    ["type"] = networkVal
+                    ["type"] = networkVal == "h2" ? "http" : networkVal
                 };
                 if (!string.IsNullOrEmpty(pathVal))
                 {
@@ -1080,6 +1248,8 @@ namespace AnywhereWinUI.Services
                     ["auto_detect_interface"] = true,
                     ["default_domain_resolver"] = "local-dns"
                 };
+                if (isSingbox114OrAbove)
+                    globalRoute["default_http_client"] = "default-http";
                 if (enableTun && !string.IsNullOrEmpty(outboundInterface))
                     globalRoute["default_interface"] = outboundInterface;
                 return globalRoute;
@@ -1095,6 +1265,8 @@ namespace AnywhereWinUI.Services
                     ["auto_detect_interface"] = true,
                     ["default_domain_resolver"] = "local-dns"
                 };
+                if (isSingbox114OrAbove)
+                    directRoute["default_http_client"] = "direct-http";
                 if (enableTun && !string.IsNullOrEmpty(outboundInterface))
                     directRoute["default_interface"] = outboundInterface;
                 return directRoute;
@@ -1111,7 +1283,7 @@ namespace AnywhereWinUI.Services
                 rules.Add(new JsonObject
                 {
                     ["rule_set"] = new JsonArray { (JsonNode)"geosite-category-ads-all" },
-                    ["outbound"] = "block"
+                    ["action"] = "reject"
                 });
 
                 ruleSets.Add(new JsonObject
@@ -1180,6 +1352,8 @@ namespace AnywhereWinUI.Services
                 ["auto_detect_interface"] = true,
                 ["default_domain_resolver"] = "local-dns"
             };
+            if (isSingbox114OrAbove)
+                smartRoute["default_http_client"] = "default-http";
             // TUN 模式下绑定物理网卡为默认接口，确保 direct 出站流量不被 TUN 重新捕获
             if (enableTun && !string.IsNullOrEmpty(outboundInterface))
                 smartRoute["default_interface"] = outboundInterface;
@@ -1319,13 +1493,27 @@ namespace AnywhereWinUI.Services
                     processNames.Add(entry);
             }
 
+            static void ApplyRuleTarget(JsonObject ruleObj, string ruleOutbound)
+            {
+                if (string.Equals(ruleOutbound, "block", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(ruleOutbound, "reject", StringComparison.OrdinalIgnoreCase))
+                {
+                    ruleObj["action"] = "reject";
+                }
+                else
+                {
+                    ruleObj["outbound"] = ruleOutbound;
+                }
+            }
+
             void AddRuleSetRule(string tag, string ruleOutbound)
             {
-                rules.Add(new JsonObject
+                var ruleObj = new JsonObject
                 {
-                    ["rule_set"] = new JsonArray { (JsonNode)tag },
-                    ["outbound"] = ruleOutbound
-                });
+                    ["rule_set"] = new JsonArray { (JsonNode)tag }
+                };
+                ApplyRuleTarget(ruleObj, ruleOutbound);
+                rules.Add(ruleObj);
 
                 if (addedRuleSetTags.Add(tag))
                 {
@@ -1341,11 +1529,12 @@ namespace AnywhereWinUI.Services
 
             void AddRemoteRuleSetRule(string tag, string url, string ruleOutbound)
             {
-                rules.Add(new JsonObject
+                var ruleObj = new JsonObject
                 {
-                    ["rule_set"] = new JsonArray { (JsonNode)tag },
-                    ["outbound"] = ruleOutbound
-                });
+                    ["rule_set"] = new JsonArray { (JsonNode)tag }
+                };
+                ApplyRuleTarget(ruleObj, ruleOutbound);
+                rules.Add(ruleObj);
 
                 if (!addedRuleSetTags.Add(tag))
                     return;
@@ -1361,10 +1550,7 @@ namespace AnywhereWinUI.Services
 
                 if (isSingbox114OrAbove)
                 {
-                    ruleSet["http_client"] = new JsonObject
-                    {
-                        ["detour"] = "proxy"
-                    };
+                    ruleSet["http_client"] = "default-http";
                 }
                 else
                 {
@@ -1382,11 +1568,12 @@ namespace AnywhereWinUI.Services
                 foreach (var value in values)
                     arr.Add((JsonNode)value);
 
-                rules.Add(new JsonObject
+                var ruleObj = new JsonObject
                 {
-                    [key] = arr,
-                    ["outbound"] = ruleOutbound
-                });
+                    [key] = arr
+                };
+                ApplyRuleTarget(ruleObj, ruleOutbound);
+                rules.Add(ruleObj);
             }
         }
 

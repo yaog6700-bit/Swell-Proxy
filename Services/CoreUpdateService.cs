@@ -17,6 +17,8 @@ namespace AnywhereWinUI.Services
         private const string SingboxApiUrl = "https://api.github.com/repos/SagerNet/sing-box/releases/latest";
         private static readonly string EngineDir = Path.Combine(AppContext.BaseDirectory, "Assets");
         public static readonly string SingboxExePath = Path.Combine(EngineDir, "sing-box.exe");
+        public static readonly string BundledBackupExePath = Path.Combine(EngineDir, "sing-box.bundled.bak");
+        public static bool HasBundledBackup => File.Exists(BundledBackupExePath);
 
         public async Task<CoreUpdateInfo?> CheckSingboxAsync(string? proxyUrl, CancellationToken ct)
         {
@@ -24,12 +26,14 @@ namespace AnywhereWinUI.Services
             if (release is null) return null;
 
             var tag = (release.TagName ?? string.Empty).TrimStart('v');
-            if (!Version.TryParse(tag, out var remote)) return null;
+            var dashIdx = tag.IndexOf('-');
+            var cleanTag = dashIdx > 0 ? tag.Substring(0, dashIdx) : tag;
+            if (!Version.TryParse(cleanTag, out var remote)) return null;
 
-            var localStr = GetLocalSingboxVersionText();
-            if (localStr.StartsWith("v") && Version.TryParse(localStr.Substring(1), out var local))
+            var local = GetLocalSingboxNumericVersion();
+            if (local != null && remote <= local)
             {
-                if (remote <= local) return null;
+                return null;
             }
 
             if (!IsX64()) return null;
@@ -111,6 +115,11 @@ namespace AnywhereWinUI.Services
             progress.Report($"正在安装 {info.TargetExeName}…");
             var targetPath = Path.Combine(EngineDir, info.TargetExeName);
             Directory.CreateDirectory(EngineDir);
+
+            if (!File.Exists(BundledBackupExePath) && File.Exists(targetPath))
+            {
+                try { File.Copy(targetPath, BundledBackupExePath, overwrite: false); } catch { }
+            }
 
             var bakPath = targetPath + ".bak";
             try { File.Delete(bakPath); } catch { }
@@ -217,17 +226,19 @@ namespace AnywhereWinUI.Services
 
         private static bool IsX64() => RuntimeInformation.ProcessArchitecture == Architecture.X64;
 
-        public static string GetLocalSingboxVersionText()
+        public static (bool IsValid, string VersionDisplay, Version? NumericVersion, string RawOutput) ProbeSingboxExecutable(string exePath)
         {
             try
             {
-                if (!File.Exists(SingboxExePath)) return "未安装";
+                if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+                    return (false, "未安装", null, string.Empty);
 
                 var psi = new ProcessStartInfo
                 {
-                    FileName = SingboxExePath,
+                    FileName = exePath,
                     Arguments = "version",
                     RedirectStandardOutput = true,
+                    RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                 };
@@ -235,13 +246,46 @@ namespace AnywhereWinUI.Services
                 if (proc != null)
                 {
                     var output = proc.StandardOutput.ReadToEnd();
-                    proc.WaitForExit(2000);
-                    var m = System.Text.RegularExpressions.Regex.Match(output, @"(\d+\.\d+\.\d+)");
-                    if (m.Success) return $"v{m.Groups[1].Value}";
+                    var err = proc.StandardError.ReadToEnd();
+                    proc.WaitForExit(3000);
+                    var combined = string.IsNullOrWhiteSpace(output) ? err : output;
+
+                    // Capture full semver including pre-release tag (e.g. 1.15.0-alpha.13 or 1.14.0)
+                    var fullMatch = System.Text.RegularExpressions.Regex.Match(
+                        combined,
+                        @"sing-box\s+version\s+v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z\.\-]+)?)",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                    if (fullMatch.Success)
+                    {
+                        var fullVerStr = fullMatch.Groups[1].Value;
+                        var dashIdx = fullVerStr.IndexOf('-');
+                        var numericPart = dashIdx > 0 ? fullVerStr.Substring(0, dashIdx) : fullVerStr;
+                        Version.TryParse(numericPart, out var numericVer);
+                        return (true, $"v{fullVerStr}", numericVer, combined);
+                    }
                 }
             }
-            catch { }
-            return "已安装 (无法读取版本)";
+            catch (Exception ex)
+            {
+                return (false, "无法执行", null, ex.Message);
+            }
+
+            return (false, "非有效 sing-box 核心", null, string.Empty);
+        }
+
+        public static Version? GetLocalSingboxNumericVersion()
+        {
+            if (!File.Exists(SingboxExePath)) return null;
+            var probe = ProbeSingboxExecutable(SingboxExePath);
+            return probe.NumericVersion;
+        }
+
+        public static string GetLocalSingboxVersionText()
+        {
+            if (!File.Exists(SingboxExePath)) return "未安装";
+            var probe = ProbeSingboxExecutable(SingboxExePath);
+            return probe.IsValid ? probe.VersionDisplay : "已安装 (无法读取版本)";
         }
     }
 }
