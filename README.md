@@ -39,12 +39,13 @@ Swell Proxy 是一款使用 **WinUI 3** 构建的 Windows 原生代理管理客�
 ## 预览
 
 ![Swell Proxy Dashboard](https://cdn.nodeimage.com/i/TU0t63tT5daa13T4xZhKFEMyIZX9BHlY.webp)
+![wHoSE9KYovugx8MiExIYoDSHq2YF5GDC.webp](https://cdn.nodeimage.com/i/wHoSE9KYovugx8MiExIYoDSHq2YF5GDC.webp)
 ![Swell Proxy Servers](https://cdn.nodeimage.com/i/Cd5ZrMyjLNK6vMNrOCfTLdLX7YUKCrmp.webp)
 ![Swell Proxy Routing](https://cdn.nodeimage.com/i/NoddMyUtzgHRckl5O4XfFLclOCqcDPHO.webp)
 ![Swell Proxy Traffic](https://cdn.nodeimage.com/i/xIEmWEiUWe7Azbr9Zkpf650aEYDZCIs3.webp)
 ![Swell Proxy Connections](https://cdn.nodeimage.com/i/MmdmlYUtqjLBYClYTaQY8QxxPpo6jpaG.webp)
 ![Swell Proxy Settings](https://cdn.nodeimage.com/i/DYvbJyBcC0cQXNniEcH3bxfwnCedKVZu.webp)
-
+![Ja0EK4tsHMBNRGT9UH0eHHZKcrSYrfEy.webp](https://cdn.nodeimage.com/i/Ja0EK4tsHMBNRGT9UH0eHHZKcrSYrfEy.webp)
 ## 下载与安装
 
 前往 [Releases 页面](https://github.com/yaog6700-bit/Swell-Proxy/releases/latest) 下载最新版本：
