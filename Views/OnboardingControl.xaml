@@ -64,12 +64,14 @@
                         <!-- 图标 -->
                         <Image Source="ms-appx:///Assets/logo_about.png" Width="80" Height="80" HorizontalAlignment="Center" Stretch="UniformToFill" />
                         
-                        <TextBlock Text="欢迎开启 Swell Proxy" 
+                        <TextBlock x:Uid="Onboard_WelcomeTitle"
+                                   Text="欢迎开启 Swell Proxy" 
                                    FontSize="28" 
                                    FontWeight="Bold" 
                                    HorizontalAlignment="Center" />
                         
-                        <TextBlock Text="基于强劲 Sing-Box 核心的下一代透明代理客户端。&#x0a;为您提供极速、稳定、无感的智能网络体验。" 
+                        <TextBlock x:Uid="Onboard_WelcomeDesc"
+                                   Text="基于强劲 Sing-Box 核心的下一代透明代理客户端。&#x0a;为您提供极速、稳定、无感的智能网络体验。" 
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                    TextAlignment="Center" 
                                    HorizontalAlignment="Center" 
@@ -86,16 +88,16 @@
                     </StackPanel>
                     <!-- 第二页：智能分流选项 -->
                     <StackPanel x:Name="Page1" Visibility="Collapsed" Spacing="16" VerticalAlignment="Center">
-                        <TextBlock Text="智能分流与过滤" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
-                        <TextBlock Text="我们已为您预设好最佳的分流策略，让您的网络更加清爽、飞速。" 
+                        <TextBlock x:Uid="Onboard_Step2Title" Text="智能分流与过滤" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
+                        <TextBlock x:Uid="Onboard_Step2Desc" Text="我们已为您预设好最佳的分流策略，让您的网络更加清爽、飞速。" 
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
                                    HorizontalAlignment="Center" Margin="0,0,0,12"/>
                         <!-- Bypass CN 卡片 -->
                         <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="12" Padding="16">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock Text="绕过局域网与中国大陆 (Bypass CN)" FontWeight="SemiBold"/>
-                                    <TextBlock Text="大陆流量直接连接不走代理，极大节省您的资源包。" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock x:Uid="Onboard_BypassCnTitle" Text="绕过局域网与中国大陆 (Bypass CN)" FontWeight="SemiBold"/>
+                                    <TextBlock x:Uid="Onboard_BypassCnDesc" Text="大陆流量直接连接不走代理，极大节省您的资源包。" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" x:Name="BypassChinaToggle" IsOn="True" OnContent="" OffContent="" MinWidth="0"/>
                             </Grid>
@@ -104,8 +106,8 @@
                         <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="12" Padding="16">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock Text="开启全局垃圾广告过滤 (Ad-Blocking)" FontWeight="SemiBold"/>
-                                    <TextBlock Text="在网络底层过滤隐私广告追踪器，提供清爽浏览环境。" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock x:Uid="Onboard_AdBlockTitle" Text="开启全局垃圾广告过滤 (Ad-Blocking)" FontWeight="SemiBold"/>
+                                    <TextBlock x:Uid="Onboard_AdBlockDesc" Text="在网络底层过滤隐私广告追踪器，提供清爽浏览环境。" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" x:Name="BlockAdsToggle" IsOn="True" OnContent="" OffContent="" MinWidth="0"/>
                             </Grid>
@@ -114,8 +116,8 @@
                         <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="12" Padding="16">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" Spacing="4">
-                                    <TextBlock Text="启用高级分流模块 (Enable advanced routing module)" FontWeight="SemiBold"/>
-                                    <TextBlock Text="开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则。" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock x:Uid="Onboard_AdvRouteTitle" Text="启用高级分流模块 (Enable advanced routing module)" FontWeight="SemiBold"/>
+                                    <TextBlock x:Uid="Onboard_AdvRouteDesc" Text="开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则。" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" x:Name="AdvancedRoutingToggle" IsOn="False" OnContent="" OffContent="" MinWidth="0"/>
                             </Grid>
@@ -123,11 +125,12 @@
                     </StackPanel>
                     <!-- 第三页：一键订阅页面 -->
                     <StackPanel x:Name="Page2" Visibility="Collapsed" Spacing="12" VerticalAlignment="Center">
-                        <TextBlock Text="一键订阅初始化" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
-                        <TextBlock Text="粘贴您的订阅链接或单个节点分享链接，起步即飞（可跳过）。" 
+                        <TextBlock x:Uid="Onboard_Step3Title" Text="一键订阅初始化" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
+                        <TextBlock x:Uid="Onboard_Step3Desc" Text="粘贴您的订阅链接或单个节点分享链接，起步即飞（可跳过）。" 
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
                                    HorizontalAlignment="Center"/>
                         <TextBox x:Name="SubscriptionInput" 
+                                 x:Uid="Onboard_SubInput"
                                  Height="100" 
                                  AcceptsReturn="True" 
                                  TextWrapping="Wrap" 
@@ -151,6 +154,7 @@
                 <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="0,24,0,0">
                     <Button Grid.Column="0" 
                             x:Name="PrevButton" 
+                            x:Uid="Onboard_PrevBtn"
                             Content="上一步" 
                             Click="PrevButton_Click" 
                             Visibility="Collapsed" 
@@ -158,6 +162,7 @@
                     
                     <Button Grid.Column="2" 
                             x:Name="NextButton" 
+                            x:Uid="Onboard_NextBtn"
                             Content="下一步" 
                             Click="NextButton_Click" 
                             Style="{StaticResource AccentButtonStyle}"/>

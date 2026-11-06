@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Models;
 using AnywhereWinUI.Services;
 using Microsoft.UI;
@@ -195,7 +196,7 @@ namespace AnywhereWinUI.ViewModels
                         otherFlows[flow.Key] += flow.Value;
                     }
                 }
-                middleNodes.Add((Name: "其他", Value: otherValue, Flows: otherFlows));
+                middleNodes.Add((Name: L.Topology_Others, Value: otherValue, Flows: otherFlows));
             }
 
             // BUG fix: 出口节点数量不加限制时，outGapTotal 可超过 availableHeight，
@@ -207,7 +208,7 @@ namespace AnywhereWinUI.ViewModels
             {
                 var topOutbounds = outboundsMap.OrderByDescending(o => o.Value).Take(MaxOutbounds).ToDictionary(o => o.Key, o => o.Value);
                 long otherOut = outboundsMap.Where(o => !topOutbounds.ContainsKey(o.Key)).Sum(o => o.Value);
-                if (otherOut > 0) topOutbounds["其他"] = otherOut;
+                if (otherOut > 0) topOutbounds[L.Topology_Others] = otherOut;
                 outboundsMap = topOutbounds;
                 // Remap flows in middleNodes to merge overflowed outbounds into "其他"
                 var validKeys = new System.Collections.Generic.HashSet<string>(topOutbounds.Keys);
@@ -217,7 +218,7 @@ namespace AnywhereWinUI.ViewModels
                     var newFlows = new Dictionary<string, long>();
                     foreach (var kv in m.Flows)
                     {
-                        string key = validKeys.Contains(kv.Key) ? kv.Key : "其他";
+                        string key = validKeys.Contains(kv.Key) ? kv.Key : L.Topology_Others;
                         if (!newFlows.ContainsKey(key)) newFlows[key] = 0;
                         newFlows[key] += kv.Value;
                     }
@@ -256,7 +257,7 @@ namespace AnywhereWinUI.ViewModels
             var sourceNode = new TopologyNode
             {
                 Id = "source-local",
-                Name = "本机设备",
+                Name = L.Topology_LocalDevice,
                 Type = "source",
                 Value = visualTotalTraffic,
                 X = PaddingLeft + shiftRight,

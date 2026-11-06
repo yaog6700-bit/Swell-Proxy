@@ -42,7 +42,7 @@
                     <SolidColorBrush x:Key="NavigationViewContentGridBackground" Color="Transparent" />
                 </NavigationView.Resources>
                 <NavigationView.MenuItems>
-                    <NavigationViewItem x:Name="DashboardNavItem" 
+                    <NavigationViewItem x:Name="DashboardNavItem" x:Uid="Nav_Dashboard"
                                         Content="仪表盘" 
                                         Tag="dashboard" 
                                         ToolTipService.ToolTip="仪表盘"
@@ -53,7 +53,7 @@
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
 
-                    <NavigationViewItem x:Name="ServersNavItem" 
+                    <NavigationViewItem x:Name="ServersNavItem" x:Uid="Nav_Servers"
                                         Content="服务器" 
                                         Tag="servers" 
                                         ToolTipService.ToolTip="服务器节点"
@@ -64,7 +64,7 @@
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
 
-                    <NavigationViewItem x:Name="RoutingNavItem" 
+                    <NavigationViewItem x:Name="RoutingNavItem" x:Uid="Nav_Routing"
                                         Content="分流规则" 
                                         Tag="routing" 
                                         ToolTipService.ToolTip="分流规则"
@@ -75,7 +75,7 @@
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
 
-                    <NavigationViewItem x:Name="TrafficNavItem" 
+                    <NavigationViewItem x:Name="TrafficNavItem" x:Uid="Nav_Traffic"
                                         Content="流量与数据" 
                                         Tag="traffic" 
                                         ToolTipService.ToolTip="流量与数据"
@@ -86,7 +86,7 @@
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
 
-                    <NavigationViewItem x:Name="ConnectionsNavItem" 
+                    <NavigationViewItem x:Name="ConnectionsNavItem" x:Uid="Nav_Connections"
                                         Content="活动连接" 
                                         Tag="connections" 
                                         ToolTipService.ToolTip="活动连接"
@@ -97,7 +97,7 @@
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
 
-                    <NavigationViewItem x:Name="LogsNavItem" 
+                    <NavigationViewItem x:Name="LogsNavItem" x:Uid="Nav_Logs"
                                         Content="请求日志" 
                                         Tag="logs" 
                                         ToolTipService.ToolTip="请求日志"
@@ -108,7 +108,7 @@
                         </NavigationViewItem.Icon>
                     </NavigationViewItem>
 
-                    <NavigationViewItem x:Name="PluginsNavItem" 
+                    <NavigationViewItem x:Name="PluginsNavItem" x:Uid="Nav_Plugins"
                                         Content="插件" 
                                         Tag="plugins" 
                                         ToolTipService.ToolTip="JS 插件管理">
@@ -119,7 +119,7 @@
 
                     <NavigationViewItemSeparator/>
 
-                    <NavigationViewItem x:Name="SettingsNavItem" 
+                    <NavigationViewItem x:Name="SettingsNavItem" x:Uid="Nav_Settings"
                                         Content="设置" 
                                         Tag="settings" 
                                         ToolTipService.ToolTip="应用设置"
@@ -147,7 +147,7 @@
             <Grid x:Name="AppTitleBar" Height="48" Background="Transparent" VerticalAlignment="Top" Margin="200,0,140,0"/>
 
             <!-- Mini Mode Toggle Button: aligned to the left of the 196px navigation drawer (x=48) -->
-            <Button x:Name="MiniModeToggleButton"
+            <Button x:Name="MiniModeToggleButton" x:Uid="MainWindow_MiniModeBtn"
                     VerticalAlignment="Top" HorizontalAlignment="Left"
                     Width="36" Height="36"
                     Margin="48,6,0,0"
@@ -160,7 +160,7 @@
             </Button>
 
             <!-- Theme Toggle Button: aligned to the right side of the 196px navigation drawer -->
-            <Button x:Name="ThemeToggleButton"
+            <Button x:Name="ThemeToggleButton" x:Uid="MainWindow_ThemeBtn"
                     VerticalAlignment="Top" HorizontalAlignment="Left"
                     Width="36" Height="36"
                     Margin="152,6,0,0"
@@ -183,8 +183,8 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="2,18,20,0" VerticalAlignment="Top" Spacing="2">
-                        <TextBlock x:Name="MiniServerNameText" Text="未选择节点" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="150" HorizontalAlignment="Left" />
-                        <TextBlock x:Name="MiniProxyModeText" Text="智能分流" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock x:Name="MiniServerNameText" x:Uid="MainWindow_MiniServerName" Text="未选择节点" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="150" HorizontalAlignment="Left" />
+                        <TextBlock x:Name="MiniProxyModeText" x:Uid="MainWindow_MiniProxyMode" Text="智能分流" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
 
                     <Grid Grid.Row="2" Margin="0,0,0,12">
@@ -200,7 +200,7 @@
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
                             <Ellipse x:Name="MiniStatusDot" Width="6" Height="6" Fill="Gray" VerticalAlignment="Center" />
-                            <TextBlock x:Name="MiniStatusText" Text="未连接" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Name="MiniStatusText" x:Uid="MainWindow_MiniStatus" Text="未连接" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
                     </Grid>
                 </Grid>
@@ -213,10 +213,10 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Button x:Name="MiniExpandButton" Grid.Column="0" Width="28" Height="22" Padding="0" BorderThickness="0" Background="Transparent" ToolTipService.ToolTip="展开" Click="MiniExpandButton_Click">
+                    <Button x:Name="MiniExpandButton" x:Uid="MainWindow_MiniExpandBtn" Grid.Column="0" Width="28" Height="22" Padding="0" BorderThickness="0" Background="Transparent" ToolTipService.ToolTip="展开" Click="MiniExpandButton_Click">
                         <FontIcon Glyph="&#xE740;" FontSize="12" />
                     </Button>
-                    <Button x:Name="MinicloseButton" Grid.Column="1" Width="28" Height="22" Padding="0" BorderThickness="0" Background="Transparent" ToolTipService.ToolTip="隐藏到托盘" Click="MinicloseButton_Click">
+                    <Button x:Name="MinicloseButton" x:Uid="MainWindow_MiniCloseBtn" Grid.Column="1" Width="28" Height="22" Padding="0" BorderThickness="0" Background="Transparent" ToolTipService.ToolTip="隐藏到托盘" Click="MinicloseButton_Click">
                         <FontIcon Glyph="&#xE711;" FontSize="12" />
                     </Button>
                 </Grid>

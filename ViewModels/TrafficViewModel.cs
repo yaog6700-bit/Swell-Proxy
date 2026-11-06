@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI;
+using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Services;
 using Microsoft.UI.Xaml;
 
@@ -116,7 +117,7 @@ namespace AnywhereWinUI.ViewModels
         private Brush _statusDotFill = new SolidColorBrush(Colors.Gray);
 
         [ObservableProperty]
-        private string _statusText = "未激活";
+        private string _statusText = L.Traffic_StatusInactive;
 
         // ── 热力图统计属性 ──────────────────────────────────────────────
         [ObservableProperty]
@@ -126,10 +127,10 @@ namespace AnywhereWinUI.ViewModels
         private string _peakDayText = "—";
 
         [ObservableProperty]
-        private string _currentStreakText = "0 天";
+        private string _currentStreakText = string.Format(L.Traffic_DaysFmt, 0);
 
         [ObservableProperty]
-        private string _maxStreakText = "0 天";
+        private string _maxStreakText = string.Format(L.Traffic_DaysFmt, 0);
 
         public ObservableCollection<TrafficChartViewModel> ChartItems { get; } = new();
         public ObservableCollection<HeatmapCellViewModel> HeatmapCells { get; } = new();
@@ -270,7 +271,7 @@ namespace AnywhereWinUI.ViewModels
                 brush = new SolidColorBrush(isRunning ? Colors.Green : Colors.Gray);
 
             StatusDotFill = brush;
-            StatusText    = isRunning ? "活跃" : "未激活";
+            StatusText    = isRunning ? L.Traffic_StatusActive : L.Traffic_StatusInactive;
         }
 
         // Called by TrafficPage when it navigates to/from this ViewModel
@@ -440,8 +441,8 @@ namespace AnywhereWinUI.ViewModels
 
                 double upHeight = Math.Max((double)record.ProxyUpload / maxVal * 130, 2);
                 double downHeight = Math.Max((double)record.ProxyDownload / maxVal * 130, 2);
-                string upTip = $"上传: {FormatBytes(record.ProxyUpload)}";
-                string downTip = $"下载: {FormatBytes(record.ProxyDownload)}";
+                string upTip = string.Format(L.Traffic_UpTooltipFmt, FormatBytes(record.ProxyUpload));
+                string downTip = string.Format(L.Traffic_DownTooltipFmt, FormatBytes(record.ProxyDownload));
 
                 if (updateInPlace)
                 {
@@ -529,6 +530,7 @@ namespace AnywhereWinUI.ViewModels
             if (maxVal == 0) maxVal = 1;
 
             // 生成格子列表
+            bool isEn = LanguageHelper.EffectiveLanguage.StartsWith("en", StringComparison.OrdinalIgnoreCase);
             var cells = new List<HeatmapCellViewModel>();
             var monthLabelList = new List<string>();
             string lastMonth = string.Empty;
@@ -542,7 +544,7 @@ namespace AnywhereWinUI.ViewModels
                 if (d.DayOfWeek == DayOfWeek.Sunday)
                 {
                     string monthStr = d.Month != today.Month || d.Year != today.Year
-                        ? d.ToString("M月")
+                        ? (isEn ? d.ToString("MMM", System.Globalization.CultureInfo.InvariantCulture) : d.ToString("M月"))
                         : string.Empty;
                     if (monthStr != lastMonth)
                     {
@@ -589,7 +591,7 @@ namespace AnywhereWinUI.ViewModels
                 if (isFuture || isBeforeData)
                     tooltip = d.ToString("yyyy/M/d");
                 else if (dayRec == null)
-                    tooltip = $"{d:yyyy/M/d}  无流量";
+                    tooltip = string.Format(L.Traffic_NoTrafficTipFmt, d);
                 else
                     tooltip = $"{d:yyyy/M/d}\n↑ {FormatBytes(dayRec.ProxyUpload)}  ↓ {FormatBytes(dayRec.ProxyDownload)}";
 
@@ -615,7 +617,9 @@ namespace AnywhereWinUI.ViewModels
                 if (DateTime.TryParseExact(peakRec.Date, "yyyy-MM-dd",
                     System.Globalization.CultureInfo.InvariantCulture,
                     System.Globalization.DateTimeStyles.None, out var peakDate))
-                    PeakDayText = $"{peakDate:M月d日}  {FormatBytes(peakRec.Total)}";
+                    PeakDayText = isEn
+                        ? $"{peakDate.ToString("MMM d", System.Globalization.CultureInfo.InvariantCulture)}  {FormatBytes(peakRec.Total)}"
+                        : $"{peakDate:M月d日}  {FormatBytes(peakRec.Total)}";
                 else
                     PeakDayText = FormatBytes(peakRec.Total);
             }
@@ -646,8 +650,8 @@ namespace AnywhereWinUI.ViewModels
             if (!recordMap.TryGetValue(today.ToString("yyyy-MM-dd"), out var todayR) || todayR.Total == 0)
                 currentStreak = 0;
 
-            CurrentStreakText = $"{currentStreak} 天";
-            MaxStreakText = $"{maxStreak} 天";
+            CurrentStreakText = string.Format(L.Traffic_DaysFmt, currentStreak);
+            MaxStreakText = string.Format(L.Traffic_DaysFmt, maxStreak);
 
             // 刷新集合
             HeatmapCells.Clear();

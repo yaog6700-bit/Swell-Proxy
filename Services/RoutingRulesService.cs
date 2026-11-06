@@ -40,8 +40,8 @@ namespace AnywhereWinUI.Services
                 defaults.Add(new RoutingRuleItem
                 {
                     Id = $"custom:{Guid.NewGuid():N}",
-                    Name = string.IsNullOrWhiteSpace(rule.Remark) ? "自定义规则" : rule.Remark,
-                    Description = "用户自定义分流规则",
+                    Name = string.IsNullOrWhiteSpace(rule.Remark) ? L.CustomRules_DefaultName : rule.Remark,
+                    Description = L.CustomRules_DefaultDesc,
                     Type = rule.Type,
                     Match = rule.Match,
                     OutboundTag = rule.OutboundTag,
@@ -99,7 +99,7 @@ namespace AnywhereWinUI.Services
                 .Where(r => !r.IsBuiltIn)
                 .Select(r => new CustomRule
                 {
-                    Remark = r.Name == "自定义规则" ? string.Empty : r.Name,
+                    Remark = (r.Name == "自定义规则" || r.Name == "Custom Rule") ? string.Empty : r.Name,
                     Type = r.Type,
                     Match = r.Match,
                     OutboundTag = r.OutboundTag,
@@ -120,8 +120,8 @@ namespace AnywhereWinUI.Services
                 new()
                 {
                     Id = "builtin:youtube",
-                    Name = "YouTube / 油管",
-                    Description = "YouTube 视频与媒体流量",
+                    Name = L.Routing_BuiltInYoutubeName,
+                    Description = L.Routing_BuiltInYoutubeDesc,
                     IconUrl = "ms-appx:///Assets/RoutingIconsLegacy/YouTube.png",
                     Type = "mixed",
                     Match = "domain_suffix:youtube.com,domain_suffix:youtu.be,domain_suffix:ytimg.com,domain_suffix:ggpht.com,domain_suffix:googlevideo.com",
@@ -133,8 +133,8 @@ namespace AnywhereWinUI.Services
                 new()
                 {
                     Id = "builtin:google",
-                    Name = "Google / 谷歌服务",
-                    Description = "Google 搜索、API、Play 与静态资源",
+                    Name = L.Routing_BuiltInGoogleName,
+                    Description = L.Routing_BuiltInGoogleDesc,
                     IconUrl = "ms-appx:///Assets/RoutingIconsLegacy/Google.png",
                     Type = "mixed",
                     Match = "domain_suffix:google.com,domain_suffix:googleapis.com,domain_suffix:gstatic.com",
@@ -146,8 +146,8 @@ namespace AnywhereWinUI.Services
                 new()
                 {
                     Id = "builtin:telegram",
-                    Name = "Telegram / 电报",
-                    Description = "Telegram 域名与专用 IP 段",
+                    Name = L.Routing_BuiltInTelegramName,
+                    Description = L.Routing_BuiltInTelegramDesc,
                     IconUrl = "ms-appx:///Assets/RoutingIconsLegacy/Telegram.png",
                     Type = "mixed",
                     Match = "domain_suffix:telegram.org,domain_suffix:t.me,domain_suffix:tdesktop.com,ip_cidr:91.108.4.0/22,ip_cidr:91.108.8.0/22,ip_cidr:91.108.12.0/22,ip_cidr:91.108.16.0/22,ip_cidr:91.108.56.0/22,ip_cidr:149.154.160.0/20",
@@ -159,8 +159,8 @@ namespace AnywhereWinUI.Services
                 new()
                 {
                     Id = "builtin:netflix",
-                    Name = "Netflix / 奈飞",
-                    Description = "Netflix 流媒体域名",
+                    Name = L.Routing_BuiltInNetflixName,
+                    Description = L.Routing_BuiltInNetflixDesc,
                     IconUrl = "ms-appx:///Assets/RoutingIconsLegacy/Netflix.png",
                     Type = "mixed",
                     Match = "domain_suffix:netflix.com,domain_suffix:netflix.net,domain_suffix:nflximg.net,domain_suffix:nflxext.com,domain_suffix:nflxso.net,domain_suffix:nflxvideo.net",
@@ -173,7 +173,7 @@ namespace AnywhereWinUI.Services
                 {
                     Id = "builtin:tiktok",
                     Name = "TikTok",
-                    Description = "TikTok 与字节海外服务",
+                    Description = L.Routing_BuiltInTiktokDesc,
                     IconUrl = "ms-appx:///Assets/RoutingIconsLegacy/TikTok.png",
                     Type = "mixed",
                     Match = "domain_suffix:tiktok.com,domain_suffix:tiktokv.com,domain_suffix:tiktokcdn.com,domain_suffix:byteoversea.com",
@@ -186,7 +186,7 @@ namespace AnywhereWinUI.Services
                 {
                     Id = "builtin:chatgpt",
                     Name = "ChatGPT / OpenAI",
-                    Description = "OpenAI 与 ChatGPT 服务",
+                    Description = L.Routing_BuiltInChatgptDesc,
                     IconUrl = "ms-appx:///Assets/RoutingIconsLegacy/ChatGPT.png",
                     Type = "mixed",
                     Match = "domain_suffix:openai.com,domain_suffix:chatgpt.com,domain_suffix:ai.com,domain_suffix:oaistatic.com,domain_suffix:oaiusercontent.com",
@@ -199,7 +199,7 @@ namespace AnywhereWinUI.Services
                 {
                     Id = "builtin:claude",
                     Name = "Claude / Anthropic",
-                    Description = "Claude 与 Anthropic 服务",
+                    Description = L.Routing_BuiltInClaudeDesc,
                     IconUrl = "ms-appx:///Assets/RoutingIconsLegacy/Claude.png",
                     Type = "mixed",
                     Match = "domain_suffix:anthropic.com,domain_suffix:claude.ai",

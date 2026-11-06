@@ -78,6 +78,11 @@ namespace AnywhereWinUI.Views
         {
             var mgr = NodesManager.Instance;
 
+            // 0. Display language selection
+            LanguageComboBox.ItemsSource = LanguageHelper.SupportedLanguages;
+            LanguageComboBox.SelectedIndex = LanguageHelper.IndexOf(LanguageHelper.GetSavedTag());
+            UpdateLanguageRestartBanner();
+
             // 1. Theme selection
             var currentTheme = MainWindow.Instance?.GetActiveTheme() ?? ElementTheme.Default;
             string themeTag = currentTheme.ToString();
@@ -126,46 +131,67 @@ namespace AnywhereWinUI.Views
                 {
                     case "Appearance":
                         if (AppearancePanel != null) AppearancePanel.Visibility = Visibility.Visible;
-                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "个性化外观";
-                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "自定义主题风格、背景材质与界面显示细节";
+                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatAppearanceTitle;
+                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatAppearanceSub;
                         break;
                     case "Colors":
                         if (ColorsPanel != null) ColorsPanel.Visibility = Visibility.Visible;
-                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "协议标识";
-                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "自定义节点协议在卡片和列表中的颜色分类";
+                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatColorsTitle;
+                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatColorsSub;
                         break;
                     case "Routing":
                         if (RoutingPanel != null) RoutingPanel.Visibility = Visibility.Visible;
-                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "路由分流";
-                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "配置系统级的路由绕过策略与广告拦截规则";
+                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatRoutingTitle;
+                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatRoutingSub;
                         break;
                     case "DnsSettings":
                         if (DnsSettingsPanel != null) DnsSettingsPanel.Visibility = Visibility.Visible;
-                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "DNS与解析";
-                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "配置代理环境下的远端与直连DNS防污染及FakeDNS";
+                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatDnsTitle;
+                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatDnsSub;
                         break;
                     case "Tailscale":
                         if (TailscalePanel != null) TailscalePanel.Visibility = Visibility.Visible;
-                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "Tailscale 组网";
-                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "将 sing-box 接入 Tailscale 私有网络，实现内网穿透与多设备互联";
+                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatTailscaleTitle;
+                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatTailscaleSub;
                         break;
                     case "Backup":
                         if (BackupPanel != null) BackupPanel.Visibility = Visibility.Visible;
-                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "备份与恢复";
-                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "备份当前配置或从本地归档进行覆盖恢复";
+                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatBackupTitle;
+                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatBackupSub;
                         break;
                     case "Autostart":
                         if (AutostartPanel != null) AutostartPanel.Visibility = Visibility.Visible;
-                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "开机与启动";
-                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "管理客户端的自启动偏好与后台行为";
+                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatAutostartTitle;
+                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatAutostartSub;
                         break;
                     case "About":
                         if (AboutPanel != null) AboutPanel.Visibility = Visibility.Visible;
-                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = "关于与内核";
-                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = "关于 Swell Proxy 原生客户端及代理内核管理";
+                        if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatAboutTitle;
+                        if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatAboutSub;
                         break;
                 }
             }
+        }
+
+        private void UpdateLanguageRestartBanner()
+        {
+            if (LanguageRestartInfoBar == null) return;
+            var currentSaved = LanguageHelper.GetSavedTag();
+            LanguageRestartInfoBar.IsOpen = !string.Equals(currentSaved, LanguageHelper.StartupTag, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isLoaded) return;
+            var tag = LanguageHelper.TagAt(LanguageComboBox.SelectedIndex);
+            LanguageHelper.SaveTag(tag);
+            UpdateLanguageRestartBanner();
+        }
+
+        private async void LanguageRestartButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control btn) btn.IsEnabled = false;
+            await App.RestartAsync();
         }
 
         private void ThemeSegmented_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -206,8 +232,8 @@ namespace AnywhereWinUI.Views
             if (SingboxVersionText != null)
             {
                 SingboxVersionText.Text = is115OrAbove
-                    ? $"当前版本: {verText}（已启用 1.15 原生 TUN 协议栈适配）"
-                    : $"当前版本: {verText}";
+                    ? string.Format(L.Settings_CoreVer115Fmt, verText)
+                    : string.Format(L.Settings_CoreVerFmt, verText);
             }
 
             if (RestoreCoreButton != null)
@@ -225,8 +251,8 @@ namespace AnywhereWinUI.Views
             if (TunStackDescText != null)
             {
                 TunStackDescText.Text = is115OrAbove
-                    ? "检测到 sing-box 1.15+ 内核：已自动切换为全新内置高性能 TCP/IP 栈（无需配置 stack）"
-                    : "选择 TUN 入站使用的网络栈，mixed 为推荐默认值（sing-box 1.15+ 自动启用全新内置协议栈）";
+                    ? L.Settings_TunStackDesc115
+                    : L.Settings_TunStackDescDefault;
             }
         }
 
@@ -252,15 +278,15 @@ namespace AnywhereWinUI.Views
                 try
                 {
                     ExportBackupButton.IsEnabled = false;
-                    ExportBackupButton.Content = "导出中...";
+                    ExportBackupButton.Content = L.Settings_ExportingBtn;
 
                     await NodesManager.Instance.ExportBackupAsync(file.Path);
 
                     var dialog = new ContentDialog
                     {
-                        Title = "备份成功",
-                        Content = $"备份文件已成功保存至：\n{file.Path}",
-                        CloseButtonText = "确定",
+                        Title = L.Settings_ExportSuccessTitle,
+                        Content = string.Format(L.Settings_ExportSuccessFmt, file.Path),
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await dialog.WithAppTheme().ShowAsync();
@@ -269,9 +295,9 @@ namespace AnywhereWinUI.Views
                 {
                     var dialog = new ContentDialog
                     {
-                        Title = "备份失败",
+                        Title = L.Settings_ExportFailTitle,
                         Content = ex.Message,
-                        CloseButtonText = "确定",
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await dialog.WithAppTheme().ShowAsync();
@@ -279,7 +305,7 @@ namespace AnywhereWinUI.Views
                 finally
                 {
                     ExportBackupButton.IsEnabled = true;
-                    ExportBackupButton.Content = "导出备份";
+                    ExportBackupButton.Content = L.Settings_ExportBtnText;
                 }
             }
         }
@@ -288,10 +314,10 @@ namespace AnywhereWinUI.Views
         {
             var confirmDialog = new ContentDialog
             {
-                Title = "确认导入备份？",
-                Content = "导入备份将彻底覆盖您当前的全部节点、订阅和个性化设置。此操作不可逆。\n\n是否继续？",
-                PrimaryButtonText = "确认导入",
-                CloseButtonText = "取消",
+                Title = L.Settings_ImportConfirmTitle,
+                Content = L.Settings_ImportConfirmMsg,
+                PrimaryButtonText = L.Settings_ImportConfirmPrimary,
+                CloseButtonText = L.Dialog_Cancel,
                 DefaultButton = ContentDialogButton.Close,
                 XamlRoot = this.XamlRoot
             };
@@ -302,14 +328,14 @@ namespace AnywhereWinUI.Views
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
             var backupFilePath = await Helpers.Win32FilePickerHelper.PickSingleFileAsync(
                 hwnd,
-                filters: [("Swell Proxy 备份", "*.zip")],
-                title: "选择备份文件");
+                filters: [(L.Settings_BackupFilterName, "*.zip")],
+                title: L.Settings_SelectBackupTitle);
             if (backupFilePath != null)
             {
                 try
                 {
                     ImportBackupButton.IsEnabled = false;
-                    ImportBackupButton.Content = "导入中...";
+                    ImportBackupButton.Content = L.Settings_ImportingBtn;
 
                     await NodesManager.Instance.ImportBackupAsync(backupFilePath);
 
@@ -319,9 +345,9 @@ namespace AnywhereWinUI.Views
 
                     var dialog = new ContentDialog
                     {
-                        Title = "恢复成功",
-                        Content = "备份已成功导入！所有节点与设置已恢复至当前界面。",
-                        CloseButtonText = "确定",
+                        Title = L.Settings_ImportSuccessTitle,
+                        Content = L.Settings_ImportSuccessMsg,
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await dialog.WithAppTheme().ShowAsync();
@@ -330,9 +356,9 @@ namespace AnywhereWinUI.Views
                 {
                     var dialog = new ContentDialog
                     {
-                        Title = "恢复失败",
+                        Title = L.Settings_ImportFailTitle,
                         Content = ex.Message,
-                        CloseButtonText = "确定",
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await dialog.WithAppTheme().ShowAsync();
@@ -340,7 +366,7 @@ namespace AnywhereWinUI.Views
                 finally
                 {
                     ImportBackupButton.IsEnabled = true;
-                    ImportBackupButton.Content = "导入恢复";
+                    ImportBackupButton.Content = L.Settings_ImportBtnText;
                 }
             }
         }
@@ -350,7 +376,7 @@ namespace AnywhereWinUI.Views
         private async void CheckUpdateButton_Click(object sender, RoutedEventArgs e)
         {
             CheckUpdateButton.IsEnabled = false;
-            CheckUpdateButton.Content = "正在检查...";
+            CheckUpdateButton.Content = L.Settings_CheckingBtn;
 
             try
             {
@@ -362,9 +388,9 @@ namespace AnywhereWinUI.Views
                 {
                     var dialog = new ContentDialog
                     {
-                        Title = "内核检查更新",
-                        Content = $"当前已是最新版本或网络无法访问。\n本地版本: {GetLocalSingboxVersionText()}",
-                        CloseButtonText = "确定",
+                        Title = L.Settings_CoreCheckTitle,
+                        Content = string.Format(L.Settings_CoreUpToDateFmt, GetLocalSingboxVersionText()),
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await dialog.WithAppTheme().ShowAsync();
@@ -372,14 +398,14 @@ namespace AnywhereWinUI.Views
                 }
 
                 var proxyRunning = CoreManager.Instance.IsRunning;
-                var stopWarning = proxyRunning ? "\n\n⚠️ 当前代理将暂时停止，更新后请手动重新连接。" : string.Empty;
+                var stopWarning = proxyRunning ? L.Settings_CoreStopWarning : string.Empty;
 
                 var confirmDialog = new ContentDialog
                 {
-                    Title = "发现新版本",
-                    Content = $"是否将内核更新至 {info.TagName}？{stopWarning}",
-                    PrimaryButtonText = "确认更新",
-                    CloseButtonText = "取消",
+                    Title = L.Settings_NewVerTitle,
+                    Content = string.Format(L.Settings_CoreConfirmUpdateFmt, info.TagName, stopWarning),
+                    PrimaryButtonText = L.Settings_ConfirmUpdateBtn,
+                    CloseButtonText = L.Dialog_Cancel,
                     XamlRoot = this.XamlRoot
                 };
 
@@ -388,13 +414,13 @@ namespace AnywhereWinUI.Views
                     return;
                 }
 
-                var progressText = new TextBlock { Text = "准备下载...", Margin = new Thickness(0, 0, 0, 10) };
+                var progressText = new TextBlock { Text = L.Settings_PreparingDownload, Margin = new Thickness(0, 0, 0, 10) };
                 var progressBar = new ProgressBar { IsIndeterminate = true, Width = 300 };
                 var stackPanel = new StackPanel { Children = { progressText, progressBar } };
 
                 var progressDialog = new ContentDialog
                 {
-                    Title = "正在更新内核",
+                    Title = L.Settings_UpdatingCoreTitle,
                     Content = stackPanel,
                     XamlRoot = this.XamlRoot
                 };
@@ -424,12 +450,12 @@ namespace AnywhereWinUI.Views
 
                     RefreshCoreVersionUI();
 
-                    var reconnectNote = proxyRunning ? "\n\n代理已停止，请返回主界面重新连接。" : string.Empty;
+                    var reconnectNote = proxyRunning ? L.Settings_CoreReconnectNote : string.Empty;
                     var successDialog = new ContentDialog
                     {
-                        Title = "更新完成",
-                        Content = $"已成功更新至 {info.TagName}。{reconnectNote}",
-                        CloseButtonText = "确定",
+                        Title = L.Settings_UpdateDoneTitle,
+                        Content = string.Format(L.Settings_UpdateDoneFmt, info.TagName, reconnectNote),
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await successDialog.WithAppTheme().ShowAsync();
@@ -440,9 +466,9 @@ namespace AnywhereWinUI.Views
                     await Task.Delay(50);
                     var errDialog = new ContentDialog
                     {
-                        Title = "更新失败",
+                        Title = L.Settings_UpdateFailTitle,
                         Content = ex.Message,
-                        CloseButtonText = "确定",
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await errDialog.WithAppTheme().ShowAsync();
@@ -452,9 +478,9 @@ namespace AnywhereWinUI.Views
             {
                 var dialog = new ContentDialog
                 {
-                    Title = "检查更新失败",
-                    Content = $"错误信息: {ex.Message}",
-                    CloseButtonText = "确定",
+                    Title = L.Settings_CheckFailTitle,
+                    Content = string.Format(L.Settings_CheckFailFmt, ex.Message),
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await dialog.WithAppTheme().ShowAsync();
@@ -462,14 +488,14 @@ namespace AnywhereWinUI.Views
             finally
             {
                 CheckUpdateButton.IsEnabled = true;
-                CheckUpdateButton.Content = "检查更新";
+                CheckUpdateButton.Content = L.Settings_CheckUpdateBtnText;
             }
         }
 
         private async void CheckAppUpdateButton_Click(object sender, RoutedEventArgs e)
         {
             CheckAppUpdateButton.IsEnabled = false;
-            CheckAppUpdateButton.Content = "正在检查...";
+            CheckAppUpdateButton.Content = L.Settings_CheckingBtn;
 
             try
             {
@@ -481,9 +507,9 @@ namespace AnywhereWinUI.Views
                 {
                     var dialog = new ContentDialog
                     {
-                        Title = "客户端检查更新",
-                        Content = $"当前客户端已是最新版本或网络无法访问。",
-                        CloseButtonText = "确定",
+                        Title = L.Settings_AppCheckTitle,
+                        Content = L.Settings_AppUpToDateMsg,
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await dialog.WithAppTheme().ShowAsync();
@@ -492,10 +518,10 @@ namespace AnywhereWinUI.Views
 
                 var confirmDialog = new ContentDialog
                 {
-                    Title = "发现新版本",
-                    Content = $"是否将客户端更新至 {info.TagName}？\n这将会下载最新版本并自动重启应用。",
-                    PrimaryButtonText = "确认更新",
-                    CloseButtonText = "取消",
+                    Title = L.Settings_NewVerTitle,
+                    Content = string.Format(L.Settings_AppConfirmUpdateFmt, info.TagName),
+                    PrimaryButtonText = L.Settings_ConfirmUpdateBtn,
+                    CloseButtonText = L.Dialog_Cancel,
                     XamlRoot = this.XamlRoot
                 };
 
@@ -504,13 +530,13 @@ namespace AnywhereWinUI.Views
                     return;
                 }
 
-                var progressText = new TextBlock { Text = "准备下载...", Margin = new Thickness(0, 0, 0, 10) };
+                var progressText = new TextBlock { Text = L.Settings_PreparingDownload, Margin = new Thickness(0, 0, 0, 10) };
                 var progressBar = new ProgressBar { IsIndeterminate = true, Width = 300 };
                 var stackPanel = new StackPanel { Children = { progressText, progressBar } };
 
                 var progressDialog = new ContentDialog
                 {
-                    Title = "正在更新客户端",
+                    Title = L.Settings_UpdatingAppTitle,
                     Content = stackPanel,
                     XamlRoot = this.XamlRoot
                 };
@@ -539,9 +565,9 @@ namespace AnywhereWinUI.Views
 
                     var successDialog = new ContentDialog
                     {
-                        Title = "更新准备就绪",
-                        Content = $"新版本 {info.TagName} 下载并校验成功！\n\n点击“立即重启”后，当前应用将关闭并完成更新覆盖。",
-                        PrimaryButtonText = "立即重启",
+                        Title = L.Settings_AppReadyTitle,
+                        Content = string.Format(L.Settings_AppReadyFmt, info.TagName),
+                        PrimaryButtonText = L.Settings_RestartNowBtn,
                         XamlRoot = this.XamlRoot
                     };
                     
@@ -561,9 +587,9 @@ namespace AnywhereWinUI.Views
                     await Task.Delay(50);
                     var errDialog = new ContentDialog
                     {
-                        Title = "更新失败",
+                        Title = L.Settings_UpdateFailTitle,
                         Content = ex.Message,
-                        CloseButtonText = "确定",
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await errDialog.WithAppTheme().ShowAsync();
@@ -573,9 +599,9 @@ namespace AnywhereWinUI.Views
             {
                 var dialog = new ContentDialog
                 {
-                    Title = "检查更新失败",
-                    Content = $"错误信息: {ex.Message}",
-                    CloseButtonText = "确定",
+                    Title = L.Settings_CheckFailTitle,
+                    Content = string.Format(L.Settings_CheckFailFmt, ex.Message),
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await dialog.WithAppTheme().ShowAsync();
@@ -583,7 +609,7 @@ namespace AnywhereWinUI.Views
             finally
             {
                 CheckAppUpdateButton.IsEnabled = true;
-                CheckAppUpdateButton.Content = "检查更新";
+                CheckAppUpdateButton.Content = L.Settings_CheckUpdateBtnText;
             }
         }
 
@@ -596,8 +622,8 @@ namespace AnywhereWinUI.Views
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
             var filePath = await Helpers.Win32FilePickerHelper.PickSingleFileAsync(
                 hwnd,
-                filters: [("可执行文件", "*.exe")],
-                title: "选择 sing-box 核心文件");
+                filters: [(L.Settings_ExeFilterName, "*.exe")],
+                title: L.Settings_SelectCoreTitle);
             if (filePath == null) return;
 
             var targetPath = Services.CoreUpdateService.SingboxExePath;
@@ -612,9 +638,9 @@ namespace AnywhereWinUI.Views
             {
                 var invalidDialog = new ContentDialog
                 {
-                    Title = "无效的核心文件",
-                    Content = $"所选文件无法通过 sing-box 版本校验（{probe.VersionDisplay}），已取消替换以保护现有核心。\n\n请选择有效的 sing-box.exe（支持 1.13 / 1.14 / 1.15+）。",
-                    CloseButtonText = "确定",
+                    Title = L.Settings_InvalidCoreTitle,
+                    Content = string.Format(L.Settings_InvalidCoreFmt, probe.VersionDisplay),
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await invalidDialog.WithAppTheme().ShowAsync();
@@ -657,14 +683,14 @@ namespace AnywhereWinUI.Views
                 RefreshCoreVersionUI();
 
                 var extra115Note = (probe.NumericVersion != null && probe.NumericVersion >= new Version(1, 15, 0))
-                    ? "\n• 已自动启用 sing-box 1.15 原生 TUN 协议栈与新规范配置适配"
+                    ? L.Settings_CoreReplace115Note
                     : string.Empty;
 
                 var dialog = new ContentDialog
                 {
-                    Title = "内核替换成功",
-                    Content = $"已成功切换内核为：{probe.VersionDisplay}\n文件：{Path.GetFileName(filePath)}{extra115Note}\n\n请返回主界面重新连接代理以应用新内核。",
-                    CloseButtonText = "确定",
+                    Title = L.Settings_CoreReplaceOkTitle,
+                    Content = string.Format(L.Settings_CoreReplaceOkFmt, probe.VersionDisplay, Path.GetFileName(filePath), extra115Note),
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await dialog.WithAppTheme().ShowAsync();
@@ -673,9 +699,9 @@ namespace AnywhereWinUI.Views
             {
                 var dialog = new ContentDialog
                 {
-                    Title = "内核替换失败",
-                    Content = $"覆盖内核文件时发生错误（可能文件被系统锁定占用）：\n{ex.Message}",
-                    CloseButtonText = "确定",
+                    Title = L.Settings_CoreReplaceFailTitle,
+                    Content = string.Format(L.Settings_CoreReplaceFailFmt, ex.Message),
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await dialog.WithAppTheme().ShowAsync();
@@ -711,9 +737,9 @@ namespace AnywhereWinUI.Views
 
                 var dialog = new ContentDialog
                 {
-                    Title = "已恢复默认核心",
-                    Content = $"已成功恢复为原版核心（{GetLocalSingboxVersionText()}）。" + (isRunning ? "\n\n请返回主界面重新连接代理。" : string.Empty),
-                    CloseButtonText = "确定",
+                    Title = L.Settings_CoreRestoredTitle,
+                    Content = string.Format(L.Settings_CoreRestoredFmt, GetLocalSingboxVersionText(), isRunning ? L.Settings_CoreRestoredReconnect : string.Empty),
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await dialog.WithAppTheme().ShowAsync();
@@ -722,9 +748,9 @@ namespace AnywhereWinUI.Views
             {
                 var dialog = new ContentDialog
                 {
-                    Title = "恢复核心失败",
+                    Title = L.Settings_CoreRestoreFailTitle,
                     Content = ex.Message,
-                    CloseButtonText = "确定",
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await dialog.WithAppTheme().ShowAsync();
@@ -742,9 +768,9 @@ namespace AnywhereWinUI.Views
 
                 var dialog = new ContentDialog
                 {
-                    Title = "重置成功",
-                    Content = "新手引导已重置并唤起！",
-                    CloseButtonText = "确定",
+                    Title = L.Settings_ResetOnboardOkTitle,
+                    Content = L.Settings_ResetOnboardOkMsg,
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await dialog.WithAppTheme().ShowAsync();
@@ -753,9 +779,9 @@ namespace AnywhereWinUI.Views
             {
                 var errDialog = new ContentDialog
                 {
-                    Title = "发生错误",
+                    Title = L.Settings_ErrorTitle,
                     Content = ex.ToString(),
-                    CloseButtonText = "确定",
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await errDialog.WithAppTheme().ShowAsync();
@@ -805,9 +831,9 @@ namespace AnywhereWinUI.Views
 
                 var dialog = new ContentDialog
                 {
-                    Title = "Geo 更新成功",
-                    Content = "最新路由数据 (geosite-cn.srs, geoip-cn.srs, geosite-category-ads-all.srs) 已经更新完成！\n若目前正在连接状态，请在仪表盘重新连接代理以使最新规则生效。",
-                    CloseButtonText = "确定",
+                    Title = L.Settings_GeoOkTitle,
+                    Content = L.Settings_GeoOkMsg,
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await dialog.WithAppTheme().ShowAsync();
@@ -816,9 +842,9 @@ namespace AnywhereWinUI.Views
             {
                 var errDialog = new ContentDialog
                 {
-                    Title = "Geo 更新失败",
-                    Content = "下载数据时发生错误 (请检查网络): \n" + ex.Message,
-                    CloseButtonText = "确定",
+                    Title = L.Settings_GeoFailTitle,
+                    Content = L.Settings_GeoFailPrefix + ex.Message,
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 await errDialog.WithAppTheme().ShowAsync();
@@ -867,9 +893,11 @@ namespace AnywhereWinUI.Views
             }
             catch (Exception ex)
             {
-                var proxyText = string.IsNullOrWhiteSpace(proxyUrl) ? "未使用本地代理" : $"使用本地代理 {proxyUrl}";
+                var proxyText = string.IsNullOrWhiteSpace(proxyUrl)
+                    ? L.Settings_GeoNoProxy
+                    : string.Format(L.Settings_GeoWithProxyFmt, proxyUrl);
                 throw new InvalidOperationException(
-                    $"下载 {fileName} 失败。\nURL: {url}\n{proxyText}\n原因: {ex.Message}",
+                    string.Format(L.Settings_GeoDownloadErrFmt, fileName, url, proxyText, ex.Message),
                     ex);
             }
         }

@@ -24,8 +24,8 @@
 
             <!-- Header -->
             <StackPanel Grid.Row="0" Margin="12,0,0,16" Spacing="4">
-                <TextBlock Text="系统设置" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                <TextBlock Text="配置客户端偏好与核心" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Uid="Settings_MasterTitle" Text="系统设置" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                <TextBlock x:Uid="Settings_MasterSubtitle" Text="配置客户端偏好与核心" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
             <!-- Categories List -->
@@ -118,7 +118,7 @@
                               PointerExited="AppearanceItem_PointerExited">
                     <Grid ColumnDefinitions="Auto,*">
                         <FontIcon x:Name="IconAppearance" Glyph="&#xE790;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="1" Text="个性化外观" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <TextBlock x:Uid="Settings_CatItemAppearance" Grid.Column="1" Text="个性化外观" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                     </Grid>
                 </ListViewItem>
                 <ListViewItem Tag="Colors" 
@@ -126,7 +126,7 @@
                               PointerExited="ColorsItem_PointerExited">
                     <Grid ColumnDefinitions="Auto,*">
                         <FontIcon x:Name="IconColors" Glyph="&#xE771;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="1" Text="协议标识" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <TextBlock x:Uid="Settings_CatItemColors" Grid.Column="1" Text="协议标识" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                     </Grid>
                 </ListViewItem>
                 <ListViewItem Tag="Routing" 
@@ -134,7 +134,7 @@
                               PointerExited="RoutingItem_PointerExited">
                     <Grid ColumnDefinitions="Auto,*">
                         <FontIcon x:Name="IconRouting" Glyph="&#xE909;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="1" Text="路由分流" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <TextBlock x:Uid="Settings_CatItemRouting" Grid.Column="1" Text="路由分流" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                     </Grid>
                 </ListViewItem>
                 <ListViewItem Tag="DnsSettings" 
@@ -142,7 +142,7 @@
                               PointerExited="DnsSettingsItem_PointerExited">
                     <Grid ColumnDefinitions="Auto,*">
                         <FontIcon x:Name="IconDnsSettings" Glyph="&#xE81E;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="1" Text="DNS 与解析" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <TextBlock x:Uid="Settings_CatItemDns" Grid.Column="1" Text="DNS 与解析" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                     </Grid>
                 </ListViewItem>
                 <ListViewItem Tag="Tailscale"
@@ -150,7 +150,7 @@
                               PointerExited="TailscaleItem_PointerExited">
                     <Grid ColumnDefinitions="Auto,*">
                         <FontIcon x:Name="IconTailscale" Glyph="&#xE703;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="1" Text="Tailscale 组网" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <TextBlock x:Uid="Settings_CatItemTailscale" Grid.Column="1" Text="Tailscale 组网" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                     </Grid>
                 </ListViewItem>
                 <ListViewItem Tag="Autostart" 
@@ -158,7 +158,7 @@
                               PointerExited="AutostartItem_PointerExited">
                     <Grid ColumnDefinitions="Auto,*">
                         <FontIcon x:Name="IconAutostart" Glyph="&#xE7E8;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="1" Text="开机与启动" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <TextBlock x:Uid="Settings_CatItemAutostart" Grid.Column="1" Text="开机与启动" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                     </Grid>
                 </ListViewItem>
                 <ListViewItem Tag="Backup" 
@@ -166,7 +166,7 @@
                               PointerExited="BackupItem_PointerExited">
                     <Grid ColumnDefinitions="Auto,*">
                         <FontIcon x:Name="IconBackup" Glyph="&#xE753;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="1" Text="备份与恢复" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <TextBlock x:Uid="Settings_CatItemBackup" Grid.Column="1" Text="备份与恢复" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                     </Grid>
                 </ListViewItem>
                 <ListViewItem Tag="About" 
@@ -174,7 +174,7 @@
                               PointerExited="AboutItem_PointerExited">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
                         <FontIcon x:Name="IconAbout" Glyph="&#xE946;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Grid.Column="1" Text="关于与内核" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <TextBlock x:Uid="Settings_CatItemAbout" Grid.Column="1" Text="关于与内核" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Visibility="{x:Bind MainViewModel.UpdateBadgeVisibility, Mode=OneWay}">
                             <Border Background="{ThemeResource SystemFillColorCriticalBrush}" CornerRadius="4" Padding="4,1">
                                 <TextBlock Text="NEW" FontSize="9" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
@@ -199,8 +199,8 @@
 
             <!-- Detail Title Header -->
             <StackPanel Grid.Row="0" Margin="0,0,0,20" Spacing="4">
-                <TextBlock x:Name="DetailCategoryTitle" Text="个性化外观" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                <TextBlock x:Name="DetailCategorySubtitle" Text="自定义主题风格、背景材质与界面显示细节" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="DetailCategoryTitle" x:Uid="Settings_DetailTitle" Text="个性化外观" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                <TextBlock x:Name="DetailCategorySubtitle" x:Uid="Settings_DetailSubtitle" Text="自定义主题风格、背景材质与界面显示细节" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
             <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
@@ -214,27 +214,58 @@
                             </TransitionCollection>
                         </StackPanel.ChildrenTransitions>
 
-                        <TextBlock Text="外观模式与背景材质" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        <TextBlock x:Uid="Settings_AppearanceSectionHeader" Text="语言、外观模式与背景材质" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+                        <!-- Display Language Card -->
+                        <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,16">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center" Spacing="4">
+                                        <TextBlock x:Uid="Settings_LanguageTitle" Text="界面显示语言" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_LanguageDesc" Text="切换客户端显示语言（简体中文 / English），重启应用后全局生效" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1"
+                                              x:Name="LanguageComboBox"
+                                              DisplayMemberPath="DisplayName"
+                                              MinWidth="160"
+                                              VerticalAlignment="Center"
+                                              SelectionChanged="LanguageComboBox_SelectionChanged"/>
+                                </Grid>
+                                <InfoBar x:Name="LanguageRestartInfoBar"
+                                         x:Uid="Settings_LanguageRestartBar"
+                                         IsOpen="False"
+                                         IsClosable="True"
+                                         Severity="Informational"
+                                         Title="语言设置已保存"
+                                         Message="重启客户端后即可切换至新语言（若代理正在运行将自动重连）。">
+                                    <InfoBar.ActionButton>
+                                        <Button x:Uid="Settings_LanguageRestartBtn"
+                                                Content="立即重启"
+                                                Click="LanguageRestartButton_Click"/>
+                                    </InfoBar.ActionButton>
+                                </InfoBar>
+                            </StackPanel>
+                        </Border>
 
                         <!-- Theme Selection Card -->
                         <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,16">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                                    <TextBlock Text="全局色彩主题" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                    <TextBlock Text="切换客户端的明暗显示状态" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock x:Uid="Settings_ThemeTitle" Text="全局色彩主题" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock x:Uid="Settings_ThemeDesc" Text="切换客户端的明暗显示状态" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <controls:Segmented Grid.Column="1" x:Name="ThemeSegmented" SelectionChanged="ThemeSegmented_SelectionChanged" VerticalAlignment="Center">
-                                    <controls:SegmentedItem Content="浅色" Tag="Light" Padding="14,6">
+                                    <controls:SegmentedItem x:Uid="Settings_ThemeLight" Content="浅色" Tag="Light" Padding="14,6">
                                         <controls:SegmentedItem.Icon>
                                             <FontIcon Glyph="&#xE706;" FontSize="16" />
                                         </controls:SegmentedItem.Icon>
                                     </controls:SegmentedItem>
-                                    <controls:SegmentedItem Content="深色" Tag="Dark" Padding="14,6">
+                                    <controls:SegmentedItem x:Uid="Settings_ThemeDark" Content="深色" Tag="Dark" Padding="14,6">
                                         <controls:SegmentedItem.Icon>
                                             <FontIcon Glyph="&#xE708;" FontSize="16" />
                                         </controls:SegmentedItem.Icon>
                                     </controls:SegmentedItem>
-                                    <controls:SegmentedItem Content="跟随系统" Tag="Default" Padding="14,6">
+                                    <controls:SegmentedItem x:Uid="Settings_ThemeSystem" Content="跟随系统" Tag="Default" Padding="14,6">
                                         <controls:SegmentedItem.Icon>
                                             <FontIcon Glyph="&#xE770;" FontSize="16" />
                                         </controls:SegmentedItem.Icon>
@@ -247,12 +278,12 @@
                         <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,16">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                                    <TextBlock Text="窗口材质背景" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                    <TextBlock Text="切换客户端窗口的背景毛玻璃样式效果" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock x:Uid="Settings_BackdropTitle" Text="窗口材质背景" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock x:Uid="Settings_BackdropDesc" Text="切换客户端窗口的背景毛玻璃样式效果" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ComboBox Grid.Column="1" x:Name="BackdropComboBox" MinWidth="160" VerticalAlignment="Center" SelectionChanged="BackdropComboBox_SelectionChanged">
-                                    <ComboBoxItem Content="Mica (原生云母)" Tag="Mica"/>
-                                    <ComboBoxItem Content="Acrylic (经典亚克力)" Tag="Acrylic"/>
+                                    <ComboBoxItem x:Uid="Settings_BackdropMica" Content="Mica (原生云母)" Tag="Mica"/>
+                                    <ComboBoxItem x:Uid="Settings_BackdropAcrylic" Content="Acrylic (经典亚克力)" Tag="Acrylic"/>
                                 </ComboBox>
                             </Grid>
                         </Border>
@@ -261,8 +292,8 @@
                         <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,16">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                                    <TextBlock Text="启用经典控制台首页" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                    <TextBlock Text="显示或隐藏左侧边栏的「仪表盘」选项（服务器页面已包含大多数控制台内容）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock x:Uid="Settings_ClassicDashTitle" Text="启用经典控制台首页" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock x:Uid="Settings_ClassicDashDesc" Text="显示或隐藏左侧边栏的「仪表盘」选项（服务器页面已包含大多数控制台内容）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" VerticalAlignment="Center" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnableClassicDashboard, Mode=TwoWay}" HorizontalAlignment="Right"/>
                             </Grid>
@@ -272,8 +303,8 @@
                         <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,16">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                                    <TextBlock Text="全局隐私保护模式" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                    <TextBlock Text="开启后每次启动应用都需要输入密码，以防止他人查看您的节点和配置" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock x:Uid="Settings_PrivacyTitle" Text="全局隐私保护模式" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock x:Uid="Settings_PrivacyDesc" Text="开启后每次启动应用都需要输入密码，以防止他人查看您的节点和配置" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" VerticalAlignment="Center" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.IsPrivacyModeActive, Mode=TwoWay}" HorizontalAlignment="Right"/>
                             </Grid>
@@ -283,8 +314,8 @@
                         <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,16">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                                    <TextBlock Text="启用插件系统" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                    <TextBlock Text="开启后侧边栏将显示「插件」入口，支持加载 JavaScript 插件扩展客户端功能。关闭后插件不会被加载，与未安装插件系统完全一致" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock x:Uid="Settings_PluginsTitle" Text="启用插件系统" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock x:Uid="Settings_PluginsDesc" Text="开启后侧边栏将显示「插件」入口，支持加载 JavaScript 插件扩展客户端功能。关闭后插件不会被加载，与未安装插件系统完全一致" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" VerticalAlignment="Center" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnablePlugins, Mode=TwoWay}" HorizontalAlignment="Right"/>
                             </Grid>
@@ -299,7 +330,7 @@
                             </TransitionCollection>
                         </StackPanel.ChildrenTransitions>
 
-                        <TextBlock Text="Tailscale 私有组网" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        <TextBlock x:Uid="Settings_TsHeader" Text="Tailscale 私有组网" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
                         <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,12">
                             <StackPanel>
@@ -308,8 +339,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,4,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE703;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="启用 Tailscale Endpoint" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="将 sing-box 作为 Tailscale 节点加入私有网络（tailnet），需要 sing-box 核心支持 Tailscale" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock x:Uid="Settings_TsEnableTitle" Text="启用 Tailscale Endpoint" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsEnableDesc" Text="将 sing-box 作为 Tailscale 节点加入私有网络（tailnet），需要 sing-box 核心支持 Tailscale" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnableTailscale, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -318,8 +349,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE8D7;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="授权 Key (Auth Key)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="Tailscale 预授权 Key（tskey-auth-...），留空则启动时在日志中显示登录 URL" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock x:Uid="Settings_TsAuthTitle" Text="授权 Key (Auth Key)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsAuthDesc" Text="Tailscale 预授权 Key（tskey-auth-...），留空则启动时在日志中显示登录 URL" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <PasswordBox Grid.Column="2" Width="220" PlaceholderText="tskey-auth-..." Password="{x:Bind ViewModel.TailscaleAuthKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
                                 </Grid>
@@ -328,8 +359,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE8F4;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="节点主机名 (Hostname)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="此节点在 tailnet 中显示的名称，留空则使用系统主机名" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsHostTitle" Text="节点主机名 (Hostname)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsHostDesc" Text="此节点在 tailnet 中显示的名称，留空则使用系统主机名" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <TextBox Grid.Column="2" Width="220" PlaceholderText="my-pc" Text="{x:Bind ViewModel.TailscaleHostname, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
                                 </Grid>
@@ -338,12 +369,12 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE8DA;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="状态目录 (State Directory)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="保存 Tailscale 认证状态的文件夹，重启后保持登录。留空则使用默认位置" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock x:Uid="Settings_TsStateTitle" Text="状态目录 (State Directory)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsStateDesc" Text="保存 Tailscale 认证状态的文件夹，重启后保持登录。留空则使用默认位置" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <TextBox Width="170" PlaceholderText="留空使用默认" Text="{x:Bind ViewModel.TailscaleStateDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <Button x:Name="TailscaleStateDirBrowseButton" Style="{StaticResource SubtleButtonStyle}" Click="TailscaleStateDirBrowse_Click" ToolTipService.ToolTip="选择文件夹">
+                                        <TextBox x:Uid="Settings_TsStateInput" Width="170" PlaceholderText="留空使用默认" Text="{x:Bind ViewModel.TailscaleStateDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <Button x:Name="TailscaleStateDirBrowseButton" x:Uid="Settings_TsStateBrowse" Style="{StaticResource SubtleButtonStyle}" Click="TailscaleStateDirBrowse_Click" ToolTipService.ToolTip="选择文件夹">
                                             <FontIcon Glyph="&#xE8DA;" FontSize="14"/>
                                         </Button>
                                     </StackPanel>
@@ -353,14 +384,14 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE774;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="协调服务器 (Control URL)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="留空使用官方 Tailscale，或填入 Headscale 自建服务器地址" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsCtrlTitle" Text="协调服务器 (Control URL)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsCtrlDesc" Text="留空使用官方 Tailscale，或填入 Headscale 自建服务器地址" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
-                                        <TextBox Width="220" PlaceholderText="留空 = 官方 Tailscale" Text="{x:Bind ViewModel.TailscaleControlUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBox x:Uid="Settings_TsCtrlInput" Width="220" PlaceholderText="留空 = 官方 Tailscale" Text="{x:Bind ViewModel.TailscaleControlUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <Button Content="官方" Click="SetTailscaleControlUrlOfficial_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
-                                            <Button Content="清空" Click="ClearTailscaleControlUrl_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                            <Button x:Uid="Settings_TsCtrlOfficialBtn" Content="官方" Click="SetTailscaleControlUrlOfficial_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                            <Button x:Uid="Settings_TsCtrlClearBtn" Content="清空" Click="ClearTailscaleControlUrl_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Grid>
@@ -369,8 +400,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE81B;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="临时节点模式 (Ephemeral)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="断开后节点自动从 tailnet 中移除，适合临时或自动化部署场景" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock x:Uid="Settings_TsEphTitle" Text="临时节点模式 (Ephemeral)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsEphDesc" Text="断开后节点自动从 tailnet 中移除，适合临时或自动化部署场景" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.TailscaleEphemeral, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -379,8 +410,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE909;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="接受其他节点路由 (Accept Routes)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="允许接收 tailnet 中其他节点通告的子网路由" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsAccRoutesTitle" Text="接受其他节点路由 (Accept Routes)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsAccRoutesDesc" Text="允许接收 tailnet 中其他节点通告的子网路由" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.TailscaleAcceptRoutes, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -389,8 +420,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xECAA;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="通告本地网段 (Advertise Routes)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="向 tailnet 共享本机所在网段，多个 CIDR 用逗号分隔，如 192.168.1.0/24" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock x:Uid="Settings_TsAdvRoutesTitle" Text="通告本地网段 (Advertise Routes)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsAdvRoutesDesc" Text="向 tailnet 共享本机所在网段，多个 CIDR 用逗号分隔，如 192.168.1.0/24" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <TextBox Grid.Column="2" Width="220" PlaceholderText="192.168.1.0/24" Text="{x:Bind ViewModel.TailscaleAdvertiseRoutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
                                 </Grid>
@@ -399,18 +430,18 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xF0AF;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="指定出口节点 (Exit Node)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="将全部出站流量通过指定的 tailnet 节点转发，填入对端节点 IP 或名称" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock x:Uid="Settings_TsExitTitle" Text="指定出口节点 (Exit Node)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsExitDesc" Text="将全部出站流量通过指定的 tailnet 节点转发，填入对端节点 IP 或名称" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <TextBox Grid.Column="2" Width="220" PlaceholderText="100.x.x.x 或留空" Text="{x:Bind ViewModel.TailscaleExitNode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                                    <TextBox x:Uid="Settings_TsExitInput" Grid.Column="2" Width="220" PlaceholderText="100.x.x.x 或留空" Text="{x:Bind ViewModel.TailscaleExitNode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
                                 </Grid>
 
                                 <!-- Advertise Exit Node -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,4">
                                     <FontIcon Grid.Column="0" Glyph="&#xE72A;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="通告为出口节点 (Advertise Exit Node)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="将本机对外通告为 Exit Node，允许其他 tailnet 节点将流量经由本机出站" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock x:Uid="Settings_TsAdvExitTitle" Text="通告为出口节点 (Advertise Exit Node)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_TsAdvExitDesc" Text="将本机对外通告为 Exit Node，允许其他 tailnet 节点将流量经由本机出站" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.TailscaleAdvertiseExitNode, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -423,11 +454,11 @@
                             <StackPanel Spacing="6">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE946;" FontSize="14" Foreground="{ThemeResource SystemAccentColor}"/>
-                                    <TextBlock Text="使用须知" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock x:Uid="Settings_TsNotesTitle" Text="使用须知" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                                 </StackPanel>
-                                <TextBlock Text="• 首次启用且未填 Auth Key 时，请在日志页查看登录 URL 并用浏览器完成授权" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
-                                <TextBlock Text="• 已存在状态文件时，Auth Key 字段会被忽略，直接复用已认证状态" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
-                                <TextBlock Text="• sing-box 核心需支持 Tailscale（实验性功能，需 sing-box 1.12.0+）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock x:Uid="Settings_TsNote1" Text="• 首次启用且未填 Auth Key 时，请在日志页查看登录 URL 并用浏览器完成授权" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock x:Uid="Settings_TsNote2" Text="• 已存在状态文件时，Auth Key 字段会被忽略，直接复用已认证状态" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock x:Uid="Settings_TsNote3" Text="• sing-box 核心需支持 Tailscale（实验性功能，需 sing-box 1.12.0+）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -440,7 +471,7 @@
                             </TransitionCollection>
                         </StackPanel.ChildrenTransitions>
 
-                        <TextBlock Text="基础路由与隐私策略" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        <TextBlock x:Uid="Settings_RoutingHeader" Text="基础路由与隐私策略" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
                         <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,12">
                             <StackPanel>
@@ -448,11 +479,11 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE909;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="绕过中国大陆 (Bypass mainland China)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="对所有目标属于中国的 IP 或国内常见域名自动采用直连直达，不经过代理" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_BypassCnTitle" Text="绕过中国大陆 (Bypass mainland China)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_BypassCnDesc" Text="对所有目标属于中国的 IP 或国内常见域名自动采用直连直达，不经过代理" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                        <Button x:Name="UpdateGeoButton" Style="{StaticResource SubtleButtonStyle}" Click="UpdateGeoButton_Click" ToolTipService.ToolTip="更新 Geo 路由数据文件 (geosite-cn.srs, geoip-cn.srs)">
+                                        <Button x:Name="UpdateGeoButton" x:Uid="Settings_UpdateGeoBtn" Style="{StaticResource SubtleButtonStyle}" Click="UpdateGeoButton_Click" ToolTipService.ToolTip="更新 Geo 路由数据文件 (geosite-cn.srs, geoip-cn.srs)">
                                             <FontIcon Glyph="&#xE895;" FontSize="16"/>
                                         </Button>
                                         <ToggleSwitch x:Name="SettingsBypassChinaSwitch" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.BypassChina, Mode=TwoWay}" VerticalAlignment="Center"/>
@@ -463,8 +494,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE727;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="全局广告与隐私追踪拦截 (Block ads &amp; trackers)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="过滤并拦截来自内置规则源中的广告分发网站，保护隐私并节省带宽" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_BlockAdsTitle" Text="全局广告与隐私追踪拦截 (Block ads &amp; trackers)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_BlockAdsDesc" Text="过滤并拦截来自内置规则源中的广告分发网站，保护隐私并节省带宽" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <ToggleSwitch x:Name="SettingsBlockAdsSwitch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.BlockAds, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -473,8 +504,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,4">
                                     <FontIcon Grid.Column="0" Glyph="&#xE8B1;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="启用高级分流模块 (Enable advanced routing module)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_AdvRoutingTitle" Text="启用高级分流模块 (Enable advanced routing module)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_AdvRoutingDesc" Text="开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <ToggleSwitch x:Name="SettingsAdvancedRoutingSwitch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnableAdvancedRouting, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -490,7 +521,7 @@
                             </TransitionCollection>
                         </StackPanel.ChildrenTransitions>
 
-                        <TextBlock Text="DNS 解析器配置" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        <TextBlock x:Uid="Settings_DnsHeader" Text="DNS 解析器配置" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
                         <Border Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,12">
                             <StackPanel>
@@ -498,14 +529,14 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,4,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE753;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="直连 DNS (Direct)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="用于国内域名及直连出站的解析" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_DirectDnsTitle" Text="直连 DNS (Direct)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_DirectDnsDesc" Text="用于国内域名及直连出站的解析" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center">
-                                        <TextBox Width="200" PlaceholderText="留空自动 (如 223.5.5.5)" Text="{x:Bind ViewModel.DirectDns, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBox x:Uid="Settings_DirectDnsInput" Width="200" PlaceholderText="留空自动 (如 223.5.5.5)" Text="{x:Bind ViewModel.DirectDns, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <Button Content="阿里" Click="SetDirectDnsAli_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
-                                            <Button Content="腾讯" Click="SetDirectDnsTencent_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                            <Button x:Uid="Settings_DirectDnsAliBtn" Content="阿里" Click="SetDirectDnsAli_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                            <Button x:Uid="Settings_DirectDnsTencentBtn" Content="腾讯" Click="SetDirectDnsTencent_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
                                             <Button Content="114" Click="SetDirectDns114_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
                                             <Button Content="DoH" Click="SetDirectDnsDoH_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
                                         </StackPanel>
@@ -516,13 +547,13 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE72C;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="代理 DNS (Proxy)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="用于境外的域名解析，需通过代理出站以防止 DNS 污染" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_ProxyDnsTitle" Text="代理 DNS (Proxy)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_ProxyDnsDesc" Text="用于境外的域名解析，需通过代理出站以防止 DNS 污染" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center">
-                                        <TextBox Width="200" PlaceholderText="如 https://1.1.1.1/dns-query" Text="{x:Bind ViewModel.ProxyDns, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBox x:Uid="Settings_ProxyDnsInput" Width="200" PlaceholderText="如 https://1.1.1.1/dns-query" Text="{x:Bind ViewModel.ProxyDns, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <Button Content="谷歌" Click="SetProxyDnsGoogle_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
+                                            <Button x:Uid="Settings_ProxyDnsGoogleBtn" Content="谷歌" Click="SetProxyDnsGoogle_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
                                             <Button Content="CF" Click="SetProxyDnsCF_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
                                             <Button Content="Quad9" Click="SetProxyDnsQuad9_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
                                             <Button Content="DoH" Click="SetProxyDnsDoH_Click" Padding="8,4" Background="Transparent" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1"/>
@@ -534,14 +565,14 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE7B3;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="查询策略" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="决定 DNS 解析时 IP 版本的偏好" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_DnsStratTitle" Text="查询策略" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_DnsStratDesc" Text="决定 DNS 解析时 IP 版本的偏好" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Width="140" SelectedValue="{x:Bind ViewModel.DnsStrategy, Mode=TwoWay}" SelectedValuePath="Tag" VerticalAlignment="Center">
-                                        <ComboBoxItem Content="仅 IPv4" Tag="ipv4_only"/>
-                                        <ComboBoxItem Content="优先 IPv4" Tag="prefer_ipv4"/>
-                                        <ComboBoxItem Content="优先 IPv6" Tag="prefer_ipv6"/>
-                                        <ComboBoxItem Content="仅 IPv6" Tag="ipv6_only"/>
+                                        <ComboBoxItem x:Uid="Settings_DnsStratIpv4Only" Content="仅 IPv4" Tag="ipv4_only"/>
+                                        <ComboBoxItem x:Uid="Settings_DnsStratPreferIpv4" Content="优先 IPv4" Tag="prefer_ipv4"/>
+                                        <ComboBoxItem x:Uid="Settings_DnsStratPreferIpv6" Content="优先 IPv6" Tag="prefer_ipv6"/>
+                                        <ComboBoxItem x:Uid="Settings_DnsStratIpv6Only" Content="仅 IPv6" Tag="ipv6_only"/>
                                     </ComboBox>
                                 </Grid>
 
@@ -549,8 +580,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xEC4A;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="启用 DNS 缓存" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="大幅提升二次解析速度，降低延迟" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_DnsCacheTitle" Text="启用 DNS 缓存" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_DnsCacheDesc" Text="大幅提升二次解析速度，降低延迟" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnableDnsCache, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -562,10 +593,10 @@
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <TextBlock Text="FakeDNS" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                                             <Border Background="{ThemeResource SystemAccentColor}" CornerRadius="4" Padding="4,2">
-                                                <TextBlock Text="实验性" FontSize="10" Foreground="White" FontWeight="Bold"/>
+                                                <TextBlock x:Uid="Settings_FakeDnsBadge" Text="实验性" FontSize="10" Foreground="White" FontWeight="Bold"/>
                                             </Border>
                                         </StackPanel>
-                                        <TextBlock Text="接管虚拟网卡 DNS，返回 198.18.x.x 假 IP 并拦截真实请求实现秒开" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_FakeDnsDesc" Text="接管虚拟网卡 DNS，返回 198.18.x.x 假 IP 并拦截真实请求实现秒开" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnableFakeDns, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -574,8 +605,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE73E;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="拦截 IPv6 DNS 泄露 (Prevent IPv6 leak)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="在开启 TUN 模式时屏蔽 AAAA 查询，防止代理环境下的 IPV6 地理信息泄露" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_BlockIpv6Title" Text="拦截 IPv6 DNS 泄露 (Prevent IPv6 leak)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_BlockIpv6Desc" Text="在开启 TUN 模式时屏蔽 AAAA 查询，防止代理环境下的 IPV6 地理信息泄露" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <ToggleSwitch x:Name="SettingsBlockIPv6Switch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.BlockIPv6, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -584,8 +615,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE968;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="允许 IPv6 DNS 解析 (Allow IPv6 DNS)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="开启后 TUN 模式不再拦截 AAAA 查询，可解决纯 IPv6 域名解析返回空结果的问题（默认关闭）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_AllowIpv6Title" Text="允许 IPv6 DNS 解析 (Allow IPv6 DNS)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_AllowIpv6Desc" Text="开启后 TUN 模式不再拦截 AAAA 查询，可解决纯 IPv6 域名解析返回空结果的问题（默认关闭）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <ToggleSwitch x:Name="SettingsAllowIPv6DnsSwitch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.AllowIPv6Dns, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -607,8 +638,8 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,4">
                                     <FontIcon Grid.Column="0" Glyph="&#xE81E;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="静默刷新系统 DNS (Flush DNS cache)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="切换节点或开启代理时，调用 Windows 原生 API 瞬间清除本地 DNS 缓存，防止网络不通" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_FlushDnsTitle" Text="静默刷新系统 DNS (Flush DNS cache)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_FlushDnsDesc" Text="切换节点或开启代理时，调用 Windows 原生 API 瞬间清除本地 DNS 缓存，防止网络不通" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <ToggleSwitch x:Name="SettingsFlushDNSSwitch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.FlushDNS, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
@@ -626,13 +657,13 @@
                         
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" Margin="0,0,0,8">
                             <StackPanel VerticalAlignment="Center" Spacing="4">
-                                <TextBlock Text="节点协议标识" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                <TextBlock Text="自定义各节点协议在卡片和列表中的颜色标签" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock x:Uid="Settings_ColorsHeader" Text="节点协议标识" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock x:Uid="Settings_ColorsDesc" Text="自定义各节点协议在卡片和列表中的颜色标签" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <Button Grid.Column="1" Click="ResetColorsButton_Click" Background="Transparent" BorderBrush="Transparent" Padding="8,6" VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <FontIcon Glyph="&#xE72C;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                    <TextBlock Text="重置颜色" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock x:Uid="Settings_ColorsResetText" Text="重置颜色" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
@@ -737,7 +768,7 @@
                                 <!-- Fallback / Others -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" Padding="16,12" ColumnSpacing="12">
                                     <FontIcon Glyph="&#xE8B9;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="其他 / 未匹配协议" FontSize="14" VerticalAlignment="Center"/>
+                                    <TextBlock x:Uid="Settings_ColorsFallback" Grid.Column="1" Text="其他 / 未匹配协议" FontSize="14" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                         <Button Width="24" Height="24" Padding="0" CornerRadius="12" VerticalAlignment="Center" Background="{x:Bind FallbackColor, Mode=OneWay, Converter={StaticResource ColorToBrushConverter}}" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
                                             <Button.Flyout>
@@ -761,7 +792,7 @@
                             </TransitionCollection>
                         </StackPanel.ChildrenTransitions>
                         
-                        <TextBlock Text="系统启动行为" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        <TextBlock x:Uid="Settings_AutostartHeader" Text="系统启动行为" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
                         <Border Background="Transparent"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -770,15 +801,15 @@
                                 Padding="16,16">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel Spacing="4" VerticalAlignment="Center">
-                                    <TextBlock Text="Windows 开机自启动" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                    <TextBlock Text="开启后，客户端将在系统登入时自动静默在托盘运行" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock x:Uid="Settings_AutostartTitle" Text="Windows 开机自启动" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock x:Uid="Settings_AutostartDesc" Text="开启后，客户端将在系统登入时自动静默在托盘运行" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ToggleSwitch x:Name="AutoStartSwitch" Grid.Column="1" VerticalAlignment="Center" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.AutoStart, Mode=TwoWay}" HorizontalAlignment="Right"/>
                             </Grid>
                         </Border>
 
                         <!-- 本地代理端口设置 -->
-                        <TextBlock Text="本地代理端口" FontSize="14" FontWeight="Medium" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        <TextBlock x:Uid="Settings_PortHeader" Text="本地代理端口" FontSize="14" FontWeight="Medium" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
                         <Border Background="Transparent"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -787,8 +818,8 @@
                                 Padding="16,16">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel Spacing="4" VerticalAlignment="Center">
-                                    <TextBlock Text="混合代理端口 (SOCKS5 &amp; HTTP)" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                    <TextBlock Text="sing-box 在本机监听的混合代理端口，SOCKS5 和 HTTP 共用同一端口。修改后将自动重启代理内核生效（范围 1024–65535）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock x:Uid="Settings_MixedPortTitle" Text="混合代理端口 (SOCKS5 &amp; HTTP)" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock x:Uid="Settings_MixedPortDesc" Text="sing-box 在本机监听的混合代理端口，SOCKS5 和 HTTP 共用同一端口。修改后将自动重启代理内核生效（范围 1024–65535）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <NumberBox x:Name="MixedPortInput"
                                            Grid.Column="1"
@@ -812,8 +843,8 @@
                                 Padding="16,16">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel Spacing="4" VerticalAlignment="Center">
-                                    <TextBlock Text="允许局域网设备连接" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                    <TextBlock Text="开启后，同一局域网内的设备可使用下方地址作为 HTTP/SOCKS5 代理。若无法连接，请检查 Windows 防火墙是否允许访问。" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock x:Uid="Settings_AllowLanTitle" Text="允许局域网设备连接" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock x:Uid="Settings_AllowLanDesc" Text="开启后，同一局域网内的设备可使用下方地址作为 HTTP/SOCKS5 代理。若无法连接，请检查 Windows 防火墙是否允许访问。" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                     <TextBlock Text="{x:Bind ViewModel.LanProxyEndpoint, Mode=OneWay}" FontSize="12" FontFamily="Consolas" Foreground="{ThemeResource SystemAccentColor}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1"
@@ -835,7 +866,7 @@
                             </TransitionCollection>
                         </StackPanel.ChildrenTransitions>
                         
-                        <TextBlock Text="配置导出与导入" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        <TextBlock x:Uid="Settings_BackupHeader" Text="配置导出与导入" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
                         <Border Background="Transparent" 
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -844,20 +875,20 @@
                             <StackPanel>
                                 <Grid ColumnDefinitions="*,Auto" Padding="16,16" ColumnSpacing="16">
                                     <StackPanel Spacing="4" VerticalAlignment="Center">
-                                        <TextBlock Text="导出配置文件备份" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="将所有的本地自建节点、订阅链接以及色彩标识导出为备份 .zip 归档" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock x:Uid="Settings_ExportTitle" Text="导出配置文件备份" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_ExportDesc" Text="将所有的本地自建节点、订阅链接以及色彩标识导出为备份 .zip 归档" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <Button x:Name="ExportBackupButton" Grid.Column="1" Content="导出备份" Click="ExportBackupButton_Click" Padding="12,5" CornerRadius="4" VerticalAlignment="Center"/>
+                                    <Button x:Name="ExportBackupButton" x:Uid="Settings_ExportBtn" Grid.Column="1" Content="导出备份" Click="ExportBackupButton_Click" Padding="12,5" CornerRadius="4" VerticalAlignment="Center"/>
                                 </Grid>
 
                                 <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="16,0"/>
 
                                 <Grid ColumnDefinitions="*,Auto" Padding="16,16" ColumnSpacing="16">
                                     <StackPanel Spacing="4" VerticalAlignment="Center">
-                                        <TextBlock Text="导入配置文件恢复" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="⚠️ 此操作将完全覆盖当前所有的节点和参数，建议先做备份" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        <TextBlock x:Uid="Settings_ImportTitle" Text="导入配置文件恢复" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_ImportDesc" Text="⚠️ 此操作将完全覆盖当前所有的节点和参数，建议先做备份" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <Button x:Name="ImportBackupButton" Grid.Column="1" Content="导入恢复" Click="ImportBackupButton_Click" Style="{StaticResource AccentButtonStyle}" Padding="12,5" CornerRadius="4" VerticalAlignment="Center"/>
+                                    <Button x:Name="ImportBackupButton" x:Uid="Settings_ImportBtn" Grid.Column="1" Content="导入恢复" Click="ImportBackupButton_Click" Style="{StaticResource AccentButtonStyle}" Padding="12,5" CornerRadius="4" VerticalAlignment="Center"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -889,7 +920,7 @@
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                         <TextBlock Text="{x:Bind ViewModel.AppVersionText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                                        <TextBlock Text="(自适应 Fluent 原生版)" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock x:Uid="Settings_AboutEditionText" Text="(自适应 Fluent 原生版)" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </StackPanel>
                                 <Image Grid.Column="1" Source="ms-appx:///Assets/logo_about.png" Width="96" Height="96" VerticalAlignment="Center" Stretch="Uniform" />
@@ -897,9 +928,10 @@
                         </Border>
 
                         <StackPanel Spacing="12">
-                            <TextBlock Text="内核与引导管理" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                            <TextBlock x:Uid="Settings_CoreSectionHeader" Text="内核与引导管理" FontSize="14" FontWeight="Medium" Margin="0,0,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
-                            <InfoBar IsOpen="{x:Bind MainViewModel.UpdateBadgeVisibility, Mode=OneWay, Converter={StaticResource VisibilityToBoolConverter}}"
+                            <InfoBar x:Uid="Settings_UpdateInfoBar"
+                                     IsOpen="{x:Bind MainViewModel.UpdateBadgeVisibility, Mode=OneWay, Converter={StaticResource VisibilityToBoolConverter}}"
                                      Severity="Success"
                                      Title="发现新版本"
                                      Message="{x:Bind MainViewModel.UpdateBannerText, Mode=OneWay}"
@@ -913,22 +945,22 @@
                                     <!-- Core settings line -->
                                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" Padding="16,16" ColumnSpacing="8">
                                         <StackPanel Spacing="4" VerticalAlignment="Center">
-                                            <TextBlock Text="Sing-box Core 运行核心" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                            <TextBlock x:Name="SingboxVersionText" Text="加载中..." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                            <TextBlock x:Uid="Settings_CoreTitle" Text="Sing-box Core 运行核心" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            <TextBlock x:Name="SingboxVersionText" x:Uid="Settings_SingboxVerLoading" Text="加载中..." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <Button x:Name="RestoreCoreButton" Grid.Column="1" Content="恢复默认核心" Padding="10,5" CornerRadius="4" Visibility="Collapsed" Click="RestoreCoreButton_Click" ToolTipService.ToolTip="恢复为客户端自带的原版 sing-box 核心" VerticalAlignment="Center"/>
-                                        <Button x:Name="ReplaceCoreButton" Grid.Column="2" Padding="6" Background="Transparent" BorderBrush="Transparent" Click="ReplaceCoreButton_Click" ToolTipService.ToolTip="手动替换本地核心文件（支持 sing-box 1.13 / 1.14 / 1.15+）" VerticalAlignment="Center">
+                                        <Button x:Name="RestoreCoreButton" x:Uid="Settings_RestoreCoreBtn" Grid.Column="1" Content="恢复默认核心" Padding="10,5" CornerRadius="4" Visibility="Collapsed" Click="RestoreCoreButton_Click" ToolTipService.ToolTip="恢复为客户端自带的原版 sing-box 核心" VerticalAlignment="Center"/>
+                                        <Button x:Name="ReplaceCoreButton" x:Uid="Settings_ReplaceCoreBtn" Grid.Column="2" Padding="6" Background="Transparent" BorderBrush="Transparent" Click="ReplaceCoreButton_Click" ToolTipService.ToolTip="手动替换本地核心文件（支持 sing-box 1.13 / 1.14 / 1.15+）" VerticalAlignment="Center">
                                             <FontIcon Glyph="&#xE8E5;" FontSize="15" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Button>
-                                        <Button x:Name="CheckUpdateButton" Grid.Column="3" Content="检查更新" Padding="12,5" CornerRadius="4" Click="CheckUpdateButton_Click" VerticalAlignment="Center"/>
+                                        <Button x:Name="CheckUpdateButton" x:Uid="Settings_CheckCoreBtn" Grid.Column="3" Content="检查更新" Padding="12,5" CornerRadius="4" Click="CheckUpdateButton_Click" VerticalAlignment="Center"/>
                                     </Grid>
 
                                     <Grid ColumnDefinitions="*,Auto,Auto" Padding="16,16" ColumnSpacing="12">
                                         <StackPanel Spacing="4" VerticalAlignment="Center">
-                                            <TextBlock Text="客户端自动更新" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                            <TextBlock Text="检查是否有新版客户端发布" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                            <TextBlock x:Uid="Settings_AppUpdateTitle" Text="客户端自动更新" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            <TextBlock x:Uid="Settings_AppUpdateDesc" Text="检查是否有新版客户端发布" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <Button x:Name="CheckAppUpdateButton" Grid.Column="2" Content="检查更新" Padding="12,5" CornerRadius="4" Click="CheckAppUpdateButton_Click" VerticalAlignment="Center"/>
+                                        <Button x:Name="CheckAppUpdateButton" x:Uid="Settings_CheckAppBtn" Grid.Column="2" Content="检查更新" Padding="12,5" CornerRadius="4" Click="CheckAppUpdateButton_Click" VerticalAlignment="Center"/>
                                     </Grid>
 
                                     <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="16,0"/>
@@ -936,10 +968,10 @@
                                     <!-- Reset Onboarding line -->
                                     <Grid ColumnDefinitions="*,Auto" Padding="16,16" ColumnSpacing="16">
                                         <StackPanel Spacing="4" VerticalAlignment="Center">
-                                            <TextBlock Text="重置新手引导" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                            <TextBlock Text="清除已完成标记，下次启动应用时将再次显示新手引导" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                            <TextBlock x:Uid="Settings_ResetOnboardTitle" Text="重置新手引导" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            <TextBlock x:Uid="Settings_ResetOnboardDesc" Text="清除已完成标记，下次启动应用时将再次显示新手引导" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <Button Grid.Column="1" Content="重置引导" Style="{StaticResource AccentButtonStyle}" Padding="12,5" CornerRadius="4" Click="ResetOnboardingButton_Click" VerticalAlignment="Center"/>
+                                        <Button x:Uid="Settings_ResetOnboardBtn" Grid.Column="1" Content="重置引导" Style="{StaticResource AccentButtonStyle}" Padding="12,5" CornerRadius="4" Click="ResetOnboardingButton_Click" VerticalAlignment="Center"/>
                                     </Grid>
                                 </StackPanel>
                             </Border>

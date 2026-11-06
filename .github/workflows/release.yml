@@ -86,7 +86,13 @@ jobs:
             Write-Host "::error::Publish did not produce $exe"
             exit 1
           }
-          Write-Host "OK: exe found at $exe ($((Get-Item $exe).Length) bytes)"
+          $priExternal = (Test-Path "$publishDir/Swell Proxy.pri") -or (Test-Path "$publishDir/resources.pri")
+          $priBundled  = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($exe)).Contains("Swell Proxy.pri")
+          if (-not ($priExternal -or $priBundled)) {
+            Write-Host "::error::Publish did not include MRT resource index (Swell Proxy.pri) in $publishDir"
+            exit 1
+          }
+          Write-Host "OK: exe found at $exe ($((Get-Item $exe).Length) bytes, priExternal=$priExternal, priBundled=$priBundled)"
 
       - name: Pack zip
         shell: pwsh

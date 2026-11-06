@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
+    x:Uid="AddRule_Dialog"
     Title="添加规则"
     PrimaryButtonText="添加"
     CloseButtonText="取消"
@@ -13,21 +14,23 @@
 
     <StackPanel Spacing="16" MinWidth="340" MaxWidth="420">
         <StackPanel Spacing="6">
-            <TextBlock Text="规则类型"
+            <TextBlock x:Uid="AddRule_TypeLabel"
+                       Text="规则类型"
                        FontSize="12"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <ComboBox x:Name="TypeComboBox"
                       SelectedIndex="0"
                       HorizontalAlignment="Stretch">
-                <ComboBoxItem Content="域名" Tag="domain" />
-                <ComboBoxItem Content="IP / CIDR" Tag="ip" />
-                <ComboBoxItem Content="进程" Tag="process" />
-                <ComboBoxItem Content="混合" Tag="mixed" />
+                <ComboBoxItem x:Uid="AddRule_TypeDomain" Content="域名" Tag="domain" />
+                <ComboBoxItem x:Uid="AddRule_TypeIp" Content="IP / CIDR" Tag="ip" />
+                <ComboBoxItem x:Uid="AddRule_TypeProcess" Content="进程" Tag="process" />
+                <ComboBoxItem x:Uid="AddRule_TypeMixed" Content="混合" Tag="mixed" />
             </ComboBox>
         </StackPanel>
 
         <StackPanel Spacing="6">
-            <TextBlock Text="匹配内容"
+            <TextBlock x:Uid="AddRule_MatchLabel"
+                       Text="匹配内容"
                        FontSize="12"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <TextBox x:Name="MatchTextBox"
@@ -40,14 +43,14 @@
                 <Button x:Name="BrowseButton">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <FontIcon Glyph="&#xE8E5;" FontSize="12" />
-                        <TextBlock Text="浏览 exe..." />
+                        <TextBlock x:Uid="AddRule_BrowseExeText" Text="浏览 exe..." />
                     </StackPanel>
                 </Button>
                 <ComboBox x:Name="BrowseFormatComboBox"
                           SelectedIndex="0"
                           MinWidth="130">
-                    <ComboBoxItem Content="进程名" Tag="name" />
-                    <ComboBoxItem Content="完整路径" Tag="path" />
+                    <ComboBoxItem x:Uid="AddRule_BrowseByName" Content="进程名" Tag="name" />
+                    <ComboBoxItem x:Uid="AddRule_BrowseByPath" Content="完整路径" Tag="path" />
                 </ComboBox>
             </StackPanel>
 
@@ -59,7 +62,8 @@
         </StackPanel>
 
         <StackPanel Spacing="6">
-            <TextBlock Text="出站方式"
+            <TextBlock x:Uid="AddRule_OutboundLabel"
+                       Text="出站方式"
                        FontSize="12"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <ComboBox x:Name="OutboundComboBox"

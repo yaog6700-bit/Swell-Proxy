@@ -501,7 +501,7 @@ namespace AnywhereWinUI
                 ThemeToggleIcon.Glyph = actualTheme == ElementTheme.Dark ? "\uE706" : "\uE708";
                 if (ThemeToggleButton != null)
                 {
-                    ToolTipService.SetToolTip(ThemeToggleButton, actualTheme == ElementTheme.Dark ? "切换至浅色模式" : "切换至深色模式");
+                    ToolTipService.SetToolTip(ThemeToggleButton, actualTheme == ElementTheme.Dark ? L.MainWindow_SwitchToLight : L.MainWindow_SwitchToDark);
                 }
             }
         }
@@ -617,7 +617,7 @@ namespace AnywhereWinUI
 
                     var openItem = new MenuFlyoutItem
                     {
-                        Text = "显示主界面",
+                        Text = L.Tray_ShowMainWindow,
                         Icon = new FontIcon { Glyph = "\uE8A7" }
                     };
                     openItem.Click += (_, _) => RestoreFromTray();
@@ -626,7 +626,7 @@ namespace AnywhereWinUI
                     bool isLocked = ViewModel.IsPrivacyLocked;
                     var privacyItem = new MenuFlyoutItem
                     {
-                        Text = isLocked ? "解锁主界面" : "锁定并隐藏",
+                        Text = isLocked ? L.Tray_UnlockWindow : L.Tray_LockAndHide,
                         Icon = new FontIcon { Glyph = isLocked ? "\uE785" : "\uE72E" }
                     };
                     privacyItem.Click += async (_, _) =>
@@ -646,7 +646,7 @@ namespace AnywhereWinUI
 
                     var exitItem = new MenuFlyoutItem
                     {
-                        Text = "退出程序",
+                        Text = L.Tray_Exit,
                         Icon = new FontIcon { Glyph = "\uE7E8" }
                     };
                     exitItem.Click += (_, _) => ExitApplication();
@@ -818,17 +818,17 @@ namespace AnywhereWinUI
         {
             var pwdBox = new PasswordBox
             {
-                Header = "请输入隐私保护密码",
-                PlaceholderText = "设置一个用于解锁的密码",
+                Header = L.Privacy_SetPwdHeader,
+                PlaceholderText = L.Privacy_SetPwdPlaceholder,
                 Width = 300
             };
 
             var dialog = new ContentDialog
             {
                 XamlRoot = this.Content.XamlRoot,
-                Title = "设置隐私密码",
-                PrimaryButtonText = "确定",
-                CloseButtonText = "取消",
+                Title = L.Privacy_SetPwdTitle,
+                PrimaryButtonText = L.Dialog_OK,
+                CloseButtonText = L.Dialog_Cancel,
                 DefaultButton = ContentDialogButton.Primary,
                 Content = new StackPanel
                 {
@@ -1149,6 +1149,16 @@ namespace AnywhereWinUI
             visual.StartAnimation("RotationAngleInDegrees", rotAnimation);
         }
 
+        public void DisposeTrayForRestart()
+        {
+            try
+            {
+                _trayManager?.Dispose();
+                _trayManager = null;
+            }
+            catch { }
+        }
+
         private async void ExitApplication()
         {
             // Stop backend engine core completely
@@ -1289,30 +1299,30 @@ namespace AnywhereWinUI
             if (!_isMiniMode) return;
             
             var activeNode = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
-            var nodeName = activeNode?.Name ?? "未选择节点";
+            var nodeName = activeNode?.Name ?? L.Common_NoNodeSelected;
             MiniServerNameText.Text = nodeName;
 
             string proxyModeText = AppSession.Instance.ProxyModeIndex switch
             {
-                0 => "系统代理",
+                0 => L.ProxyMode_System,
                 1 => "TUN",
-                3 => "TUN + 系统代理",
-                _ => "本地代理"
+                3 => L.ProxyMode_TunSystem,
+                _ => L.ProxyMode_Local
             };
 
             string routingMode = AppSession.Instance.RoutingMode;
             string routeModeText = routingMode switch
             {
-                "global" => "全局代理",
-                "direct" => "全部直连",
-                _ => "智能分流"
+                "global" => L.RouteMode_GlobalProxy,
+                "direct" => L.RouteMode_DirectAll,
+                _ => L.RouteMode_Smart
             };
             MiniProxyModeText.Text = $"{proxyModeText} · {routeModeText}";
             
             bool isRunning = CoreManager.Instance.IsRunning;
             MiniStartStopButton.IsChecked = isRunning;
             
-            string pingText = isRunning ? "已连接" : "未连接";
+            string pingText = isRunning ? L.Common_Connected : L.Common_Disconnected;
             Microsoft.UI.Xaml.Media.Brush statusBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Colors.Gray);
 
             if (isRunning)
@@ -1320,7 +1330,7 @@ namespace AnywhereWinUI
                 var serversVm = ((App)Application.Current).Services.GetService(typeof(ServersViewModel)) as ServersViewModel;
                 var serverItem = serversVm?.AllServers != null ? System.Linq.Enumerable.FirstOrDefault(serversVm.AllServers, s => s.Id == NodesManager.Instance.SelectedNodeId) : null;
                 
-                if (serverItem != null && serverItem.PingText != "未测试" && serverItem.PingText != "测试中...")
+                if (serverItem != null && serverItem.LatencyMs is > 0)
                 {
                     pingText = serverItem.PingText;
                     statusBrush = serverItem.PingColor ?? new Microsoft.UI.Xaml.Media.SolidColorBrush(Colors.Green);

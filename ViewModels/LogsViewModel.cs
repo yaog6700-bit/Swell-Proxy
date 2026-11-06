@@ -8,6 +8,7 @@ using Microsoft.UI;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Dispatching;
 using Windows.ApplicationModel.DataTransfer;
+using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Services;
 using AnywhereWinUI.Models;
 
@@ -32,10 +33,10 @@ namespace AnywhereWinUI.ViewModels
         private ObservableCollection<LogEntry> _logEntries = new();
 
         [ObservableProperty]
-        private string _lineCountText = "(0 行)";
+        private string _lineCountText = string.Format(L.Logs_LineCountFmt, 0);
 
         [ObservableProperty]
-        private string _statusText = "核心已停止";
+        private string _statusText = L.Logs_StatusStopped;
 
         [ObservableProperty]
         private Brush _statusDotFill = StoppedBrush;
@@ -151,7 +152,7 @@ namespace AnywhereWinUI.ViewModels
                 _prevBufferCount = LogEntries.Count;
             }
 
-            LineCountText = $"({lines.Count} 行)";
+            LineCountText = string.Format(L.Logs_LineCountFmt, lines.Count);
             LogFlushed?.Invoke(this, (received, prevCount, _prevBufferCount));
         }
 
@@ -159,7 +160,7 @@ namespace AnywhereWinUI.ViewModels
         {
             var lines = CoreManager.Instance.GetLogBuffer();
             RebuildFromSnapshot(lines);
-            LineCountText = $"({lines.Count} 行)";
+            LineCountText = string.Format(L.Logs_LineCountFmt, lines.Count);
         }
 
         private void RebuildFromSnapshot(System.Collections.Generic.IReadOnlyList<string> lines)
@@ -175,7 +176,7 @@ namespace AnywhereWinUI.ViewModels
         private void UpdateStatus()
         {
             var running = CoreManager.Instance.IsRunning;
-            StatusText = running ? "核心运行中" : "核心已停止";
+            StatusText = running ? L.Logs_StatusRunning : L.Logs_StatusStopped;
             StatusDotFill = running ? RunningBrush : StoppedBrush;
         }
 
@@ -206,7 +207,7 @@ namespace AnywhereWinUI.ViewModels
             _dirty = false;
             LogEntries.Clear();
             _prevBufferCount = 0;
-            LineCountText = "(0 行)";
+            LineCountText = string.Format(L.Logs_LineCountFmt, 0);
         }
 
         public void Dispose()

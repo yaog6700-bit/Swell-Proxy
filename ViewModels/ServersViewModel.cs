@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Services;
 using AnywhereWinUI.Views;
 using Microsoft.UI;
@@ -140,7 +141,7 @@ namespace AnywhereWinUI.ViewModels
                     SubscriptionId = node.SubscriptionId ?? string.Empty,
                     Network = node.Network ?? string.Empty,
                     IsFavorite = node.IsFavorite,
-                    PingText = "未测试",
+                    PingText = L.Servers_PingUntested,
                     ActiveIndicatorVisibility = (node.Id == currentSelectedId && isRunning) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed
                 };
                 AllServers.Add(item);
@@ -226,12 +227,12 @@ namespace AnywhereWinUI.ViewModels
             var selected = string.IsNullOrWhiteSpace(SelectedGroupFilterId) ? AllFilterId : SelectedGroupFilterId;
 
             GroupFilters.Clear();
-            GroupFilters.Add(new ServerGroupFilterItem { Id = AllFilterId, Name = "全部服务器" });
-            GroupFilters.Add(new ServerGroupFilterItem { Id = FavoritesFilterId, Name = "收藏列表" });
+            GroupFilters.Add(new ServerGroupFilterItem { Id = AllFilterId, Name = L.Servers_FilterAll });
+            GroupFilters.Add(new ServerGroupFilterItem { Id = FavoritesFilterId, Name = L.Servers_FilterFavorites });
 
             if (AllServers.Any(s => IsManualOrDetached(s.SubscriptionId)))
             {
-                GroupFilters.Add(new ServerGroupFilterItem { Id = ManualFilterId, Name = "自建列表" });
+                GroupFilters.Add(new ServerGroupFilterItem { Id = ManualFilterId, Name = L.Servers_FilterManual });
             }
 
             foreach (var sub in Subscriptions)
@@ -242,7 +243,7 @@ namespace AnywhereWinUI.ViewModels
                 GroupFilters.Add(new ServerGroupFilterItem
                 {
                     Id = sub.Id,
-                    Name = string.IsNullOrWhiteSpace(sub.Name) ? "未命名订阅" : sub.Name
+                    Name = string.IsNullOrWhiteSpace(sub.Name) ? L.Servers_UnnamedSub : sub.Name
                 });
             }
 
@@ -297,7 +298,7 @@ namespace AnywhereWinUI.ViewModels
             _dispatcherQueue.TryEnqueue(() =>
             {
                 item.LatencyMs = null;
-                item.PingText = "测试中...";
+                item.PingText = L.Servers_PingTesting;
                 item.PingColor = new SolidColorBrush(Colors.Orange);
             });
 
@@ -308,7 +309,7 @@ namespace AnywhereWinUI.ViewModels
                 if (result.Status != LatencyProbeStatus.Success)
                 {
                     item.LatencyMs = -1;
-                    item.PingText = result.Status == LatencyProbeStatus.Timeout ? "超时" : "失败";
+                    item.PingText = result.Status == LatencyProbeStatus.Timeout ? L.Servers_PingTimeout : L.Servers_PingFailed;
                     item.PingColor = new SolidColorBrush(Colors.Red);
 
                     // Also update selected server property if this is the selected one, so UI bound to it can update
@@ -529,7 +530,7 @@ namespace AnywhereWinUI.ViewModels
                     line.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
                     // 作为订阅处理
-                    string subName = $"订阅_{DateTime.Now:MMdd_HHmm}";
+                    string subName = $"{L.Servers_AutoSubPrefix}_{DateTime.Now:MMdd_HHmm}";
                     if (addedSubsCount > 0)
                     {
                         subName += $"_{addedSubsCount + 1}";

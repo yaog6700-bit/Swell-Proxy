@@ -19,7 +19,7 @@
 
         <!-- Title row: dynamic title + icon segmented switcher -->
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-            <TextBlock x:Name="DialogTitleText"
+            <TextBlock x:Name="DialogTitleText" x:Uid="SubDialog_Title"
                        Grid.Column="0"
                        Text="添加订阅"
                        FontSize="20"
@@ -36,13 +36,13 @@
                     <SolidColorBrush x:Key="SegmentedItemBorderBrushPointerOver" Color="Transparent" />
                 </controls:Segmented.Resources>
                 <!-- Add sub icon -->
-                <controls:SegmentedItem Padding="0" ToolTipService.ToolTip="添加订阅">
+                <controls:SegmentedItem x:Uid="SubDialog_SegAdd" Padding="0" ToolTipService.ToolTip="添加订阅">
                     <controls:SegmentedItem.Icon>
                         <FontIcon Glyph="&#xED0E;" FontSize="14" />
                     </controls:SegmentedItem.Icon>
                 </controls:SegmentedItem>
                 <!-- Manage subs icon -->
-                <controls:SegmentedItem Padding="0" ToolTipService.ToolTip="管理订阅">
+                <controls:SegmentedItem x:Uid="SubDialog_SegManage" Padding="0" ToolTipService.ToolTip="管理订阅">
                     <controls:SegmentedItem.Icon>
                         <FontIcon Glyph="&#xEBC3;" FontSize="14" />
                     </controls:SegmentedItem.Icon>
@@ -52,15 +52,15 @@
 
         <!-- ── Add Page ─────────────────────────────────────────────────────── -->
         <StackPanel x:Name="AddPagePanel" Spacing="14">
-            <TextBox x:Name="UrlInput"
+            <TextBox x:Name="UrlInput" x:Uid="SubDialog_UrlInput"
                      Header="订阅链接"
                      PlaceholderText="https://..."
                      TextWrapping="Wrap"
                      TextChanged="UrlInput_TextChanged" />
-            <TextBox x:Name="NameInput"
+            <TextBox x:Name="NameInput" x:Uid="SubDialog_NameInput"
                      Header="备注名称（可选）"
                      PlaceholderText="留空则使用链接域名" />
-            <TextBlock Text="将自动拉取并导入订阅中的全部节点"
+            <TextBlock x:Uid="SubDialog_Hint" Text="将自动拉取并导入订阅中的全部节点"
                        FontSize="12"
                        Opacity="0.65" />
         </StackPanel>
@@ -77,10 +77,10 @@
                     Padding="2,0">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                        <TextBlock Text="自动刷新订阅"
+                        <TextBlock x:Uid="SubDialog_AutoRefreshTitle" Text="自动刷新订阅"
                                    FontSize="14"
                                    FontWeight="SemiBold" />
-                        <TextBlock Text="每 24 小时同步一次"
+                        <TextBlock x:Uid="SubDialog_AutoRefreshDesc" Text="每 24 小时同步一次"
                                    FontSize="12"
                                    Opacity="0.65" />
                     </StackPanel>
@@ -95,7 +95,7 @@
             </Border>
 
             <!-- Empty state -->
-            <TextBlock x:Name="EmptyStateText"
+            <TextBlock x:Name="EmptyStateText" x:Uid="SubDialog_EmptyText"
                        Grid.Row="1"
                        Text="暂无订阅"
                        HorizontalAlignment="Center"

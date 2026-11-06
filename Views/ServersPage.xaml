@@ -41,7 +41,7 @@
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <AutoSuggestBox x:Name="ServerSearchBox"
+                    <AutoSuggestBox x:Name="ServerSearchBox" x:Uid="Servers_SearchBox"
                                     Grid.Column="0"
                                     PlaceholderText="搜索服务器..."
                                     QueryIcon="Find"
@@ -77,7 +77,7 @@
                             </DataTemplate>
                         </AutoSuggestBox.ItemTemplate>
                     </AutoSuggestBox>
-                    <ToggleButton x:Name="GroupFilterToggleButton"
+                    <ToggleButton x:Name="GroupFilterToggleButton" x:Uid="Servers_GroupFilterBtn"
                                   Grid.Column="1"
                                   Background="Transparent"
                                   BorderBrush="Transparent"
@@ -109,7 +109,7 @@
                         <FontIcon Glyph="&#xEA37;"
                                   FontSize="12"
                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="筛选条件:"
+                        <TextBlock x:Uid="Servers_FilterLabel" Text="筛选条件:"
                                    FontSize="14"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" />
@@ -121,7 +121,7 @@
                               SelectedValuePath="Id"
                               SelectionChanged="GroupFilterComboBox_SelectionChanged" />
 
-                    <DropDownButton x:Name="SortButton"
+                    <DropDownButton x:Name="SortButton" x:Uid="Servers_SortBtn"
                                     Grid.Column="2"
                                     Background="Transparent"
                                     BorderBrush="Transparent"
@@ -131,22 +131,22 @@
                         </DropDownButton.Content>
                         <DropDownButton.Flyout>
                             <MenuFlyout Placement="Bottom">
-                                <RadioMenuFlyoutItem x:Name="SortDefaultItem"
+                                <RadioMenuFlyoutItem x:Name="SortDefaultItem" x:Uid="Servers_SortDefaultItem"
                                                      Text="默认"
                                                      Tag="Default"
                                                      GroupName="ServerSortMode"
                                                      Click="SortMenuItem_Click" />
-                                <RadioMenuFlyoutItem x:Name="SortActiveItem"
+                                <RadioMenuFlyoutItem x:Name="SortActiveItem" x:Uid="Servers_SortActiveItem"
                                                      Text="当前连接"
                                                      Tag="Active"
                                                      GroupName="ServerSortMode"
                                                      Click="SortMenuItem_Click" />
-                                <RadioMenuFlyoutItem x:Name="SortProtocolItem"
+                                <RadioMenuFlyoutItem x:Name="SortProtocolItem" x:Uid="Servers_SortProtocolItem"
                                                      Text="协议"
                                                      Tag="Protocol"
                                                      GroupName="ServerSortMode"
                                                      Click="SortMenuItem_Click" />
-                                <RadioMenuFlyoutItem x:Name="SortLatencyItem"
+                                <RadioMenuFlyoutItem x:Name="SortLatencyItem" x:Uid="Servers_SortLatencyItem"
                                                      Text="延迟"
                                                      Tag="Latency"
                                                      GroupName="ServerSortMode"
@@ -227,7 +227,7 @@
                                                 VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                 <Ellipse Width="6" Height="6" Fill="White" VerticalAlignment="Center" />
-                                                <TextBlock Text="已激活" FontSize="11" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                <TextBlock x:Uid="Servers_ActiveBadge" Text="已激活" FontSize="11" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
@@ -266,7 +266,7 @@
             <!-- Bottom Action Panel -->
             <Grid Grid.Row="2" Margin="0,12,0,0">
                 <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
-                    <Button Click="AddManualServer_Click"
+                    <Button x:Uid="Servers_AddManualBtn" Click="AddManualServer_Click"
                             ToolTipService.ToolTip="添加手动节点"
                             PointerEntered="Button_PointerEntered"
                             PointerExited="Button_PointerExited"
@@ -276,7 +276,7 @@
                         </Button.ScaleTransition>
                         <FontIcon Glyph="&#xE710;" FontSize="16" />
                     </Button>
-                    <Button Click="ImportFromClipboard_Click"
+                    <Button x:Uid="Servers_ImportClipboardBtn" Click="ImportFromClipboard_Click"
                             ToolTipService.ToolTip="从剪贴板导入节点/订阅"
                             PointerEntered="Button_PointerEntered"
                             PointerExited="Button_PointerExited"
@@ -286,7 +286,7 @@
                         </Button.ScaleTransition>
                         <FontIcon Glyph="&#xE71B;" FontSize="16" />
                     </Button>
-                    <Button Click="ManageSubscriptions_Click"
+                    <Button x:Uid="Servers_ManageSubBtn" Click="ManageSubscriptions_Click"
                             ToolTipService.ToolTip="订阅管理"
                             PointerEntered="Button_PointerEntered"
                             PointerExited="Button_PointerExited"
@@ -296,7 +296,7 @@
                         </Button.ScaleTransition>
                         <FontIcon Glyph="&#xEBC3;" FontSize="16" />
                     </Button>
-                    <Button x:Name="PingAllButton"
+                    <Button x:Name="PingAllButton" x:Uid="Servers_PingAllBtn"
                             Click="PingAllServers_Click"
                             ToolTipService.ToolTip="一键测速"
                             PointerEntered="Button_PointerEntered"
@@ -307,7 +307,7 @@
                         </Button.ScaleTransition>
                         <FontIcon Glyph="&#xEC4A;" FontSize="16" />
                     </Button>
-                    <Button x:Name="QrShareButton"
+                    <Button x:Name="QrShareButton" x:Uid="Servers_QrShareBtn"
                             Click="QrShareButton_Click"
                             ToolTipService.ToolTip="分享节点（二维码）"
                             PointerEntered="Button_PointerEntered"
@@ -336,8 +336,8 @@
             <Grid x:Name="EmptyViewPanel" Grid.Row="0" Visibility="Visible" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <FontIcon Glyph="&#xEC05;" FontSize="56" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="未选择服务器" Style="{ThemeResource SubtitleTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
-                    <TextBlock Text="从左侧列表中选择节点以查看详细配置参数、出口 IP 及 AI 解锁状态。" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" MaxWidth="300" TextAlignment="Center" TextWrapping="Wrap" />
+                    <TextBlock x:Uid="Servers_EmptyTitle" Text="未选择服务器" Style="{ThemeResource SubtitleTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                    <TextBlock x:Uid="Servers_EmptySubtitle" Text="从左侧列表中选择节点以查看详细配置参数、出口 IP 及 AI 解锁状态。" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" MaxWidth="300" TextAlignment="Center" TextWrapping="Wrap" />
                 </StackPanel>
             </Grid>
 
@@ -380,19 +380,19 @@
                             </Grid.RowDefinitions>
 
                             <!-- Address -->
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="地址" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Uid="Servers_DetailAddrLabel" Grid.Row="0" Grid.Column="0" Text="地址" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock Grid.Row="0" Grid.Column="1" x:Name="DetailHostText" Text="hk-vip.anywhere-server.com" FontWeight="Medium" VerticalAlignment="Center" />
 
                             <!-- Port -->
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="端口" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Uid="Servers_DetailPortLabel" Grid.Row="1" Grid.Column="0" Text="端口" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock Grid.Row="1" Grid.Column="1" x:Name="DetailPortText" Text="443" FontWeight="Medium" VerticalAlignment="Center" />
 
                             <!-- Transport / Network -->
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="传输" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Uid="Servers_DetailTransportLabel" Grid.Row="2" Grid.Column="0" Text="传输" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock Grid.Row="2" Grid.Column="1" x:Name="DetailNetworkText" Text="TCP" FontWeight="Medium" VerticalAlignment="Center" />
 
                             <!-- Latency -->
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="延迟" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Uid="Servers_DetailLatencyLabel" Grid.Row="3" Grid.Column="0" Text="延迟" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <TextBlock x:Name="DetailLatencyText" Text="--- ms" FontWeight="Bold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                                 <Button x:Name="TestSingleLatencyButton" Click="TestSingleLatency_Click" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4">
@@ -405,7 +405,7 @@
 
                         <!-- Section: AI Unlock Indicators -->
                         <StackPanel Spacing="12">
-                            <TextBlock Text="AI 解锁状态" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock x:Uid="Servers_AiSectionTitle" Text="AI 解锁状态" FontSize="14" FontWeight="SemiBold" />
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Ellipse x:Name="OpenAiLight" Width="8" Height="8" Fill="{StaticResource StateNeutralBrush}" VerticalAlignment="Center" />
@@ -427,10 +427,10 @@
                         <!-- Section: IP Network Status -->
                         <StackPanel Spacing="12">
                             <Grid>
-                                <TextBlock Text="IP 网络状态" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="Servers_IpSectionTitle" Text="IP 网络状态" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <ProgressRing x:Name="IpLoadingRing" IsActive="False" Width="16" Height="16" VerticalAlignment="Center" />
-                                    <Button x:Name="RefreshAiIpButton"
+                                    <Button x:Name="RefreshAiIpButton" x:Uid="Servers_RefreshAiIpBtn"
                                             Click="RefreshAiIpChecks_Click"
                                             ToolTipService.ToolTip="重新检测 AI 解锁与出口 IP"
                                             Padding="4"
@@ -454,24 +454,24 @@
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="出口 IP" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="Servers_ExitIpLabel" Grid.Row="0" Grid.Column="0" Text="出口 IP" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                     <TextBlock x:Name="IpAddressText" Text="-" FontWeight="Medium" VerticalAlignment="Center" />
-                                    <Button x:Name="ToggleIpMaskButton" Click="ToggleIpMask_Click" ToolTipService.ToolTip="显示完整 IP" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4">
+                                    <Button x:Name="ToggleIpMaskButton" x:Uid="Servers_ToggleIpMaskBtn" Click="ToggleIpMask_Click" ToolTipService.ToolTip="显示完整 IP" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4">
                                         <FontIcon x:Name="IpMaskIcon" Glyph="&#xED1A;" FontSize="14" />
                                     </Button>
-                                    <Button Click="CopyIpStatus_Click" ToolTipService.ToolTip="复制 IP 网络状态" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4">
+                                    <Button x:Uid="Servers_CopyIpStatusBtn" Click="CopyIpStatus_Click" ToolTipService.ToolTip="复制 IP 网络状态" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4">
                                         <FontIcon Glyph="&#xE8C8;" FontSize="14" />
                                     </Button>
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="ISP 运营商" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="Servers_IspLabel" Grid.Row="1" Grid.Column="0" Text="ISP 运营商" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                 <TextBlock Grid.Row="1" Grid.Column="1" x:Name="IpOrgText" Text="-" FontWeight="Medium" TextWrapping="Wrap" VerticalAlignment="Center" />
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="ASN 编号" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="Servers_AsnLabel" Grid.Row="2" Grid.Column="0" Text="ASN 编号" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                 <TextBlock Grid.Row="2" Grid.Column="1" x:Name="IpAsnText" Text="-" FontWeight="Medium" VerticalAlignment="Center" />
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="地理位置" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                <TextBlock x:Uid="Servers_LocationLabel" Grid.Row="3" Grid.Column="0" Text="地理位置" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                 <TextBlock Grid.Row="3" Grid.Column="1" x:Name="IpLocationText" Text="-" FontWeight="Medium" TextWrapping="Wrap" VerticalAlignment="Center" />
                             </Grid>
                         </StackPanel>
@@ -482,12 +482,12 @@
             <!-- Panel 2: Edit/Add Manual Server Form -->
             <ScrollViewer x:Name="EditFormPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="16" MaxWidth="600" HorizontalAlignment="Stretch">
-                    <TextBlock x:Name="EditFormTitle" Text="手动添加服务器" Style="{ThemeResource TitleTextBlockStyle}" FontWeight="Bold"/>
-                    <TextBlock Text="请在下方填写服务器配置参数。" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock x:Name="EditFormTitle" x:Uid="Servers_EditTitle" Text="手动添加服务器" Style="{ThemeResource TitleTextBlockStyle}" FontWeight="Bold"/>
+                    <TextBlock x:Uid="Servers_EditSubtitle" Text="请在下方填写服务器配置参数。" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
-                    <TextBox x:Name="ServerNameInput" Header="节点名称" PlaceholderText="例如: 香港 BGP VLESS-XTLS" Margin="0,8,0,0"/>
+                    <TextBox x:Name="ServerNameInput" x:Uid="Servers_FormName" Header="节点名称" PlaceholderText="例如: 香港 BGP VLESS-XTLS" Margin="0,8,0,0"/>
 
-                    <ComboBox x:Name="ServerProtocolInput" Header="协议类型" HorizontalAlignment="Stretch" SelectionChanged="ServerProtocolInput_SelectionChanged">
+                    <ComboBox x:Name="ServerProtocolInput" x:Uid="Servers_FormProtocol" Header="协议类型" HorizontalAlignment="Stretch" SelectionChanged="ServerProtocolInput_SelectionChanged">
                         <ComboBoxItem Content="VLESS" IsSelected="True"/>
                         <ComboBoxItem Content="VMess"/>
                         <ComboBoxItem Content="Shadowsocks"/>
@@ -504,54 +504,54 @@
                     </ComboBox>
 
                     <!-- 前置代理 (Proxy Chain) -->
-                    <ComboBox x:Name="ServerProxyChainInput" Header="前置代理 (Proxy Chain)" HorizontalAlignment="Stretch" />
-                    <TextBlock Text="选择通过另一个代理服务器连接此节点（链式代理）" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,-8,0,0" />
+                    <ComboBox x:Name="ServerProxyChainInput" x:Uid="Servers_FormProxyChain" Header="前置代理 (Proxy Chain)" HorizontalAlignment="Stretch" />
+                    <TextBlock x:Uid="Servers_FormProxyChainDesc" Text="选择通过另一个代理服务器连接此节点（链式代理）" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,-8,0,0" />
 
                     <Grid ColumnSpacing="12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="100" />
                         </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" x:Name="ServerHostInput" Header="地址 / 域名" PlaceholderText="例如: hk.anywhere.com" />
-                        <TextBox Grid.Column="1" x:Name="ServerPortInput" Header="端口" InputScope="Number" Text="443" />
+                        <TextBox Grid.Column="0" x:Name="ServerHostInput" x:Uid="Servers_FormHost" Header="地址 / 域名" PlaceholderText="例如: hk.anywhere.com" />
+                        <TextBox Grid.Column="1" x:Name="ServerPortInput" x:Uid="Servers_FormPort" Header="端口" InputScope="Number" Text="443" />
                     </Grid>
 
                     <!-- Shadow-TLS settings -->
                     <StackPanel x:Name="ShadowTlsPanel" Spacing="12" Visibility="Collapsed">
-                        <CheckBox x:Name="ServerIsShadowTlsInput" Content="启用 Shadow-TLS" Checked="ServerIsShadowTlsInput_Changed" Unchecked="ServerIsShadowTlsInput_Changed" />
+                        <CheckBox x:Name="ServerIsShadowTlsInput" x:Uid="Servers_FormEnableShadowTls" Content="启用 Shadow-TLS" Checked="ServerIsShadowTlsInput_Changed" Unchecked="ServerIsShadowTlsInput_Changed" />
                         <StackPanel x:Name="ShadowTlsSubPanel" Spacing="12" Visibility="Collapsed">
-                            <ComboBox x:Name="ServerShadowTlsVersionInput" Header="Shadow-TLS 版本" HorizontalAlignment="Stretch">
+                            <ComboBox x:Name="ServerShadowTlsVersionInput" x:Uid="Servers_FormShadowTlsVer" Header="Shadow-TLS 版本" HorizontalAlignment="Stretch">
                                 <ComboBoxItem Content="3" IsSelected="True"/>
                                 <ComboBoxItem Content="2"/>
                                 <ComboBoxItem Content="1"/>
                             </ComboBox>
-                            <TextBox x:Name="ServerShadowTlsPasswordInput" Header="Shadow-TLS 密码" PlaceholderText="请输入 Shadow-TLS 密码" />
-                            <TextBox x:Name="ServerShadowTlsSniInput" Header="SNI（伪装域名）" PlaceholderText="例如: support.apple.com" />
+                            <TextBox x:Name="ServerShadowTlsPasswordInput" x:Uid="Servers_FormShadowTlsPwd" Header="Shadow-TLS 密码" PlaceholderText="请输入 Shadow-TLS 密码" />
+                            <TextBox x:Name="ServerShadowTlsSniInput" x:Uid="Servers_FormShadowTlsSni" Header="SNI（伪装域名）" PlaceholderText="例如: support.apple.com" />
                         </StackPanel>
                     </StackPanel>
 
                     <!-- 密码 / Token -->
                     <StackPanel x:Name="PasswordPanel" Spacing="8" Visibility="Collapsed">
-                        <PasswordBox x:Name="ServerPasswordInput" Header="密码 / Token" PasswordChar="●" PlaceholderText="请输入密码或Token" />
+                        <PasswordBox x:Name="ServerPasswordInput" x:Uid="Servers_FormPassword" Header="密码 / Token" PasswordChar="●" PlaceholderText="请输入密码或Token" />
                     </StackPanel>
 
                     <!-- WireGuard 设置 -->
                     <StackPanel x:Name="WireGuardPanel" Spacing="8" Visibility="Collapsed">
-                        <TextBox x:Name="ServerWgPrivateKeyInput" Header="私钥 (Private Key)" PlaceholderText="请输入 WireGuard 私钥" />
-                        <TextBox x:Name="ServerWgLocalAddressInput" Header="本地地址 (Local Address)" PlaceholderText="10.0.0.2/32" />
-                        <TextBox x:Name="ServerWgPreSharedKeyInput" Header="预共享密钥 (Pre-Shared Key)" PlaceholderText="可选" />
-                        <TextBox x:Name="ServerWgMtuInput" Header="MTU" InputScope="Number" PlaceholderText="1408 (为 0 则使用默认)" />
+                        <TextBox x:Name="ServerWgPrivateKeyInput" x:Uid="Servers_FormWgPrivKey" Header="私钥 (Private Key)" PlaceholderText="请输入 WireGuard 私钥" />
+                        <TextBox x:Name="ServerWgLocalAddressInput" x:Uid="Servers_FormWgLocalAddr" Header="本地地址 (Local Address)" PlaceholderText="10.0.0.2/32" />
+                        <TextBox x:Name="ServerWgPreSharedKeyInput" x:Uid="Servers_FormWgPsk" Header="预共享密钥 (Pre-Shared Key)" PlaceholderText="可选" />
+                        <TextBox x:Name="ServerWgMtuInput" x:Uid="Servers_FormWgMtu" Header="MTU" InputScope="Number" PlaceholderText="1408 (为 0 则使用默认)" />
                     </StackPanel>
 
                     <!-- Nowhere 设置 -->
                     <StackPanel x:Name="NowherePanel" Spacing="8" Visibility="Collapsed">
-                        <TextBox x:Name="ServerNowhereSpecInput" Header="Spec" PlaceholderText="请输入 Nowhere 的 Spec" />
+                        <TextBox x:Name="ServerNowhereSpecInput" x:Uid="Servers_FormNowhereSpec" Header="Spec" PlaceholderText="请输入 Nowhere 的 Spec" />
                     </StackPanel>
 
                     <!-- Snell 设置 -->
                     <StackPanel x:Name="SnellPanel" Spacing="12" Visibility="Collapsed">
-                        <PasswordBox x:Name="ServerSnellPskInput" Header="预共享密钥 (PSK)" PasswordChar="●" PlaceholderText="请输入 Snell PSK"/>
-                        <ComboBox x:Name="ServerSnellVersionInput" Header="Snell 版本 (Version)" HorizontalAlignment="Stretch" SelectionChanged="ServerSnellVersionInput_SelectionChanged">
+                        <PasswordBox x:Name="ServerSnellPskInput" x:Uid="Servers_FormSnellPsk" Header="预共享密钥 (PSK)" PasswordChar="●" PlaceholderText="请输入 Snell PSK"/>
+                        <ComboBox x:Name="ServerSnellVersionInput" x:Uid="Servers_FormSnellVer" Header="Snell 版本 (Version)" HorizontalAlignment="Stretch" SelectionChanged="ServerSnellVersionInput_SelectionChanged">
                             <ComboBoxItem Content="6"/>
                             <ComboBoxItem Content="4" IsSelected="True"/>
                             <ComboBoxItem Content="5"/>
@@ -559,25 +559,25 @@
                             <ComboBoxItem Content="2"/>
                             <ComboBoxItem Content="1"/>
                         </ComboBox>
-                        <ComboBox x:Name="ServerSnellModeInput" Header="流量整形 (Mode) [仅 v6]" HorizontalAlignment="Stretch" Visibility="Collapsed">
+                        <ComboBox x:Name="ServerSnellModeInput" x:Uid="Servers_FormSnellMode" Header="流量整形 (Mode) [仅 v6]" HorizontalAlignment="Stretch" Visibility="Collapsed">
                             <ComboBoxItem Content="default" IsSelected="True"/>
                             <ComboBoxItem Content="unshaped"/>
                             <ComboBoxItem Content="unsafe-raw"/>
                         </ComboBox>
-                        <ComboBox x:Name="ServerSnellObfsInput" Header="HTTP 混淆 (Obfs) [v1-v5]" HorizontalAlignment="Stretch" SelectionChanged="ServerSnellObfsInput_SelectionChanged">
-                            <ComboBoxItem Content="关闭 (none)" IsSelected="True"/>
+                        <ComboBox x:Name="ServerSnellObfsInput" x:Uid="Servers_FormSnellObfs" Header="HTTP 混淆 (Obfs) [v1-v5]" HorizontalAlignment="Stretch" SelectionChanged="ServerSnellObfsInput_SelectionChanged">
+                            <ComboBoxItem x:Uid="Servers_FormSnellObfsOff" Content="关闭 (none)" IsSelected="True"/>
                             <ComboBoxItem Content="HTTP"/>
                         </ComboBox>
-                        <TextBox x:Name="ServerSnellObfsHostInput" Header="混淆域名 (Obfs Host)" PlaceholderText="例如: bing.com" Visibility="Collapsed"/>
+                        <TextBox x:Name="ServerSnellObfsHostInput" x:Uid="Servers_FormSnellObfsHost" Header="混淆域名 (Obfs Host)" PlaceholderText="例如: bing.com" Visibility="Collapsed"/>
                     </StackPanel>
 
                     <!-- 混淆方式 (Obfs) -->
                     <StackPanel x:Name="ObfsPanel" Spacing="8" Visibility="Collapsed">
-                        <ComboBox x:Name="ServerObfsTypeInput" Header="混淆方式 (Obfs)" HorizontalAlignment="Stretch" SelectionChanged="ServerObfsTypeInput_SelectionChanged">
+                        <ComboBox x:Name="ServerObfsTypeInput" x:Uid="Servers_FormObfsType" Header="混淆方式 (Obfs)" HorizontalAlignment="Stretch" SelectionChanged="ServerObfsTypeInput_SelectionChanged">
                             <ComboBoxItem Content="none" IsSelected="True" />
                             <ComboBoxItem Content="obfs" />
                         </ComboBox>
-                        <TextBox x:Name="ServerObfsPasswordInput" Header="混淆密码 (Obfs Password)" PlaceholderText="请输入混淆密码" Visibility="Collapsed" />
+                        <TextBox x:Name="ServerObfsPasswordInput" x:Uid="Servers_FormObfsPwd" Header="混淆密码 (Obfs Password)" PlaceholderText="请输入混淆密码" Visibility="Collapsed" />
                     </StackPanel>
 
                     <!-- UUID / 用户名 -->
@@ -592,12 +592,12 @@
 
                     <!-- 加密方式 -->
                     <StackPanel x:Name="EncryptionPanel" Spacing="8" Visibility="Collapsed">
-                        <ComboBox x:Name="ServerEncryptionInput" Header="加密方式" HorizontalAlignment="Stretch" />
+                        <ComboBox x:Name="ServerEncryptionInput" x:Uid="Servers_FormEncryption" Header="加密方式" HorizontalAlignment="Stretch" />
                     </StackPanel>
 
                     <!-- 传输协议 (Network) -->
                     <StackPanel x:Name="NetworkPanel" Spacing="8" Visibility="Collapsed">
-                        <ComboBox x:Name="ServerNetworkInput" Header="传输协议 (Network)" HorizontalAlignment="Stretch" SelectionChanged="ServerNetworkInput_SelectionChanged">
+                        <ComboBox x:Name="ServerNetworkInput" x:Uid="Servers_FormNetwork" Header="传输协议 (Network)" HorizontalAlignment="Stretch" SelectionChanged="ServerNetworkInput_SelectionChanged">
                             <ComboBoxItem Content="tcp" IsSelected="True"/>
                             <ComboBoxItem Content="ws"/>
                             <ComboBoxItem Content="httpupgrade"/>
@@ -611,7 +611,7 @@
 
                     <!-- 伪装类型 (Header Type) -->
                     <StackPanel x:Name="HeaderTypePanel" Spacing="8" Visibility="Collapsed">
-                        <ComboBox x:Name="ServerHeaderTypeInput" Header="伪装类型 (Header Type)" HorizontalAlignment="Stretch">
+                        <ComboBox x:Name="ServerHeaderTypeInput" x:Uid="Servers_FormHeaderType" Header="伪装类型 (Header Type)" HorizontalAlignment="Stretch">
                             <ComboBoxItem Content="none" IsSelected="True" />
                             <ComboBoxItem Content="http" />
                         </ComboBox>
@@ -623,13 +623,13 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" x:Name="ServerPathInput" Header="路径 (Path)" PlaceholderText="/v2ray" />
-                        <TextBox Grid.Column="1" x:Name="ServerWsHostInput" Header="伪装域名 (Host)" PlaceholderText="example.com" />
+                        <TextBox Grid.Column="0" x:Name="ServerPathInput" x:Uid="Servers_FormPath" Header="路径 (Path)" PlaceholderText="/v2ray" />
+                        <TextBox Grid.Column="1" x:Name="ServerWsHostInput" x:Uid="Servers_FormWsHost" Header="伪装域名 (Host)" PlaceholderText="example.com" />
                     </Grid>
 
                     <!-- 流控 (Flow) -->
                     <StackPanel x:Name="FlowPanel" Spacing="8" Visibility="Collapsed">
-                        <ComboBox x:Name="ServerFlowInput" Header="流控 (Flow)" HorizontalAlignment="Stretch">
+                        <ComboBox x:Name="ServerFlowInput" x:Uid="Servers_FormFlow" Header="流控 (Flow)" HorizontalAlignment="Stretch">
                             <ComboBoxItem Content="none" IsSelected="True"/>
                             <ComboBoxItem Content="xtls-rprx-vision"/>
                             <ComboBoxItem Content="xtls-rprx-vision-udp443"/>
@@ -637,7 +637,7 @@
                     </StackPanel>
 
                     <StackPanel x:Name="SecurityPanel" Spacing="8" Visibility="Collapsed">
-                        <ComboBox x:Name="ServerSecurityInput" Header="安全传输 (Security)" HorizontalAlignment="Stretch" SelectionChanged="ServerSecurityInput_SelectionChanged">
+                        <ComboBox x:Name="ServerSecurityInput" x:Uid="Servers_FormSecurity" Header="安全传输 (Security)" HorizontalAlignment="Stretch" SelectionChanged="ServerSecurityInput_SelectionChanged">
                             <ComboBoxItem Content="none" IsSelected="True"/>
                             <ComboBoxItem Content="tls"/>
                             <ComboBoxItem Content="reality"/>
@@ -652,7 +652,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0" x:Name="ServerSniInput" Header="SNI (Server Name Indication)" PlaceholderText="example.com" />
-                            <ComboBox Grid.Column="1" x:Name="ServerFingerprintInput" Header="指纹 (Fingerprint)" HorizontalAlignment="Stretch">
+                            <ComboBox Grid.Column="1" x:Name="ServerFingerprintInput" x:Uid="Servers_FormFingerprint" Header="指纹 (Fingerprint)" HorizontalAlignment="Stretch">
                                 <ComboBoxItem Content="none" IsSelected="True"/>
                                 <ComboBoxItem Content="chrome"/>
                                 <ComboBoxItem Content="firefox"/>
@@ -669,7 +669,7 @@
                             <ComboBoxItem Content="h3" />
                             <ComboBoxItem Content="h3,h2,http/1.1" />
                         </ComboBox>
-                        <CheckBox x:Name="ServerAllowInsecureInput" Content="允许不安全证书 (Allow Insecure)" />
+                        <CheckBox x:Name="ServerAllowInsecureInput" x:Uid="Servers_FormAllowInsecure" Content="允许不安全证书 (Allow Insecure)" />
                     </StackPanel>
 
                     <!-- Reality 专属 -->
@@ -685,8 +685,8 @@
                     </Grid>
 
                     <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,24,0,0">
-                        <Button Content="保存" Click="SaveServer_Click" Style="{ThemeResource AccentButtonStyle}" Padding="20,10" CornerRadius="6"/>
-                        <Button Content="取消" Click="CancelEdit_Click" Padding="20,10" CornerRadius="6"/>
+                        <Button x:Uid="Servers_FormSaveBtn" Content="保存" Click="SaveServer_Click" Style="{ThemeResource AccentButtonStyle}" Padding="20,10" CornerRadius="6"/>
+                        <Button x:Uid="Servers_FormCancelBtn" Content="取消" Click="CancelEdit_Click" Padding="20,10" CornerRadius="6"/>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
@@ -694,26 +694,26 @@
             <!-- Panel 3: Subscription Manager View -->
             <ScrollViewer x:Name="SubscriptionPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" Padding="0,0,16,0">
                 <StackPanel Spacing="16" MaxWidth="600" HorizontalAlignment="Stretch" Margin="0,0,0,24">
-                    <TextBlock Text="订阅管理" Style="{ThemeResource TitleTextBlockStyle}" FontWeight="Bold"/>
-                    <TextBlock Text="支持批量导入和同步节点，方便快速更新。" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock x:Uid="Servers_SubMgrTitle" Text="订阅管理" Style="{ThemeResource TitleTextBlockStyle}" FontWeight="Bold"/>
+                    <TextBlock x:Uid="Servers_SubMgrSubtitle" Text="支持批量导入和同步节点，方便快速更新。" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
                     <controls:Segmented x:Name="SubSegmented" 
                                         HorizontalAlignment="Stretch" 
                                         SelectedIndex="0"
                                         SelectionChanged="SubSegmented_SelectionChanged"
                                         Margin="0,8,0,8">
-                        <controls:SegmentedItem Content="添加新订阅"/>
-                        <controls:SegmentedItem Content="我的订阅列表"/>
+                        <controls:SegmentedItem x:Uid="Servers_SubSegAdd" Content="添加新订阅"/>
+                        <controls:SegmentedItem x:Uid="Servers_SubSegList" Content="我的订阅列表"/>
                     </controls:Segmented>
 
                     <!-- Tab 0: Import Subscription Form -->
                     <StackPanel x:Name="SubAddFormPanel" Spacing="16">
-                        <TextBox x:Name="SubNameInput" Header="订阅名称" PlaceholderText="例如: GlaDOS VIP 订阅"/>
-                        <TextBox x:Name="SubUrlInput" Header="订阅链接 (URL)" PlaceholderText="https://api.glados.space/subs/..."/>
+                        <TextBox x:Name="SubNameInput" x:Uid="Servers_SubFormName" Header="订阅名称" PlaceholderText="例如: GlaDOS VIP 订阅"/>
+                        <TextBox x:Name="SubUrlInput" x:Uid="Servers_SubFormUrl" Header="订阅链接 (URL)" PlaceholderText="https://api.glados.space/subs/..."/>
 
                         <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0">
-                            <Button x:Name="SaveSubButton" Click="SaveSub_Click" Content="导入并同步" Style="{ThemeResource AccentButtonStyle}" Padding="20,10" CornerRadius="6"/>
-                            <Button Content="返回" Click="CancelEdit_Click" Padding="20,10" CornerRadius="6"/>
+                            <Button x:Name="SaveSubButton" x:Uid="Servers_SubSaveBtn" Click="SaveSub_Click" Content="导入并同步" Style="{ThemeResource AccentButtonStyle}" Padding="20,10" CornerRadius="6"/>
+                            <Button x:Uid="Servers_SubBackBtn1" Content="返回" Click="CancelEdit_Click" Padding="20,10" CornerRadius="6"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -743,22 +743,22 @@
 
                                         <!-- Last Updated -->
                                         <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Spacing="4" Margin="0,6,0,0">
-                                            <TextBlock Text="上次同步:" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock x:Uid="Servers_SubLastSync" Text="上次同步:" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                             <TextBlock Text="{x:Bind LastUpdated, Mode=OneWay}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         </StackPanel>
 
                                         <!-- Actions -->
-                                        <Button Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Click="UpdateSub_Click" Padding="8" Margin="8,0,0,0" ToolTipService.ToolTip="同步">
+                                        <Button x:Uid="Servers_SubSyncItemBtn" Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Click="UpdateSub_Click" Padding="8" Margin="8,0,0,0" ToolTipService.ToolTip="同步">
                                             <FontIcon Glyph="&#xE72C;" FontSize="12" />
                                         </Button>
-                                        <Button Grid.Row="0" Grid.RowSpan="3" Grid.Column="2" Click="DeleteSub_Click" Padding="8" Margin="4,0,0,0" Foreground="Red" ToolTipService.ToolTip="删除">
+                                        <Button x:Uid="Servers_SubDelItemBtn" Grid.Row="0" Grid.RowSpan="3" Grid.Column="2" Click="DeleteSub_Click" Padding="8" Margin="4,0,0,0" Foreground="Red" ToolTipService.ToolTip="删除">
                                             <FontIcon Glyph="&#xE74D;" FontSize="12" />
                                         </Button>
                                     </Grid>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
-                        <Button Content="返回" Click="CancelEdit_Click" Padding="20,10" CornerRadius="6" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+                        <Button x:Uid="Servers_SubBackBtn2" Content="返回" Click="CancelEdit_Click" Padding="20,10" CornerRadius="6" HorizontalAlignment="Left" Margin="0,16,0,0"/>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
@@ -790,7 +790,7 @@
                 <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="16,0,0,0">
                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                         <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                        <TextBlock x:Name="ActiveNodeText" Text="未连接" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock x:Name="ActiveNodeText" x:Uid="Servers_ActiveNodeText" Text="未连接" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,2">
                         <StackPanel Orientation="Horizontal" Spacing="4">
@@ -807,7 +807,7 @@
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
                     <!-- 当面板隐藏但正在运行时显示此按钮 -->
-                    <Button x:Name="ReopenTopSheetButton" 
+                    <Button x:Name="ReopenTopSheetButton" x:Uid="Servers_ReopenSheetBtn"
                             Visibility="Collapsed"
                             Click="ReopenTopSheetButton_Click" 
                             Padding="8" CornerRadius="6"
@@ -821,7 +821,7 @@
                     </Button>
 
                     <!-- Proxy Mode -->
-                    <Button x:Name="ProxyModeButton"
+                    <Button x:Name="ProxyModeButton" x:Uid="Servers_ProxyModeBtn"
                             Padding="8" CornerRadius="6"
                             PointerEntered="Button_PointerEntered"
                             PointerExited="Button_PointerExited"
@@ -833,10 +833,10 @@
                         <FontIcon x:Name="ProxyModeIcon" Glyph="&#xEC27;" FontSize="16" FontFamily="{ThemeResource SymbolThemeFontFamily}"/>
                         <Button.Flyout>
                             <MenuFlyout>
-                                <MenuFlyoutItem Text="系统代理" Tag="system" Click="SetProxyMode_Click" />
-                                <MenuFlyoutItem Text="TUN模式" Tag="tun" Click="SetProxyMode_Click" />
-                                <MenuFlyoutItem Text="仅手动代理" Tag="manual" Click="SetProxyMode_Click" />
-                                <MenuFlyoutItem Text="TUN + 系统代理" Tag="tun-system" Click="SetProxyMode_Click" />
+                                <MenuFlyoutItem x:Uid="Servers_FlyoutSys" Text="系统代理" Tag="system" Click="SetProxyMode_Click" />
+                                <MenuFlyoutItem x:Uid="Servers_FlyoutTun" Text="TUN模式" Tag="tun" Click="SetProxyMode_Click" />
+                                <MenuFlyoutItem x:Uid="Servers_FlyoutManual" Text="仅手动代理" Tag="manual" Click="SetProxyMode_Click" />
+                                <MenuFlyoutItem x:Uid="Servers_FlyoutTunSys" Text="TUN + 系统代理" Tag="tun-system" Click="SetProxyMode_Click" />
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
@@ -852,9 +852,9 @@
                         <FontIcon x:Name="RoutingModeIcon" Glyph="&#xE909;" FontSize="16" />
                         <Button.Flyout>
                             <MenuFlyout>
-                                <MenuFlyoutItem Text="智能分流" Tag="smart" Click="SetRoutingMode_Click" />
-                                <MenuFlyoutItem Text="全局路由" Tag="global" Click="SetRoutingMode_Click" />
-                                <MenuFlyoutItem Text="直接连接" Tag="direct" Click="SetRoutingMode_Click" />
+                                <MenuFlyoutItem x:Uid="Servers_FlyoutSmart" Text="智能分流" Tag="smart" Click="SetRoutingMode_Click" />
+                                <MenuFlyoutItem x:Uid="Servers_FlyoutGlobal" Text="全局路由" Tag="global" Click="SetRoutingMode_Click" />
+                                <MenuFlyoutItem x:Uid="Servers_FlyoutDirect" Text="直接连接" Tag="direct" Click="SetRoutingMode_Click" />
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
@@ -898,7 +898,7 @@
                     </Border>
 
                     <!-- Hint text -->
-                    <TextBlock Text="使用手机/其它代理软件扫码导入"
+                    <TextBlock x:Uid="Servers_QrHint" Text="使用手机/其它代理软件扫码导入"
                                FontSize="11"
                                TextAlignment="Center"
                                TextWrapping="Wrap"
@@ -918,7 +918,7 @@
                                 <GradientStop Color="#8B5CF6" Offset="1"/>
                             </LinearGradientBrush>
                         </Button.Background>
-                        <TextBlock x:Name="CopyLinkButtonText"
+                        <TextBlock x:Name="CopyLinkButtonText" x:Uid="Servers_QrCopyText"
                                    Text="复制分享链接"
                                    FontSize="13"
                                    FontWeight="Medium"
@@ -967,7 +967,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                         <FontIcon Glyph="&#xE7E8;" FontSize="24" Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
-                        <TextBlock Text="概览" Style="{ThemeResource TitleTextBlockStyle}" />
+                        <TextBlock x:Uid="Servers_SheetTitle" Text="概览" Style="{ThemeResource TitleTextBlockStyle}" />
                     </StackPanel>
                     <Button Grid.Column="1" Click="CloseTopSheet_Click" Background="Transparent" BorderThickness="0" CornerRadius="20" Width="40" Height="40" Padding="0">
                         <FontIcon Glyph="&#xE711;" FontSize="14" />
@@ -985,17 +985,17 @@
                         
                         <!-- Mock Stats -->
                         <StackPanel Grid.Column="0" Spacing="4">
-                            <TextBlock Text="当前节点" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Uid="Servers_SheetNodeLabel" Text="当前节点" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock x:Name="TopSheetNodeNameText" Text="---" FontWeight="Bold" FontSize="16" />
                         </StackPanel>
                         
                         <StackPanel Grid.Column="1" Spacing="4">
-                            <TextBlock Text="运行时间" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Uid="Servers_SheetUptimeLabel" Text="运行时间" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock x:Name="TopSheetUptimeText" Text="00:00:00" FontWeight="Bold" FontSize="16" />
                         </StackPanel>
                         
                         <StackPanel Grid.Column="2" Spacing="4">
-                            <TextBlock Text="网络延迟" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Uid="Servers_SheetLatencyLabel" Text="网络延迟" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock x:Name="TopSheetLatencyText" Text="--- ms" Foreground="{ThemeResource SystemFillColorSuccessBrush}" FontWeight="Bold" FontSize="16" />
                         </StackPanel>
                     </Grid>
@@ -1015,11 +1015,11 @@
                             <!-- 实时速度文本 -->
                             <StackPanel Grid.Column="0" Spacing="12" VerticalAlignment="Center" Margin="0,0,16,0">
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="下载" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock x:Uid="Servers_SheetDownLabel" Text="下载" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     <TextBlock x:Name="TopSheetDownText" Text="0 B/s" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
                                 </StackPanel>
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="上传" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock x:Uid="Servers_SheetUpLabel" Text="上传" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     <TextBlock x:Name="TopSheetUpText" Text="0 B/s" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                                 </StackPanel>
                             </StackPanel>

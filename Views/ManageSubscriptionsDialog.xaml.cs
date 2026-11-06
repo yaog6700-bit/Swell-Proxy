@@ -1,4 +1,4 @@
-﻿using AnywhereWinUI.Helpers;
+using AnywhereWinUI.Helpers;
 using System;
 using System.Threading.Tasks;
 using Microsoft.UI;
@@ -45,21 +45,21 @@ namespace AnywhereWinUI.Views
 
         private void ApplyAddPage()
         {
-            DialogTitleText.Text       = "添加订阅";
+            DialogTitleText.Text       = L.SubDialog_AddTitle;
             AddPagePanel.Visibility    = Visibility.Visible;
             ManagePagePanel.Visibility = Visibility.Collapsed;
-            PrimaryButtonText          = "添加";
-            CloseButtonText            = "取消";
+            PrimaryButtonText          = L.SubDialog_AddBtn;
+            CloseButtonText            = L.Dialog_Cancel;
             IsPrimaryButtonEnabled     = !string.IsNullOrWhiteSpace(UrlInput?.Text);
         }
 
         private void ApplyManagePage()
         {
-            DialogTitleText.Text       = "管理订阅";
+            DialogTitleText.Text       = L.SubDialog_ManageTitle;
             AddPagePanel.Visibility    = Visibility.Collapsed;
             ManagePagePanel.Visibility = Visibility.Visible;
             PrimaryButtonText          = string.Empty;
-            CloseButtonText            = "完成";
+            CloseButtonText            = L.SubDialog_DoneBtn;
             IsPrimaryButtonEnabled     = false;
             _isLoadingAutoRefreshSwitch = true;
             AutoRefreshSwitch.IsOn = AppSession.Instance.EnableSubscriptionAutoRefresh;
@@ -98,7 +98,7 @@ namespace AnywhereWinUI.Views
             {
                 try { name = new Uri(url).Host; }
                 catch { name = url; }
-                if (string.IsNullOrWhiteSpace(name)) name = "未命名订阅";
+                if (string.IsNullOrWhiteSpace(name)) name = L.Servers_UnnamedSub;
             }
 
             try
@@ -115,9 +115,9 @@ namespace AnywhereWinUI.Views
                         
                         var errDialog = new ContentDialog
                         {
-                            Title = "添加订阅失败",
+                            Title = L.SubDialog_AddFailTitle,
                             Content = err,
-                            CloseButtonText = "确定",
+                            CloseButtonText = L.Dialog_OK,
                             XamlRoot = this.XamlRoot
                         };
                         try { await errDialog.WithAppTheme().ShowAsync(); } catch { }
@@ -183,7 +183,7 @@ namespace AnywhereWinUI.Views
             };
             var updatedBlock = new TextBlock
             {
-                Text     = $"上次同步：{sub.LastUpdated}",
+                Text     = Loc.Format("SubDialog_LastSyncFmt", sub.LastUpdated),
                 FontSize = 12,
                 Opacity  = 0.7
             };
@@ -219,7 +219,7 @@ namespace AnywhereWinUI.Views
                 BorderThickness = new Thickness(0),
                 Content         = iconGrid
             };
-            ToolTipService.SetToolTip(refreshBtn, "刷新订阅");
+            ToolTipService.SetToolTip(refreshBtn, L.SubDialog_RefreshTooltip);
 
             refreshBtn.Click += async (_, _) =>
             {
@@ -233,9 +233,9 @@ namespace AnywhereWinUI.Views
                     {
                         var errDialog = new ContentDialog
                         {
-                            Title = "更新订阅失败",
+                            Title = L.SubDialog_UpdateFailTitle,
                             Content = err,
-                            CloseButtonText = "确定",
+                            CloseButtonText = L.Dialog_OK,
                             XamlRoot = this.XamlRoot
                         };
                         try { await errDialog.WithAppTheme().ShowAsync(); } catch { }
@@ -246,7 +246,7 @@ namespace AnywhereWinUI.Views
                         var latest = NodesManager.Instance.Subscriptions.Find(s => s.Id == sub.Id);
                         if (latest != null)
                         {
-                            updatedBlock.Text = $"上次同步：{latest.LastUpdated}";
+                            updatedBlock.Text = Loc.Format("SubDialog_LastSyncFmt", latest.LastUpdated);
                             nextUpdateBlock.Text = GetAutoRefreshStatusText(latest);
                         }
                     }
@@ -264,20 +264,20 @@ namespace AnywhereWinUI.Views
             // ── Delete button with Flyout confirm ─────────────────────────────
             var confirmTitle = new TextBlock
             {
-                Text         = "删除订阅？",
+                Text         = L.SubDialog_DelConfirmTitle,
                 TextWrapping = TextWrapping.Wrap,
                 FontWeight   = FontWeights.SemiBold
             };
             var confirmDesc = new TextBlock
             {
-                Text         = "将同时删除该订阅下的所有节点。",
+                Text         = L.SubDialog_DelConfirmDesc,
                 TextWrapping = TextWrapping.Wrap,
                 FontSize     = 12,
                 Opacity      = 0.7
             };
             var confirmDeleteBtn = new Button
             {
-                Content             = "删除",
+                Content             = L.Servers_MenuDelete,
                 HorizontalAlignment = HorizontalAlignment.Right
             };
             // Try to apply danger accent style
@@ -310,7 +310,7 @@ namespace AnywhereWinUI.Views
                 Content         = new FontIcon { Glyph = "\uE74D", FontSize = 14 },
                 Flyout          = flyout
             };
-            ToolTipService.SetToolTip(deleteBtn, "删除订阅");
+            ToolTipService.SetToolTip(deleteBtn, L.SubDialog_DelTooltip);
 
             confirmDeleteBtn.Click += (_, _) =>
             {
@@ -365,7 +365,7 @@ namespace AnywhereWinUI.Views
         {
             return AppSession.Instance.EnableSubscriptionAutoRefresh
                 ? NodesManager.GetSubscriptionNextAutoRefreshText(sub)
-                : "下次自动同步：已关闭";
+                : L.SubDialog_AutoRefreshOff;
         }
     }
 }

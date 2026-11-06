@@ -319,7 +319,7 @@ namespace AnywhereWinUI.Helpers
                 iconHandle = LoadIconW(IntPtr.Zero, (IntPtr)IDI_APPLICATION);
             }
 
-            string tooltip = _isActive ? "Swell Proxy - 已连接" : "Swell Proxy - 未连接";
+            string tooltip = _isActive ? L.Tray_ConnectedTooltip : L.Tray_DisconnectedTooltip;
 
             return new NOTIFYICONDATAW
             {

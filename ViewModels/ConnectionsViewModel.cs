@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Models;
 using AnywhereWinUI.Services;
 using Microsoft.UI.Dispatching;
@@ -19,7 +20,7 @@ namespace AnywhereWinUI.ViewModels
         private bool isCapturing = true;
 
         [ObservableProperty]
-        private string captureButtonText = "停止捕获";
+        private string captureButtonText = L.Conn_StopCapture;
 
         [ObservableProperty]
         private string captureButtonIcon = "\xE769"; // Pause icon
@@ -85,7 +86,7 @@ namespace AnywhereWinUI.ViewModels
                     else
                     {
                         // Parse status and rule visually
-                        string status = "进行中"; // Since it's in the list, it's active
+                        string status = L.Conn_StatusActive; // Since it's in the list, it's active
                         string targetHost = string.IsNullOrEmpty(incoming.Metadata.Host) 
                                             ? incoming.Metadata.DestinationIP 
                                             : incoming.Metadata.Host;
@@ -201,14 +202,14 @@ namespace AnywhereWinUI.ViewModels
             IsCapturing = !IsCapturing;
             if (IsCapturing)
             {
-                CaptureButtonText = "停止捕获";
+                CaptureButtonText = L.Conn_StopCapture;
                 CaptureButtonIcon = "\xE769"; // Pause
                 if (_isActivePage)
                     await SingboxApiClient.Instance.StartAsync();
             }
             else
             {
-                CaptureButtonText = "开始捕获";
+                CaptureButtonText = L.Conn_StartCapture;
                 CaptureButtonIcon = "\xE768"; // Play
                 await SingboxApiClient.Instance.StopAsync();
             }

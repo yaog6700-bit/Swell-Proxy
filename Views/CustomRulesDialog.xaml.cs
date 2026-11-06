@@ -21,16 +21,16 @@ namespace AnywhereWinUI.Views
         private readonly ObservableCollection<CustomRule> _rules = new();
         private readonly ObservableCollection<CustomRule> _filteredRules = new();
 
-        private static readonly RuleTemplate[] RuleTemplates =
+        private static RuleTemplate[] GetRuleTemplates() => new RuleTemplate[]
         {
-            new("Microsoft", "mixed", "domain_suffix:microsoft.com,domain_suffix:windows.com,domain_suffix:office.com,domain_suffix:office365.com,domain_suffix:live.com,domain_suffix:msftconnecttest.com,domain_suffix:msftncsi.com,domain_suffix:azure.com,domain_suffix:visualstudio.com", "Microsoft、Windows、Office、Azure、Visual Studio 等常用服务。", "proxy"),
-            new("Apple", "mixed", "domain_suffix:apple.com,domain_suffix:icloud.com,domain_suffix:cdn-apple.com,domain_suffix:apple-dns.net,domain_suffix:appstore.com", "Apple、iCloud、App Store 与系统服务。", "proxy"),
-            new("GitHub", "mixed", "domain_suffix:github.com,domain_suffix:github.io,domain_suffix:githubusercontent.com,domain_suffix:githubassets.com", "GitHub 网页、仓库、静态资源与 raw 内容。", "proxy"),
-            new("Steam", "mixed", "domain_suffix:steampowered.com,domain_suffix:steamcommunity.com,domain_suffix:steamstatic.com,domain_suffix:steamserver.net,domain_suffix:steamcontent.com", "Steam 商店、社区与下载相关域名。", "proxy"),
-            new("Discord", "mixed", "domain_suffix:discord.com,domain_suffix:discord.gg,domain_suffix:discordapp.com,domain_suffix:discordapp.net", "Discord 网页、邀请链接与语音/媒体服务。", "proxy"),
-            new("Spotify", "mixed", "domain_suffix:spotify.com,domain_suffix:scdn.co,domain_suffix:spotifycdn.com", "Spotify 登录、播放与 CDN 域名。", "proxy"),
-            new("Bilibili", "mixed", "domain_suffix:bilibili.com,domain_suffix:biliapi.com,domain_suffix:biliapi.net,domain_suffix:bilivideo.com,domain_suffix:hdslb.com", "哔哩哔哩网页、接口与视频 CDN。", "direct"),
-            new("局域网 / 私有网段", "ip", "ip_cidr:10.0.0.0/8,ip_cidr:172.16.0.0/12,ip_cidr:192.168.0.0/16,ip_cidr:127.0.0.0/8,ip_cidr:fc00::/7,ip_cidr:fe80::/10", "常见局域网、回环与 IPv6 私有/链路本地地址。", "direct"),
+            new("Microsoft", "mixed", "domain_suffix:microsoft.com,domain_suffix:windows.com,domain_suffix:office.com,domain_suffix:office365.com,domain_suffix:live.com,domain_suffix:msftconnecttest.com,domain_suffix:msftncsi.com,domain_suffix:azure.com,domain_suffix:visualstudio.com", L.CustomRules_TplMsDesc, "proxy"),
+            new("Apple", "mixed", "domain_suffix:apple.com,domain_suffix:icloud.com,domain_suffix:cdn-apple.com,domain_suffix:apple-dns.net,domain_suffix:appstore.com", L.CustomRules_TplAppleDesc, "proxy"),
+            new("GitHub", "mixed", "domain_suffix:github.com,domain_suffix:github.io,domain_suffix:githubusercontent.com,domain_suffix:githubassets.com", L.CustomRules_TplGithubDesc, "proxy"),
+            new("Steam", "mixed", "domain_suffix:steampowered.com,domain_suffix:steamcommunity.com,domain_suffix:steamstatic.com,domain_suffix:steamserver.net,domain_suffix:steamcontent.com", L.CustomRules_TplSteamDesc, "proxy"),
+            new("Discord", "mixed", "domain_suffix:discord.com,domain_suffix:discord.gg,domain_suffix:discordapp.com,domain_suffix:discordapp.net", L.CustomRules_TplDiscordDesc, "proxy"),
+            new("Spotify", "mixed", "domain_suffix:spotify.com,domain_suffix:scdn.co,domain_suffix:spotifycdn.com", L.CustomRules_TplSpotifyDesc, "proxy"),
+            new("Bilibili", "mixed", "domain_suffix:bilibili.com,domain_suffix:biliapi.com,domain_suffix:biliapi.net,domain_suffix:bilivideo.com,domain_suffix:hdslb.com", L.CustomRules_TplBiliDesc, "direct"),
+            new(L.CustomRules_TplLanName, "ip", "ip_cidr:10.0.0.0/8,ip_cidr:172.16.0.0/12,ip_cidr:192.168.0.0/16,ip_cidr:127.0.0.0/8,ip_cidr:fc00::/7,ip_cidr:fe80::/10", L.CustomRules_TplLanDesc, "direct"),
         };
 
         // Tracks which rule is being edited (null = add mode)
@@ -49,7 +49,7 @@ namespace AnywhereWinUI.Views
                 _rules.Add(new CustomRule
                 {
                     Id          = r.Id,   // 保留稳定标识
-                    Remark      = r.Name == "自定义规则" ? string.Empty : r.Name,
+                    Remark      = (r.Name == "自定义规则" || r.Name == "Custom Rule" || r.Name == L.CustomRules_DefaultName) ? string.Empty : r.Name,
                     Type        = r.Type,
                     Match       = r.Match,
                     OutboundTag = r.OutboundTag,
@@ -62,8 +62,8 @@ namespace AnywhereWinUI.Views
             if (mode != "smart")
             {
                 NonSmartModeBanner.Message = mode == "global"
-                    ? "您正处于全局模式，自定义规则不会写入配置。切回智能分流模式后自动生效。"
-                    : "您正处于直连模式，自定义规则不会写入配置。切回智能分流模式后自动生效。";
+                    ? L.CustomRules_GlobalWarn
+                    : L.CustomRules_DirectWarn;
                 NonSmartModeBanner.IsOpen = true;
             }
 
@@ -83,9 +83,9 @@ namespace AnywhereWinUI.Views
         private static void PopulateOutboundComboBox(ComboBox comboBox)
         {
             comboBox.Items.Clear();
-            comboBox.Items.Add(new ComboBoxItem { Content = "默认代理", Tag = "proxy" });
-            comboBox.Items.Add(new ComboBoxItem { Content = "直连",     Tag = "direct" });
-            comboBox.Items.Add(new ComboBoxItem { Content = "拦截",     Tag = "block" });
+            comboBox.Items.Add(new ComboBoxItem { Content = L.Routing_ActionProxy,  Tag = "proxy" });
+            comboBox.Items.Add(new ComboBoxItem { Content = L.Routing_ActionDirect, Tag = "direct" });
+            comboBox.Items.Add(new ComboBoxItem { Content = L.Routing_ActionBlock,  Tag = "block" });
 
             var nodes = NodesManager.Instance.Nodes;
             if (nodes.Count > 0)
@@ -97,7 +97,7 @@ namespace AnywhereWinUI.Views
                 {
                     comboBox.Items.Add(new ComboBoxItem
                     {
-                        Content = $"节点：{node.Name}",
+                        Content = string.Format(L.CustomRules_NodePrefixFmt, node.Name),
                         Tag     = $"node:{node.Id}"
                     });
                 }
@@ -139,8 +139,8 @@ namespace AnywhereWinUI.Views
             RulesListView.CanReorderItems = !isSearching;
             RulesListView.AllowDrop       = !isSearching;
             RuleCountText.Text = !isSearching
-                ? $"共 {_rules.Count} 条规则"
-                : $"共 {_rules.Count} 条规则，匹配 {_filteredRules.Count} 条";
+                ? string.Format(L.CustomRules_CountFmt, _rules.Count)
+                : string.Format(L.CustomRules_CountFilteredFmt, _rules.Count, _filteredRules.Count);
         }
 
         private static bool RuleMatchesSearch(CustomRule rule, string query)
@@ -174,7 +174,7 @@ namespace AnywhereWinUI.Views
         private void PopulateTemplates()
         {
             TemplateComboBox.Items.Clear();
-            foreach (var template in RuleTemplates)
+            foreach (var template in GetRuleTemplates())
             {
                 TemplateComboBox.Items.Add(new ComboBoxItem
                 {
@@ -257,7 +257,7 @@ namespace AnywhereWinUI.Views
             };
             textPanel.Children.Add(new TextBlock
             {
-                Text            = string.IsNullOrWhiteSpace(rule.Remark) ? "未命名规则" : rule.Remark,
+                Text            = string.IsNullOrWhiteSpace(rule.Remark) ? L.CustomRules_Unnamed : rule.Remark,
                 FontSize        = 13,
                 FontWeight      = Microsoft.UI.Text.FontWeights.SemiBold,
                 TextTrimming    = TextTrimming.CharacterEllipsis
@@ -286,7 +286,7 @@ namespace AnywhereWinUI.Views
                 VerticalAlignment = VerticalAlignment.Center,
                 Content           = new FontIcon { Glyph = "\uE70F", FontSize = 13 }
             };
-            ToolTipService.SetToolTip(editBtn, "编辑");
+            ToolTipService.SetToolTip(editBtn, L.CustomRules_EditTooltip);
             editBtn.Click += EditRuleButton_Click;
             Grid.SetColumn(editBtn, 4);
 
@@ -305,7 +305,7 @@ namespace AnywhereWinUI.Views
                     Foreground = new SolidColorBrush(Color.FromArgb(255, 196, 43, 28))
                 }
             };
-            ToolTipService.SetToolTip(deleteBtn, "删除");
+            ToolTipService.SetToolTip(deleteBtn, L.CustomRules_DelTooltip);
             deleteBtn.Click += DeleteRuleButton_Click;
             Grid.SetColumn(deleteBtn, 5);
 
@@ -363,18 +363,18 @@ namespace AnywhereWinUI.Views
         private static string FormatTypeLabel(string type) => type switch
         {
             "ip"      => "IP",
-            "process" => "进程",
-            "mixed"   => "混合",
-            _         => "域名"
+            "process" => L.Routing_TypeProcess,
+            "mixed"   => L.Routing_TypeMixed,
+            _         => L.Routing_TypeDomain
         };
 
         private static string FormatOutboundLabel(string outbound) => outbound switch
         {
-            "direct"  => "直连",
-            "block"   => "拦截",
-            "urltest" => "自动",
+            "direct"  => L.Routing_ActionDirect,
+            "block"   => L.Routing_ActionBlock,
+            "urltest" => L.Routing_BadgeAuto,
             _ when TryResolveNodeName(outbound, out var nodeName) => nodeName,
-            _         => "代理"
+            _         => L.Routing_BadgeProxy
         };
 
         private static bool TryResolveNodeName(string outbound, out string nodeName)
@@ -390,7 +390,7 @@ namespace AnywhereWinUI.Views
                 return false;
             }
 
-            nodeName = string.IsNullOrWhiteSpace(node.Name) ? "节点" : node.Name;
+            nodeName = string.IsNullOrWhiteSpace(node.Name) ? L.CustomRules_NodeFallback : node.Name;
             return true;
         }
 
@@ -420,7 +420,7 @@ namespace AnywhereWinUI.Views
             var template = GetSelectedTemplate();
             if (template == null)
             {
-                TemplateErrorText.Text       = "请选择规则模板";
+                TemplateErrorText.Text       = L.CustomRules_SelectTplErr;
                 TemplateErrorText.Visibility = Visibility.Visible;
                 return;
             }
@@ -429,7 +429,7 @@ namespace AnywhereWinUI.Views
                     string.Equals(rule.Type,  template.Type,  StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(rule.Match, template.Match, StringComparison.OrdinalIgnoreCase)))
             {
-                TemplateErrorText.Text       = "已存在相同模板规则，可直接编辑现有规则";
+                TemplateErrorText.Text       = L.CustomRules_DupTplErr;
                 TemplateErrorText.Visibility = Visibility.Visible;
                 return;
             }
@@ -475,7 +475,7 @@ namespace AnywhereWinUI.Views
             FormErrorText.Visibility = Visibility.Collapsed;
             FormRemarkTextBox.Text   = rule?.Remark ?? string.Empty;
             FormMatchTextBox.Text    = rule?.Match  ?? string.Empty;
-            FormTitleText.Text       = isEdit ? "编辑规则" : "添加规则";
+            FormTitleText.Text       = isEdit ? L.CustomRules_EditTitle : L.CustomRules_AddTitle;
 
             // Type
             int typeIdx = rule?.Type switch
@@ -510,8 +510,8 @@ namespace AnywhereWinUI.Views
             ListPanel.Visibility     = Visibility.Visible;
 
             IsPrimaryButtonEnabled = true;
-            PrimaryButtonText      = "保存";
-            CloseButtonText        = "取消";
+            PrimaryButtonText      = L.CustomRules_SaveBtn;
+            CloseButtonText        = L.Dialog_Cancel;
         }
 
         private void OpenTemplatePanel()
@@ -539,8 +539,8 @@ namespace AnywhereWinUI.Views
             ListPanel.Visibility     = Visibility.Visible;
 
             IsPrimaryButtonEnabled = true;
-            PrimaryButtonText      = "保存";
-            CloseButtonText        = "取消";
+            PrimaryButtonText      = L.CustomRules_SaveBtn;
+            CloseButtonText        = L.Dialog_Cancel;
         }
 
         private void FormBackButton_Click(object sender, RoutedEventArgs e)   => CloseForm();
@@ -563,23 +563,23 @@ namespace AnywhereWinUI.Views
             {
                 case "domain":
                     FormBrowsePanel.Visibility       = Visibility.Collapsed;
-                    FormMatchTextBox.PlaceholderText = "youtube.com 或 geosite:cn";
-                    FormHintText.Text                = "支持精确匹配、regex:、geosite:、ruleset:https://.../*.srs 前缀";
+                    FormMatchTextBox.PlaceholderText = L.CustomRules_PhDomain;
+                    FormHintText.Text                = L.CustomRules_HintDomain;
                     break;
                 case "ip":
                     FormBrowsePanel.Visibility       = Visibility.Collapsed;
-                    FormMatchTextBox.PlaceholderText = "192.168.0.0/16 或 geoip:cn";
-                    FormHintText.Text                = "支持 CIDR 格式，多个用逗号分隔";
+                    FormMatchTextBox.PlaceholderText = L.CustomRules_PhIp;
+                    FormHintText.Text                = L.CustomRules_HintIp;
                     break;
                 case "process":
                     FormBrowsePanel.Visibility       = Visibility.Visible;
-                    FormMatchTextBox.PlaceholderText = "chrome.exe 或完整路径";
-                    FormHintText.Text                = "填写进程名或完整路径，多个用逗号分隔";
+                    FormMatchTextBox.PlaceholderText = L.CustomRules_PhProcess;
+                    FormHintText.Text                = L.CustomRules_HintProcess;
                     break;
                 case "mixed":
                     FormBrowsePanel.Visibility       = Visibility.Collapsed;
                     FormMatchTextBox.PlaceholderText = "domain_suffix:youtube.com, geosite:youtube, ip_cidr:1.1.1.1/32";
-                    FormHintText.Text                = "支持 domain_suffix:、domain:、domain_regex:、geosite:、geoip:、ip_cidr:、process_name:、process_path:、ruleset:https://.../*.srs";
+                    FormHintText.Text                = L.CustomRules_HintMixed;
                     break;
             }
         }
@@ -622,7 +622,7 @@ namespace AnywhereWinUI.Views
             string remark = FormRemarkTextBox.Text.Trim();
             if (string.IsNullOrEmpty(match))
             {
-                FormErrorText.Text       = "请填写匹配内容";
+                FormErrorText.Text       = L.CustomRules_EmptyMatchErr;
                 FormErrorText.Visibility = Visibility.Visible;
                 return;
             }
@@ -651,7 +651,7 @@ namespace AnywhereWinUI.Views
 
                     if (!System.Net.IPAddress.TryParse(ipPart, out var ipAddress))
                     {
-                        FormErrorText.Text       = $"无效的 IP 地址: {ipPart}";
+                        FormErrorText.Text       = string.Format(L.CustomRules_InvalidIpFmt, ipPart);
                         FormErrorText.Visibility = Visibility.Visible;
                         return;
                     }
@@ -660,19 +660,19 @@ namespace AnywhereWinUI.Views
                     {
                         if (!int.TryParse(prefixPart, out int prefix) || prefix < 0)
                         {
-                            FormErrorText.Text       = $"无效的 CIDR 前缀: {entry}";
+                            FormErrorText.Text       = string.Format(L.CustomRules_InvalidCidrFmt, entry);
                             FormErrorText.Visibility = Visibility.Visible;
                             return;
                         }
                         if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && prefix > 32)
                         {
-                            FormErrorText.Text       = $"IPv4 掩码不能大于 32: {entry}";
+                            FormErrorText.Text       = string.Format(L.CustomRules_Ipv4MaskErrFmt, entry);
                             FormErrorText.Visibility = Visibility.Visible;
                             return;
                         }
                         if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 && prefix > 128)
                         {
-                            FormErrorText.Text       = $"IPv6 掩码不能大于 128: {entry}";
+                            FormErrorText.Text       = string.Format(L.CustomRules_Ipv6MaskErrFmt, entry);
                             FormErrorText.Visibility = Visibility.Visible;
                             return;
                         }
@@ -730,8 +730,8 @@ namespace AnywhereWinUI.Views
             {
                 // FIX: 优先使用已有稳定 ID；仅当规则完全新增（Id 为空）时才生成新 GUID
                 Id           = string.IsNullOrEmpty(rule.Id) ? $"custom:{Guid.NewGuid():N}" : rule.Id,
-                Name         = string.IsNullOrWhiteSpace(rule.Remark) ? "自定义规则" : rule.Remark,
-                Description  = "用户自定义分流规则",
+                Name         = string.IsNullOrWhiteSpace(rule.Remark) ? L.CustomRules_DefaultName : rule.Remark,
+                Description  = L.CustomRules_DefaultDesc,
                 Type         = rule.Type,
                 Match        = rule.Match,
                 OutboundTag  = rule.OutboundTag,

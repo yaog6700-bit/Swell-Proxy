@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Models;
 
 namespace AnywhereWinUI.Services
@@ -122,19 +123,19 @@ namespace AnywhereWinUI.Services
             using var client = CreateHttpClient(proxyUrl, TimeSpan.FromMinutes(10));
 
             // 1. Download SHA256
-            progress.Report(new ProgressDialogUpdate("正在获取校验文件…"));
+            progress.Report(new ProgressDialogUpdate(L.Update_FetchingChecksum));
             string expectedHash;
             try
             {
                 var shaText = await client.GetStringAsync(info.Sha256Url, ct);
                 expectedHash = ParseSha256SumLine(shaText)
-                    ?? throw new InvalidDataException("更新校验文件格式异常");
+                    ?? throw new InvalidDataException(L.Update_InvalidChecksumFmt);
             }
             catch (OperationCanceledException) { throw; }
             catch (InvalidDataException) { throw; }
             catch (Exception ex)
             {
-                throw new InvalidDataException("无法下载更新校验文件：" + ex.Message);
+                throw new InvalidDataException(L.Update_DownloadChecksumErr + ex.Message);
             }
 
             // 2. Download ZIP and hash
@@ -143,40 +144,40 @@ namespace AnywhereWinUI.Services
                 client, info.ZipUrl, zipPath, info.ZipAssetName, progress, ct);
 
             if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("更新包校验失败：SHA256 与服务器公布的不一致。");
+                throw new InvalidDataException(L.Update_HashMismatch);
 
             // 4. Extract
-            progress.Report(new ProgressDialogUpdate("正在解压更新包…"));
+            progress.Report(new ProgressDialogUpdate(L.Update_Extracting));
             try
             {
                 ZipFile.ExtractToDirectory(zipPath, extractDir, overwriteFiles: true);
             }
             catch (Exception ex)
             {
-                throw new InvalidDataException("更新包解压失败：" + ex.Message);
+                throw new InvalidDataException(L.Update_ExtractErr + ex.Message);
             }
 
             // 5. Sanity check
-            progress.Report(new ProgressDialogUpdate("正在验证更新包…"));
+            progress.Report(new ProgressDialogUpdate(L.Update_Verifying));
 
             var newAppExe     = Path.Combine(extractDir, AppExeName);
             var newUpdaterExe = Path.Combine(extractDir, UpdaterExeName);
 
             if (!File.Exists(newAppExe) || !File.Exists(newUpdaterExe))
-                throw new InvalidDataException("更新包内容异常：缺少必要文件。");
+                throw new InvalidDataException(L.Update_MissingFiles);
 
             // 6. Stage current updater to runner dir
             var installDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
             var currentUpdater = Path.Combine(installDir, UpdaterExeName);
             if (!File.Exists(currentUpdater))
             {
-                throw new FileNotFoundException("缺少升级辅助组件，请重新下载完整安装包。", currentUpdater);
+                throw new FileNotFoundException(L.Update_MissingUpdater, currentUpdater);
             }
 
             var stagedRunner = Path.Combine(runnerDir, UpdaterExeName);
             File.Copy(currentUpdater, stagedRunner, overwrite: true);
 
-            progress.Report(new ProgressDialogUpdate("正在准备重启…"));
+            progress.Report(new ProgressDialogUpdate(L.Update_PreparingRestart));
 
             return new UpdateStaging(extractDir, stagedRunner, installDir, info.NewVersion);
         }
@@ -303,8 +304,8 @@ namespace AnywhereWinUI.Services
         {
             var mbReceived = received / 1024.0 / 1024.0;
             return total.HasValue
-                ? $"正在下载 {name} … {mbReceived:0.0} / {total.Value / 1024.0 / 1024.0:0.0} MB"
-                : $"正在下载 {name} … {mbReceived:0.0} MB";
+                ? string.Format(L.Update_DownloadingWithTotalFmt, name, mbReceived, total.Value / 1024.0 / 1024.0)
+                : string.Format(L.Update_DownloadingNoTotalFmt, name, mbReceived);
         }
     }
 }

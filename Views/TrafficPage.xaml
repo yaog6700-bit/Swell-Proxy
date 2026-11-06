@@ -23,8 +23,8 @@
 
         <!-- Header Panel -->
         <StackPanel Grid.Row="0" Margin="0,0,0,16" Spacing="4">
-            <TextBlock Text="流量与数据" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-            <TextBlock Text="实时监控当前会话及历史网络流量统计" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock x:Uid="Traffic_Title" Text="流量与数据" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock x:Uid="Traffic_Subtitle" Text="实时监控当前会话及历史网络流量统计" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" Padding="0,0,16,0" VerticalScrollBarVisibility="Auto">
@@ -50,7 +50,7 @@
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                             <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                            <TextBlock Text="实时速率" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock x:Uid="Traffic_LiveSpeedLabel" Text="实时速率" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
                         <TextBlock Grid.Column="1" x:Name="ActiveConnectionsText" Text="{x:Bind ViewModel.ActiveConnectionsText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" FontFamily="Consolas" FontSize="14"/>
                     </Grid>
@@ -66,7 +66,7 @@
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                             <FontIcon Glyph="&#xE93E;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                            <TextBlock Text="核心连接状态" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock x:Uid="Traffic_CoreStatusLabel" Text="核心连接状态" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <Ellipse x:Name="StatusDot" Width="10" Height="10" Fill="{x:Bind ViewModel.StatusDotFill, Mode=OneWay}"/>
@@ -83,13 +83,13 @@
                         CornerRadius="12" 
                         Padding="24">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="当前会话（仅代理流量）" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock x:Uid="Traffic_SessionHeader" Text="当前会话（仅代理流量）" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                         <Grid ColumnDefinitions="*,*,*">
                             <!-- 上传 -->
                             <StackPanel Grid.Column="0" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE898;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontSize="16"/>
-                                    <TextBlock Text="上传流量" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                    <TextBlock x:Uid="Traffic_SessionUpLabel" Text="上传流量" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
                                 </StackPanel>
                                 <TextBlock x:Name="SessionUploadText" Text="{x:Bind ViewModel.SessionUploadText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
@@ -97,7 +97,7 @@
                             <StackPanel Grid.Column="1" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE896;" Foreground="{ThemeResource SystemFillColorSuccessBrush}" FontSize="16"/>
-                                    <TextBlock Text="下载流量" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                    <TextBlock x:Uid="Traffic_SessionDownLabel" Text="下载流量" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
                                 </StackPanel>
                                 <TextBlock x:Name="SessionDownloadText" Text="{x:Bind ViewModel.SessionDownloadText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
@@ -105,7 +105,7 @@
                             <StackPanel Grid.Column="2" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE8D7;" Foreground="{ThemeResource SystemFillColorAttentionBrush}" FontSize="16"/>
-                                    <TextBlock Text="会话总量" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                    <TextBlock x:Uid="Traffic_SessionTotalLabel" Text="会话总量" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
                                 </StackPanel>
                                 <TextBlock x:Name="SessionTotalText" Text="{x:Bind ViewModel.SessionTotalText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
@@ -121,13 +121,13 @@
                         CornerRadius="12" 
                         Padding="24">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="本月累计" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock x:Uid="Traffic_MonthHeader" Text="本月累计" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                         <Grid ColumnDefinitions="*,*,*">
                             <!-- 上传 -->
                             <StackPanel Grid.Column="0" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE898;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontSize="16"/>
-                                    <TextBlock Text="本月上传" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                    <TextBlock x:Uid="Traffic_MonthUpLabel" Text="本月上传" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
                                 </StackPanel>
                                 <TextBlock x:Name="MonthUploadText" Text="{x:Bind ViewModel.MonthUploadText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
@@ -135,7 +135,7 @@
                             <StackPanel Grid.Column="1" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE896;" Foreground="{ThemeResource SystemFillColorSuccessBrush}" FontSize="16"/>
-                                    <TextBlock Text="本月下载" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                    <TextBlock x:Uid="Traffic_MonthDownLabel" Text="本月下载" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
                                 </StackPanel>
                                 <TextBlock x:Name="MonthDownloadText" Text="{x:Bind ViewModel.MonthDownloadText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
@@ -143,7 +143,7 @@
                             <StackPanel Grid.Column="2" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE8D7;" Foreground="{ThemeResource SystemFillColorAttentionBrush}" FontSize="16"/>
-                                    <TextBlock Text="本月总计" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                                    <TextBlock x:Uid="Traffic_MonthTotalLabel" Text="本月总计" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
                                 </StackPanel>
                                 <TextBlock x:Name="MonthTotalText" Text="{x:Bind ViewModel.MonthTotalText, Mode=OneWay}" FontSize="20" FontWeight="Bold" FontFamily="Consolas" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
@@ -159,7 +159,7 @@
                         CornerRadius="12" 
                         Padding="24">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="每日代理流量（近 30 天，单位: MB）" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock x:Uid="Traffic_DailyChartHeader" Text="每日代理流量（近 30 天，单位: MB）" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                         
                         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled">
                             <ItemsControl x:Name="ChartItemsControl" ItemsSource="{x:Bind ViewModel.ChartItems, Mode=OneWay}">
@@ -206,16 +206,16 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="流量热力图" FontSize="16" FontWeight="SemiBold"
+                            <TextBlock x:Uid="Traffic_HeatmapHeader" Grid.Column="0" Text="流量热力图" FontSize="16" FontWeight="SemiBold"
                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                             <tk:Segmented x:Name="HeatmapModeSegmented"
                                           Grid.Column="1"
                                           SelectedIndex="0"
                                           VerticalAlignment="Center"
                                           SelectionChanged="HeatmapModeSegmented_SelectionChanged">
-                                <tk:SegmentedItem Content="每日" />
-                                <tk:SegmentedItem Content="每周" />
-                                <tk:SegmentedItem Content="累计" />
+                                <tk:SegmentedItem x:Uid="Traffic_HeatmapDaily" Content="每日" />
+                                <tk:SegmentedItem x:Uid="Traffic_HeatmapWeekly" Content="每周" />
+                                <tk:SegmentedItem x:Uid="Traffic_HeatmapCumulative" Content="累计" />
                             </tk:Segmented>
                         </Grid>
 

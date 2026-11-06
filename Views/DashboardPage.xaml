@@ -24,10 +24,10 @@
 
         <!-- ── Header ── -->
         <StackPanel Grid.Row="0" Margin="0,0,0,16" Spacing="4">
-            <TextBlock Text="控制台"
+            <TextBlock x:Uid="Dashboard_HeaderTitle" Text="控制台"
                        FontSize="20" FontWeight="SemiBold"
                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-            <TextBlock Text="简洁现代的网络代理管理器"
+            <TextBlock x:Uid="Dashboard_HeaderSubtitle" Text="简洁现代的网络代理管理器"
                        FontSize="12"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
@@ -120,7 +120,7 @@
                                        FontSize="22" FontWeight="SemiBold"
                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                        TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="点击左侧按钮切换引擎状态"
+                            <TextBlock x:Uid="Dashboard_ToggleHint" Text="点击左侧按钮切换引擎状态"
                                        FontSize="12"
                                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
                         </StackPanel>
@@ -133,7 +133,7 @@
                             </Grid.RowDefinitions>
                                 <!-- Latency with ContentThemeTransition -->
                                 <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6">
-                                    <TextBlock Text="延迟:"
+                                    <TextBlock x:Uid="Dashboard_LatencyLabel" Text="延迟:"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                FontSize="13" VerticalAlignment="Center"/>
                                     <ContentControl Content="{x:Bind ViewModel.CurrentLatency, Mode=OneWay}"
@@ -173,11 +173,11 @@
 
                             <!-- Row 1: Routing Mode -->
                             <StackPanel Grid.Row="1" Margin="0,24,0,0" HorizontalAlignment="Left" Width="360">
-                                <TextBlock Text="路由模式" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13" Margin="0,0,0,8" FontWeight="SemiBold"/>
+                                <TextBlock x:Uid="Dashboard_RoutingModeHeader" Text="路由模式" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13" Margin="0,0,0,8" FontWeight="SemiBold"/>
                                 <tk:Segmented SelectedIndex="{x:Bind ViewModel.SelectedModeIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
-                                    <tk:SegmentedItem Content="规则 (Rule)" />
-                                    <tk:SegmentedItem Content="全局 (Global)" />
-                                    <tk:SegmentedItem Content="直连 (Direct)" />
+                                    <tk:SegmentedItem x:Uid="Dashboard_RouteRule" Content="规则 (Rule)" />
+                                    <tk:SegmentedItem x:Uid="Dashboard_RouteGlobal" Content="全局 (Global)" />
+                                    <tk:SegmentedItem x:Uid="Dashboard_RouteDirect" Content="直连 (Direct)" />
                                 </tk:Segmented>
                             </StackPanel>
 
@@ -221,7 +221,7 @@
                                         <FontIcon Glyph="&#xE898;" FontSize="14" Foreground="#34D399"/>
                                     </Border>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="上传速度" FontSize="11"
+                                        <TextBlock x:Uid="Dashboard_UploadSpeedLabel" Text="上传速度" FontSize="11"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         <!-- Upload speed with ContentThemeTransition -->
                                         <ContentControl Content="{x:Bind ViewModel.UploadSpeed, Mode=OneWay}"
@@ -244,7 +244,7 @@
                                         <FontIcon Glyph="&#xE896;" FontSize="14" Foreground="#60A5FA"/>
                                     </Border>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="下载速度" FontSize="11"
+                                        <TextBlock x:Uid="Dashboard_DownloadSpeedLabel" Text="下载速度" FontSize="11"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         <!-- Download speed with ContentThemeTransition -->
                                         <ContentControl Content="{x:Bind ViewModel.DownloadSpeed, Mode=OneWay}"
@@ -298,12 +298,12 @@
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon Glyph="&#xE8F1;" FontSize="16"
                                           Foreground="{ThemeResource SystemAccentColor}"/>
-                                <TextBlock Text="订阅信息" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock x:Uid="Dashboard_SubInfoHeader" Text="订阅信息" FontSize="14" FontWeight="SemiBold"/>
                             </StackPanel>
 
                             <!-- Used Traffic label + percentage -->
                             <Grid>
-                                <TextBlock Text="已用流量" HorizontalAlignment="Left"
+                                <TextBlock x:Uid="Dashboard_UsedTrafficLabel" Text="已用流量" HorizontalAlignment="Left"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <TextBlock Text="{x:Bind ViewModel.SubUsedPercent, Mode=OneWay}"
                                            HorizontalAlignment="Right" FontWeight="SemiBold"/>
@@ -328,7 +328,7 @@
 
                             <!-- Remaining days -->
                             <Grid>
-                                <TextBlock Text="剩余时长" HorizontalAlignment="Left"
+                                <TextBlock x:Uid="Dashboard_RemainingTimeLabel" Text="剩余时长" HorizontalAlignment="Left"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <TextBlock Text="{x:Bind ViewModel.SubRemainingDays, Mode=OneWay}"
                                            HorizontalAlignment="Right" FontWeight="SemiBold"/>
@@ -348,17 +348,17 @@
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon Glyph="&#xE713;" FontSize="16"
                                           Foreground="{ThemeResource SystemAccentColor}"/>
-                                <TextBlock Text="快捷操作" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock x:Uid="Dashboard_QuickActionsHeader" Text="快捷操作" FontSize="14" FontWeight="SemiBold"/>
                             </StackPanel>
 
                             <!-- Proxy Mode -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="代理模式" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Uid="Dashboard_ProxyModeLabel" Text="代理模式" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 <tk:Segmented SelectedIndex="{x:Bind ViewModel.ProxyModeIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
-                                    <tk:SegmentedItem Content="系统代理"/>
-                                    <tk:SegmentedItem Content="TUN 模式"/>
-                                    <tk:SegmentedItem Content="本地"/>
-                                    <tk:SegmentedItem Content="TUN + 系统"/>
+                                    <tk:SegmentedItem x:Uid="Dashboard_ProxySys" Content="系统代理"/>
+                                    <tk:SegmentedItem x:Uid="Dashboard_ProxyTun" Content="TUN 模式"/>
+                                    <tk:SegmentedItem x:Uid="Dashboard_ProxyLocal" Content="本地"/>
+                                    <tk:SegmentedItem x:Uid="Dashboard_ProxyTunSys" Content="TUN + 系统"/>
                                 </tk:Segmented>
                             </StackPanel>
 
@@ -370,7 +370,7 @@
                                 <Button.Content>
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xE72C;" FontSize="14"/>
-                                        <TextBlock Text="更新所有订阅"/>
+                                        <TextBlock x:Uid="Dashboard_RefreshAllSubsText" Text="更新所有订阅"/>
                                     </StackPanel>
                                 </Button.Content>
                             </Button>

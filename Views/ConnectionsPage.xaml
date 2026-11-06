@@ -19,8 +19,8 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,16" Spacing="4">
-            <TextBlock Text="活动连接" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-            <TextBlock Text="实时监控并分析经过本地代理引擎的所有网络请求" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock x:Uid="Conn_Title" Text="活动连接" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock x:Uid="Conn_Subtitle" Text="实时监控并分析经过本地代理引擎的所有网络请求" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 
         <!-- Toolbar -->
@@ -35,12 +35,12 @@
                 <Button Command="{x:Bind ViewModel.ClearConnectionsCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE74D;" FontSize="14"/>
-                        <TextBlock Text="清空" />
+                        <TextBlock x:Uid="Conn_ClearText" Text="清空" />
                     </StackPanel>
                 </Button>
             </StackPanel>
             
-            <AutoSuggestBox Grid.Column="2" Width="240" 
+            <AutoSuggestBox x:Uid="Conn_SearchBox" Grid.Column="2" Width="240" 
                             PlaceholderText="搜索域名或 IP..." 
                             QueryIcon="Find" 
                             Text="{x:Bind ViewModel.SearchText, Mode=TwoWay}"
@@ -52,7 +52,7 @@
             <StackPanel Spacing="16">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <FontIcon Glyph="&#xF6FA;" FontSize="16" Foreground="{ThemeResource SystemAccentColor}"/>
-                    <TextBlock Text="连接拓扑" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock x:Uid="Conn_TopologyHeader" Text="连接拓扑" FontSize="16" FontWeight="SemiBold"/>
                 </StackPanel>
                 <mycontrols:TopologyGraphControl Height="280" Margin="-20,0,-20,-20" />
             </StackPanel>
@@ -82,13 +82,13 @@
                         <ColumnDefinition Width="80"/>
                     </Grid.ColumnDefinitions>
                     
-                    <TextBlock Grid.Column="0" Text="类型" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="目标主机" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="2" Text="状态" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="3" Text="出站节点" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="4" Text="规则" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="5" Text="耗时" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="6" Text="大小" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Uid="Conn_ColType" Grid.Column="0" Text="类型" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Uid="Conn_ColHost" Grid.Column="1" Text="目标主机" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Uid="Conn_ColStatus" Grid.Column="2" Text="状态" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Uid="Conn_ColNode" Grid.Column="3" Text="出站节点" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Uid="Conn_ColRule" Grid.Column="4" Text="规则" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Uid="Conn_ColDuration" Grid.Column="5" Text="耗时" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Uid="Conn_ColSize" Grid.Column="6" Text="大小" FontWeight="SemiBold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
                 </Grid>
 
                 <ListView Grid.Row="1" 

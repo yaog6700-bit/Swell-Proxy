@@ -15,15 +15,16 @@
     <WinUISDKReferences>false</WinUISDKReferences>
     <WindowsPackageType>None</WindowsPackageType>
     <EnableMsixTooling>true</EnableMsixTooling>
-    <DefaultItemExcludes>$(DefaultItemExcludes);AnywhereWinUI.Updater\**;tests\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);AnywhereWinUI.Updater\**;tests\**;release\**</DefaultItemExcludes>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
+    <DefaultLanguage>zh-CN</DefaultLanguage>
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>4.0.1</Version>
+    <Version>4.1.0</Version>
   </PropertyGroup>
 
   <!-- Publish & Optimization Properties for Ultra-Low Resource Usage -->

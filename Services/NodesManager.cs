@@ -329,9 +329,9 @@ namespace AnywhereWinUI.Services
         public static string GetSubscriptionNextAutoRefreshText(PersistedSubscription sub)
         {
             if (!TryParseLastUpdated(sub.LastUpdated, out var lastUpdated))
-                return "下次自动同步：待下次启动时同步";
+                return Helpers.L.SubDialog_AutoRefreshPending;
 
-            return $"下次自动同步：{lastUpdated.Add(SubscriptionAutoRefreshInterval):yyyy-MM-dd HH:mm:ss}";
+            return Helpers.Loc.Format("SubDialog_AutoRefreshNextFmt", $"{lastUpdated.Add(SubscriptionAutoRefreshInterval):yyyy-MM-dd HH:mm:ss}");
         }
 
         private static bool TryParseLastUpdated(string? value, out DateTime lastUpdated)

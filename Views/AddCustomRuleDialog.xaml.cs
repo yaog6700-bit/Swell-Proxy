@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Models;
 using AnywhereWinUI.Services;
 using Microsoft.UI.Xaml;
@@ -27,8 +28,8 @@ namespace AnywhereWinUI.Views
         public void LoadRule(CustomRule rule)
         {
             EditingRule = rule;
-            Title = "编辑规则";
-            PrimaryButtonText = "保存";
+            Title = L.CustomRules_EditTitle;
+            PrimaryButtonText = L.CustomRules_SaveBtn;
 
             SelectComboBoxItemByTag(TypeComboBox, rule.Type);
             MatchTextBox.Text = rule.Match;
@@ -39,9 +40,9 @@ namespace AnywhereWinUI.Views
         private void PopulateOutbounds()
         {
             OutboundComboBox.Items.Clear();
-            OutboundComboBox.Items.Add(new ComboBoxItem { Content = "默认代理", Tag = "proxy" });
-            OutboundComboBox.Items.Add(new ComboBoxItem { Content = "直连", Tag = "direct" });
-            OutboundComboBox.Items.Add(new ComboBoxItem { Content = "拦截", Tag = "block" });
+            OutboundComboBox.Items.Add(new ComboBoxItem { Content = L.Routing_ActionProxy, Tag = "proxy" });
+            OutboundComboBox.Items.Add(new ComboBoxItem { Content = L.Routing_ActionDirect, Tag = "direct" });
+            OutboundComboBox.Items.Add(new ComboBoxItem { Content = L.Routing_ActionBlock, Tag = "block" });
 
             if (NodesManager.Instance.Nodes.Count > 0)
             {
@@ -72,26 +73,26 @@ namespace AnywhereWinUI.Views
             {
                 case "ip":
                     BrowsePanel.Visibility = Visibility.Collapsed;
-                    MatchTextBox.PlaceholderText = "192.168.0.0/16 或 geoip:cn";
-                    HintTextBlock.Text = "支持 CIDR、geoip: 标签，多个值用英文逗号分隔。";
+                    MatchTextBox.PlaceholderText = L.CustomRules_PhIp;
+                    HintTextBlock.Text = L.CustomRules_HintIp;
                     break;
 
                 case "process":
                     BrowsePanel.Visibility = Visibility.Visible;
-                    MatchTextBox.PlaceholderText = "chrome.exe 或 C:\\Path\\app.exe";
-                    HintTextBlock.Text = "填写进程名或完整路径，多个值用英文逗号分隔。";
+                    MatchTextBox.PlaceholderText = L.CustomRules_PhProcess;
+                    HintTextBlock.Text = L.CustomRules_HintProcess;
                     break;
 
                 case "mixed":
                     BrowsePanel.Visibility = Visibility.Collapsed;
                     MatchTextBox.PlaceholderText = "domain_suffix:youtube.com, domain_keyword:google, geosite:youtube, ip_cidr:1.1.1.1/32";
-                    HintTextBlock.Text = "支持 domain_suffix:、domain:、domain_keyword:、domain_regex:、geosite:、geoip:、ip_cidr:、process_name:、process_path:、ruleset:https://.../*.srs。";
+                    HintTextBlock.Text = L.CustomRules_HintMixed;
                     break;
 
                 default:
                     BrowsePanel.Visibility = Visibility.Collapsed;
-                    MatchTextBox.PlaceholderText = "youtube.com 或 domain_keyword:google";
-                    HintTextBlock.Text = "支持精确域名、domain_keyword:（关键词）、regex:、regexp:、domain_suffix:、geosite:、ruleset:https://.../*.srs 前缀。";
+                    MatchTextBox.PlaceholderText = L.CustomRules_PhDomain;
+                    HintTextBlock.Text = L.CustomRules_HintDomain;
                     break;
             }
         }
@@ -140,7 +141,7 @@ namespace AnywhereWinUI.Views
             string match = MatchTextBox.Text.Trim();
             if (string.IsNullOrEmpty(match))
             {
-                ErrorText.Text = "请填写匹配内容。";
+                ErrorText.Text = L.CustomRules_EmptyMatchErr;
                 ErrorText.Visibility = Visibility.Visible;
                 args.Cancel = true;
                 return;

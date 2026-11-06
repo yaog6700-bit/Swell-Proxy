@@ -68,7 +68,7 @@ namespace AnywhereWinUI.ViewModels
                     void Apply()
                     {
                         AvailableUpdate = info;
-                        UpdateBannerText = $"🎉 发现新版客户端 {info.TagName}！点击下方的“检查更新”按钮即可获取最新功能与修复体验。";
+                        UpdateBannerText = string.Format(L.Update_BannerFmt, info.TagName);
                         UpdateBadgeVisibility = Visibility.Visible;
                     }
 

@@ -17,8 +17,8 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,16" Spacing="4">
-            <TextBlock Text="请求日志" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-            <TextBlock Text="查看本地代理核心的实时流转日志与系统状态" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock x:Uid="Logs_Title" Text="请求日志" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock x:Uid="Logs_Subtitle" Text="查看本地代理核心的实时流转日志与系统状态" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 
         <!-- Log Content Board (Virtualized ListView keeps only ~20 visible rows in XAML memory instead of 500) -->
@@ -44,7 +44,7 @@
                         <Grid ColumnSpacing="16" Background="Transparent">
                             <Grid.ContextFlyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutItem Text="复制此行" Icon="Copy" Click="CopySingleLogLine_Click"/>
+                                    <MenuFlyoutItem x:Uid="Logs_CopyLineItem" Text="复制此行" Icon="Copy" Click="CopySingleLogLine_Click"/>
                                 </MenuFlyout>
                             </Grid.ContextFlyout>
                             <Grid.ColumnDefinitions>
@@ -103,9 +103,9 @@
 
             <!-- Right controls -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                <ToggleButton x:Name="AutoScrollToggle" IsChecked="{x:Bind ViewModel.AutoScroll, Mode=TwoWay}" Content="自动滚动" FontSize="12" Padding="12,6"/>
-                <Button x:Name="CopyButton" Content="复制全部" FontSize="12" Padding="12,6" Command="{x:Bind ViewModel.CopyLogsCommand}"/>
-                <Button x:Name="ClearButton" Content="清除缓存" FontSize="12" Padding="12,6" Command="{x:Bind ViewModel.ClearLogsCommand}"/>
+                <ToggleButton x:Name="AutoScrollToggle" x:Uid="Logs_AutoScrollBtn" IsChecked="{x:Bind ViewModel.AutoScroll, Mode=TwoWay}" Content="自动滚动" FontSize="12" Padding="12,6"/>
+                <Button x:Name="CopyButton" x:Uid="Logs_CopyAllBtn" Content="复制全部" FontSize="12" Padding="12,6" Command="{x:Bind ViewModel.CopyLogsCommand}"/>
+                <Button x:Name="ClearButton" x:Uid="Logs_ClearBtn" Content="清除缓存" FontSize="12" Padding="12,6" Command="{x:Bind ViewModel.ClearLogsCommand}"/>
             </StackPanel>
         </Grid>
     </Grid>

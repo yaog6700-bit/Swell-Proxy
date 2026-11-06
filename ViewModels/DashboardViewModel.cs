@@ -17,7 +17,7 @@ namespace AnywhereWinUI.ViewModels
         private bool _isCoreRunning;
 
         [ObservableProperty]
-        private string _coreStatusText = "未连接";
+        private string _coreStatusText = L.Common_Disconnected;
 
         [ObservableProperty]
         private string _selectedMode = "规则 (Rule)";
@@ -58,7 +58,7 @@ namespace AnywhereWinUI.ViewModels
         }
 
         [ObservableProperty]
-        private string _currentNodeName = "未选择节点";
+        private string _currentNodeName = L.Common_NoNodeSelected;
 
         [ObservableProperty]
         private string _currentLatency = "- ms";
@@ -94,7 +94,7 @@ namespace AnywhereWinUI.ViewModels
             }
 
             _isCoreRunning = CoreManager.Instance.IsRunning;
-            _coreStatusText = _isCoreRunning ? "已连接" : "未连接";
+            _coreStatusText = _isCoreRunning ? L.Common_Connected : L.Common_Disconnected;
 
             CoreManager.Instance.RunningChanged += CoreManager_RunningChanged;
             CoreManager.Instance.TrafficUpdated += CoreManager_TrafficUpdated;
@@ -107,7 +107,7 @@ namespace AnywhereWinUI.ViewModels
             _dispatcherQueue.TryEnqueue(() =>
             {
                 IsCoreRunning = isRunning;
-                CoreStatusText = isRunning ? "已连接" : "未连接";
+                CoreStatusText = isRunning ? L.Common_Connected : L.Common_Disconnected;
                 if (isRunning)
                 {
                     UpdateNodeInfo();
@@ -160,7 +160,7 @@ namespace AnywhereWinUI.ViewModels
             }
             else
             {
-                CurrentNodeName = "未选择节点";
+                CurrentNodeName = L.Common_NoNodeSelected;
             }
         }
 
@@ -191,7 +191,7 @@ namespace AnywhereWinUI.ViewModels
         };
 
         [ObservableProperty]
-        private string _subRemainingDays = "15 天";
+        private string _subRemainingDays = Loc.Format("Dashboard_RemainingDaysFmt", 15);
 
         [ObservableProperty]
         private int _proxyModeIndex = AppSession.Instance.ProxyModeIndex;
@@ -247,10 +247,10 @@ namespace AnywhereWinUI.ViewModels
 
                         var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
                         {
-                            Title = "需要管理员权限",
-                            Content = "开启 TUN 模式需要管理员权限以创建虚拟网卡和接管系统路由。\n即将请求 UAC 提权并以管理员身份重启客户端。",
-                            PrimaryButtonText = "确认提权",
-                            CloseButtonText = "取消",
+                            Title = L.Tun_AdminRequiredTitle,
+                            Content = L.Tun_AdminRequiredMsg,
+                            PrimaryButtonText = L.Tun_AdminConfirmBtn,
+                            CloseButtonText = L.Dialog_Cancel,
                             XamlRoot = xamlRoot
                         };
 
@@ -346,9 +346,9 @@ namespace AnywhereWinUI.ViewModels
                 {
                     var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
                     {
-                        Title = "启动失败",
-                        Content = "代理引擎启动失败，请检查配置。\n详细信息请查看日志页面。",
-                        CloseButtonText = "确定",
+                        Title = L.Core_StartFailedTitle,
+                        Content = L.Core_StartFailedDashboard,
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = MainWindow.Instance?.Content.XamlRoot
                     };
                     _ = dialog.WithAppTheme().ShowAsync();

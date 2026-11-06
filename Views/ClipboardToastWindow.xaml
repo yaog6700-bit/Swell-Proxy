@@ -27,9 +27,10 @@
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <FontIcon Glyph="&#xE128;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                <TextBlock Text="检测到代理节点" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" />
+                <TextBlock x:Uid="ClipToast_Title" Text="检测到代理节点" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" />
             </StackPanel>
-            <Button Grid.Column="1"
+            <Button x:Uid="ClipToast_CloseBtn"
+                    Grid.Column="1"
                     Click="CloseButton_Click"
                     Background="Transparent"
                     BorderThickness="0"
@@ -53,6 +54,7 @@
                    TextTrimming="CharacterEllipsis" />
 
         <Button x:Name="ImportButton"
+                x:Uid="ClipToast_ImportBtn"
                 Content="一键导入并测速 (Enter)"
                 Grid.Row="2"
                 HorizontalAlignment="Stretch"

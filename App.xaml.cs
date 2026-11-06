@@ -31,6 +31,9 @@ namespace AnywhereWinUI
 
         public App()
         {
+            MigrateDataFolder();
+            Helpers.LanguageHelper.InitializeFromSettings();
+
             Services = ConfigureServices();
             this.InitializeComponent();
             this.UnhandledException += App_UnhandledException;
@@ -69,7 +72,6 @@ namespace AnywhereWinUI
         protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
             var cmdArgs = Environment.GetCommandLineArgs();
-            bool isTunRestart = false;
             bool isAutoStart = false;
             int parentPid = 0;
 
@@ -77,11 +79,14 @@ namespace AnywhereWinUI
             {
                 if (arg == "--tun" || arg == "--tun-start" || arg == "--tun-system" || arg == "--tun-system-start")
                 {
-                    isTunRestart = true;
                     isAutoStart = (arg == "--tun-start" || arg == "--tun-system-start");
                     int proxyModeIndex = arg.StartsWith("--tun-system", StringComparison.Ordinal) ? 3 : 1;
                     AppSession.Instance.ProxyModeIndex = proxyModeIndex;
                     Helpers.LocalSettingsHelper.SetValue("proxyModeIndex", proxyModeIndex);
+                }
+                else if (arg == "--auto-start-proxy")
+                {
+                    isAutoStart = true;
                 }
                 else if (arg.StartsWith("--parent-pid="))
                 {
@@ -140,9 +145,9 @@ namespace AnywhereWinUI
                     });
                 }
 
-                if (isTunRestart && isAutoStart)
+                if (isAutoStart)
                 {
-                    // Auto-start proxy if it was running before UAC restart
+                    // Auto-start proxy if it was running before UAC or language restart
                     _ = Task.Run(async () =>
                     {
                         var cfg = await ConfigBuilder.BuildAsync();
@@ -157,6 +162,45 @@ namespace AnywhereWinUI
                 LogCrash(ex, "OnLaunched Execution");
                 throw;
             }
+        }
+
+        public static async Task RestartAsync()
+        {
+            bool wasRunning = CoreManager.Instance.IsRunning;
+            if (wasRunning)
+            {
+                await CoreManager.Instance.StopAsync();
+            }
+
+            try
+            {
+                await PluginManager.Instance.FireAsync(PluginTrigger.OnShutdown);
+            }
+            catch { }
+
+            MainWindow.Instance?.DisposeTrayForRestart();
+
+            string? exePath = Environment.ProcessPath;
+            if (!string.IsNullOrEmpty(exePath))
+            {
+                string restartArgs = wasRunning
+                    ? $"--parent-pid={Environment.ProcessId} --auto-start-proxy"
+                    : $"--parent-pid={Environment.ProcessId}";
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = exePath,
+                    Arguments = restartArgs,
+                    WorkingDirectory = AppContext.BaseDirectory,
+                    UseShellExecute = false
+                });
+            }
+
+            try { _singleInstanceMutex?.ReleaseMutex(); } catch { }
+            try { _singleInstanceMutex?.Dispose(); } catch { }
+            _singleInstanceMutex = null;
+
+            Environment.Exit(0);
         }
 
         private void StartSubscriptionAutoRefreshMonitor()

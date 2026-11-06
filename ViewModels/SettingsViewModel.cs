@@ -193,8 +193,8 @@ namespace AnywhereWinUI.ViewModels
                 var appVer = AppUpdateService.CurrentVersion;
                 dispatcher?.TryEnqueue(() =>
                 {
-                    CoreVersionText = $"当前核心版本: {ver}";
-                    AppVersionText = $"版本 v{appVer.Major}.{appVer.Minor}.{appVer.Build}";
+                    CoreVersionText = string.Format(L.Settings_VmCoreVerFmt, ver);
+                    AppVersionText = string.Format(L.Settings_VmAppVerFmt, appVer.Major, appVer.Minor, appVer.Build);
                 });
             });
         }
@@ -360,7 +360,7 @@ namespace AnywhereWinUI.ViewModels
 
         private void UpdateLanProxyEndpoint()
         {
-            var address = GetPrimaryLanAddress() ?? "本机局域网 IP";
+            var address = GetPrimaryLanAddress() ?? L.Settings_LanIpFallback;
             LanProxyEndpoint = $"{address}:{MixedPort}";
         }
 

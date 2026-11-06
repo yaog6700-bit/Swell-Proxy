@@ -14,8 +14,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16" Spacing="4">
-            <TextBlock Text="分流规则" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-            <TextBlock Text="配置智能分流拦截规则，支持应用规则、自定义规则与顺序匹配" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <TextBlock x:Uid="Routing_Title" Text="分流规则" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock x:Uid="Routing_Subtitle" Text="配置智能分流拦截规则，支持应用规则、自定义规则与顺序匹配" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 
         <Border Grid.Row="1"
@@ -34,11 +34,12 @@
 
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,0,0,20">
                     <StackPanel Spacing="2" VerticalAlignment="Center">
-                        <TextBlock Text="策略组配置" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock x:Uid="Routing_GroupTitle" Text="策略组配置" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                         <TextBlock x:Name="RuleCountText" Text="共 0 条规则，按列表顺序匹配" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
 
-                    <Button Grid.Column="1"
+                    <Button x:Uid="Routing_ResetBtn"
+                            Grid.Column="1"
                             Click="ResetRulesButton_Click"
                             Padding="10,6"
                             CornerRadius="6"
@@ -46,7 +47,8 @@
                         <FontIcon Glyph="&#xE777;" FontSize="13"/>
                     </Button>
 
-                    <Button Grid.Column="2"
+                    <Button x:Uid="Routing_CustomRulesBtn"
+                            Grid.Column="2"
                             Content="配置自定义规则"
                             Style="{ThemeResource AccentButtonStyle}"
                             FontSize="12"

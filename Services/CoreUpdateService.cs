@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using AnywhereWinUI.Helpers;
 
 namespace AnywhereWinUI.Services
 {
@@ -74,17 +75,17 @@ namespace AnywhereWinUI.Services
             string? expectedHash = null;
             if (info.ChecksumUrl is not null)
             {
-                progress.Report("正在获取校验文件…");
+                progress.Report(L.Update_FetchingChecksum);
                 try
                 {
                     var checksumText = await client.GetStringAsync(info.ChecksumUrl, ct);
-                    expectedHash = ParsePureSha256(checksumText) ?? throw new InvalidDataException("校验文件格式异常");
+                    expectedHash = ParsePureSha256(checksumText) ?? throw new InvalidDataException(L.Update_InvalidChecksumFmt);
                 }
-                catch (Exception ex) { throw new InvalidDataException("无法下载校验文件：" + ex.Message); }
+                catch (Exception ex) { throw new InvalidDataException(L.Update_DownloadChecksumErr + ex.Message); }
             }
             else
             {
-                progress.Report("无可用校验文件，跳过安全哈希验证步骤…");
+                progress.Report(L.Core_NoChecksumSkip);
             }
 
             var actualHash = await DownloadAndHashAsync(client, info.ZipUrl, zipPath, info.ZipAssetName, progress, ct);
@@ -92,27 +93,27 @@ namespace AnywhereWinUI.Services
             if (expectedHash is not null)
             {
                 if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException($"SHA-256 校验失败：下载的文件与服务器公布的哈希不一致。");
+                    throw new InvalidDataException(L.Update_HashMismatch);
             }
 
-            progress.Report("正在解压…");
+            progress.Report(L.Update_Extracting);
             try
             {
                 ZipFile.ExtractToDirectory(zipPath, extractDir, overwriteFiles: true);
             }
-            catch (Exception ex) { throw new InvalidDataException("解压失败：" + ex.Message); }
+            catch (Exception ex) { throw new InvalidDataException(L.Update_ExtractErr + ex.Message); }
 
             var extractedExe = FindExeInDirectory(extractDir, info.TargetExeName);
             if (extractedExe is null)
-                throw new InvalidDataException($"更新包内未找到 {info.TargetExeName}");
+                throw new InvalidDataException(string.Format(L.Core_MissingTargetFmt, info.TargetExeName));
 
             if (onBeforeInstall != null)
             {
-                progress.Report("正在准备环境…");
+                progress.Report(L.Core_PreparingEnv);
                 await onBeforeInstall();
             }
 
-            progress.Report($"正在安装 {info.TargetExeName}…");
+            progress.Report(string.Format(L.Core_InstallingFmt, info.TargetExeName));
             var targetPath = Path.Combine(EngineDir, info.TargetExeName);
             Directory.CreateDirectory(EngineDir);
 
@@ -130,7 +131,7 @@ namespace AnywhereWinUI.Services
 
             try { Directory.Delete(stageDir, recursive: true); } catch { }
 
-            progress.Report($"更新完成！当前版本：{info.TagName}");
+            progress.Report(string.Format(L.Core_UpdatedStatusFmt, info.TagName));
         }
 
         private static async Task<GhRelease?> FetchReleaseAsync(string apiUrl, string? proxyUrl, CancellationToken ct)
@@ -195,8 +196,8 @@ namespace AnywhereWinUI.Services
         {
             var mb = received / 1024.0 / 1024.0;
             return total.HasValue
-                ? $"正在下载 {name} … {mb:0.0} / {total.Value / 1024.0 / 1024.0:0.0} MB"
-                : $"正在下载 {name} … {mb:0.0} MB";
+                ? string.Format(L.Update_DownloadingWithTotalFmt, name, mb, total.Value / 1024.0 / 1024.0)
+                : string.Format(L.Update_DownloadingNoTotalFmt, name, mb);
         }
 
         private static string? ParsePureSha256(string content)
@@ -231,7 +232,7 @@ namespace AnywhereWinUI.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
-                    return (false, "未安装", null, string.Empty);
+                    return (false, L.Core_NotInstalled, null, string.Empty);
 
                 var psi = new ProcessStartInfo
                 {
@@ -268,10 +269,10 @@ namespace AnywhereWinUI.Services
             }
             catch (Exception ex)
             {
-                return (false, "无法执行", null, ex.Message);
+                return (false, L.Core_CannotExec, null, ex.Message);
             }
 
-            return (false, "非有效 sing-box 核心", null, string.Empty);
+            return (false, L.Core_InvalidBinary, null, string.Empty);
         }
 
         public static Version? GetLocalSingboxNumericVersion()
@@ -283,9 +284,9 @@ namespace AnywhereWinUI.Services
 
         public static string GetLocalSingboxVersionText()
         {
-            if (!File.Exists(SingboxExePath)) return "未安装";
+            if (!File.Exists(SingboxExePath)) return L.Core_NotInstalled;
             var probe = ProbeSingboxExecutable(SingboxExePath);
-            return probe.IsValid ? probe.VersionDisplay : "已安装 (无法读取版本)";
+            return probe.IsValid ? probe.VersionDisplay : L.Core_InstalledUnknownVer;
         }
     }
 }

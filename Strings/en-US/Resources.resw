@@ -1,0 +1,2276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Language_FollowSystem" xml:space="preserve">
+    <value>Follow System</value>
+  </data>
+  <data name="Dialog_OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Dialog_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Dialog_Confirm" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="Common_Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Common_Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="Common_NoNodeSelected" xml:space="preserve">
+    <value>No Server Selected</value>
+  </data>
+  <data name="Common_UnknownNode" xml:space="preserve">
+    <value>Unknown Server</value>
+  </data>
+  <data name="ProxyMode_System" xml:space="preserve">
+    <value>System Proxy</value>
+  </data>
+  <data name="ProxyMode_Tun" xml:space="preserve">
+    <value>TUN Mode</value>
+  </data>
+  <data name="ProxyMode_Manual" xml:space="preserve">
+    <value>Local Only</value>
+  </data>
+  <data name="ProxyMode_Local" xml:space="preserve">
+    <value>Local Proxy</value>
+  </data>
+  <data name="ProxyMode_TunSystem" xml:space="preserve">
+    <value>TUN + System Proxy</value>
+  </data>
+  <data name="RouteMode_Smart" xml:space="preserve">
+    <value>Rule</value>
+  </data>
+  <data name="RouteMode_Global" xml:space="preserve">
+    <value>Global</value>
+  </data>
+  <data name="RouteMode_Direct" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="RouteMode_GlobalProxy" xml:space="preserve">
+    <value>Global</value>
+  </data>
+  <data name="RouteMode_DirectAll" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="MainWindow_SwitchToLight" xml:space="preserve">
+    <value>Switch to Light Mode</value>
+  </data>
+  <data name="MainWindow_SwitchToDark" xml:space="preserve">
+    <value>Switch to Dark Mode</value>
+  </data>
+  <data name="Tray_ConnectedTooltip" xml:space="preserve">
+    <value>Swell Proxy - Connected</value>
+  </data>
+  <data name="Tray_DisconnectedTooltip" xml:space="preserve">
+    <value>Swell Proxy - Disconnected</value>
+  </data>
+  <data name="Tray_ShowMainWindow" xml:space="preserve">
+    <value>Open Swell Proxy</value>
+  </data>
+  <data name="Tray_UnlockWindow" xml:space="preserve">
+    <value>Unlock Window</value>
+  </data>
+  <data name="Tray_LockAndHide" xml:space="preserve">
+    <value>Lock &amp; Hide</value>
+  </data>
+  <data name="Tray_Exit" xml:space="preserve">
+    <value>Quit</value>
+  </data>
+  <data name="Privacy_SetPwdTitle" xml:space="preserve">
+    <value>Set Privacy Password</value>
+  </data>
+  <data name="Privacy_SetPwdHeader" xml:space="preserve">
+    <value>Enter a privacy password</value>
+  </data>
+  <data name="Privacy_SetPwdPlaceholder" xml:space="preserve">
+    <value>Password used to unlock the app</value>
+  </data>
+  <data name="Nav_Dashboard.Content" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Nav_Dashboard.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Nav_Servers.Content" xml:space="preserve">
+    <value>Servers</value>
+  </data>
+  <data name="Nav_Servers.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Proxy Servers</value>
+  </data>
+  <data name="Nav_Routing.Content" xml:space="preserve">
+    <value>Routing</value>
+  </data>
+  <data name="Nav_Routing.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Routing Rules</value>
+  </data>
+  <data name="Nav_Traffic.Content" xml:space="preserve">
+    <value>Traffic</value>
+  </data>
+  <data name="Nav_Traffic.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Traffic &amp; Analytics</value>
+  </data>
+  <data name="Nav_Connections.Content" xml:space="preserve">
+    <value>Connections</value>
+  </data>
+  <data name="Nav_Connections.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Active Connections</value>
+  </data>
+  <data name="Nav_Logs.Content" xml:space="preserve">
+    <value>Logs</value>
+  </data>
+  <data name="Nav_Logs.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Core Logs</value>
+  </data>
+  <data name="Nav_Plugins.Content" xml:space="preserve">
+    <value>Plugins</value>
+  </data>
+  <data name="Nav_Plugins.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>JavaScript Plugins</value>
+  </data>
+  <data name="Nav_Settings.Content" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Nav_Settings.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="MainWindow_MiniModeBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Mini Mode</value>
+  </data>
+  <data name="MainWindow_ThemeBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Toggle Theme</value>
+  </data>
+  <data name="MainWindow_MiniExpandBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Expand</value>
+  </data>
+  <data name="MainWindow_MiniCloseBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Hide to Tray</value>
+  </data>
+  <data name="MainWindow_MiniServerName.Text" xml:space="preserve">
+    <value>No Server Selected</value>
+  </data>
+  <data name="MainWindow_MiniProxyMode.Text" xml:space="preserve">
+    <value>Rule</value>
+  </data>
+  <data name="MainWindow_MiniStatus.Text" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="Tun_AdminRequiredTitle" xml:space="preserve">
+    <value>Administrator Privileges Required</value>
+  </data>
+  <data name="Tun_AdminRequiredMsg" xml:space="preserve">
+    <value>TUN mode requires Administrator privileges to create a virtual network adapter and manage system routes.
+Swell Proxy will request UAC elevation and restart as Administrator.</value>
+  </data>
+  <data name="Tun_AdminConfirmBtn" xml:space="preserve">
+    <value>Elevate &amp; Restart</value>
+  </data>
+  <data name="Core_StartFailedTitle" xml:space="preserve">
+    <value>Failed to Start Core</value>
+  </data>
+  <data name="Core_StartFailedDashboard" xml:space="preserve">
+    <value>Failed to start proxy core. Please verify your configuration.
+Check the Logs page for details.</value>
+  </data>
+  <data name="Core_StartFailedWithError" xml:space="preserve">
+    <value>Failed to start proxy core. Please verify your configuration or check the Logs page.
+Error: {0}</value>
+  </data>
+  <data name="Core_ConfigBuildFailedTitle" xml:space="preserve">
+    <value>Configuration Error</value>
+  </data>
+  <data name="Core_ConfigBuildFailedMsg" xml:space="preserve">
+    <value>An error occurred while building the server configuration:
+{0}</value>
+  </data>
+  <data name="Dashboard_InfoConnectedMsg" xml:space="preserve">
+    <value>Connected to {0}</value>
+  </data>
+  <data name="Dashboard_InfoStoppedTitle" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="Dashboard_InfoStoppedMsg" xml:space="preserve">
+    <value>Proxy core has stopped</value>
+  </data>
+  <data name="Dashboard_RemainingDaysFmt" xml:space="preserve">
+    <value>{0} days</value>
+  </data>
+  <data name="Dashboard_HeaderTitle.Text" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Dashboard_HeaderSubtitle.Text" xml:space="preserve">
+    <value>Clean and modern network proxy manager</value>
+  </data>
+  <data name="Dashboard_ToggleHint.Text" xml:space="preserve">
+    <value>Click the power button to start or stop the proxy</value>
+  </data>
+  <data name="Dashboard_LatencyLabel.Text" xml:space="preserve">
+    <value>Latency:</value>
+  </data>
+  <data name="Dashboard_RoutingModeHeader.Text" xml:space="preserve">
+    <value>Routing Mode</value>
+  </data>
+  <data name="Dashboard_RouteRule.Content" xml:space="preserve">
+    <value>Rule</value>
+  </data>
+  <data name="Dashboard_RouteGlobal.Content" xml:space="preserve">
+    <value>Global</value>
+  </data>
+  <data name="Dashboard_RouteDirect.Content" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="Dashboard_UploadSpeedLabel.Text" xml:space="preserve">
+    <value>Upload</value>
+  </data>
+  <data name="Dashboard_DownloadSpeedLabel.Text" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Dashboard_SubInfoHeader.Text" xml:space="preserve">
+    <value>Subscription</value>
+  </data>
+  <data name="Dashboard_UsedTrafficLabel.Text" xml:space="preserve">
+    <value>Data Used</value>
+  </data>
+  <data name="Dashboard_RemainingTimeLabel.Text" xml:space="preserve">
+    <value>Remaining</value>
+  </data>
+  <data name="Dashboard_QuickActionsHeader.Text" xml:space="preserve">
+    <value>Quick Actions</value>
+  </data>
+  <data name="Dashboard_ProxyModeLabel.Text" xml:space="preserve">
+    <value>Proxy Mode</value>
+  </data>
+  <data name="Dashboard_ProxySys.Content" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="Dashboard_ProxyTun.Content" xml:space="preserve">
+    <value>TUN</value>
+  </data>
+  <data name="Dashboard_ProxyLocal.Content" xml:space="preserve">
+    <value>Local</value>
+  </data>
+  <data name="Dashboard_ProxyTunSys.Content" xml:space="preserve">
+    <value>TUN + Sys</value>
+  </data>
+  <data name="Dashboard_RefreshAllSubsText.Text" xml:space="preserve">
+    <value>Update All Subscriptions</value>
+  </data>
+  <data name="Servers_PingUntested" xml:space="preserve">
+    <value>Untested</value>
+  </data>
+  <data name="Servers_PingTesting" xml:space="preserve">
+    <value>Testing...</value>
+  </data>
+  <data name="Servers_PingTimeout" xml:space="preserve">
+    <value>Timeout</value>
+  </data>
+  <data name="Servers_PingFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Servers_FilterAll" xml:space="preserve">
+    <value>All Servers</value>
+  </data>
+  <data name="Servers_FilterFavorites" xml:space="preserve">
+    <value>Favorites</value>
+  </data>
+  <data name="Servers_FilterManual" xml:space="preserve">
+    <value>Manual</value>
+  </data>
+  <data name="Servers_UnnamedSub" xml:space="preserve">
+    <value>Unnamed Subscription</value>
+  </data>
+  <data name="Servers_AutoSubPrefix" xml:space="preserve">
+    <value>Sub</value>
+  </data>
+  <data name="Servers_FilterTooltipFmt" xml:space="preserve">
+    <value>Filter Group: {0}</value>
+  </data>
+  <data name="Servers_SortDefault" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="Servers_SortActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Servers_SortProtocol" xml:space="preserve">
+    <value>Protocol</value>
+  </data>
+  <data name="Servers_SortLatency" xml:space="preserve">
+    <value>Latency</value>
+  </data>
+  <data name="Servers_SortTooltipFmt" xml:space="preserve">
+    <value>Sort by: {0}</value>
+  </data>
+  <data name="Servers_CopyShareLink" xml:space="preserve">
+    <value>Copy Share Link</value>
+  </data>
+  <data name="Servers_Copied" xml:space="preserve">
+    <value>Copied!</value>
+  </data>
+  <data name="Servers_MenuEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Servers_MenuDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Servers_MenuShare" xml:space="preserve">
+    <value>Share</value>
+  </data>
+  <data name="Servers_MenuAddFav" xml:space="preserve">
+    <value>Add to Favorites</value>
+  </data>
+  <data name="Servers_MenuRemoveFav" xml:space="preserve">
+    <value>Remove from Favorites</value>
+  </data>
+  <data name="Servers_AddManualTitle" xml:space="preserve">
+    <value>Add Server Manually</value>
+  </data>
+  <data name="Servers_EditNodeTitle" xml:space="preserve">
+    <value>Edit Server</value>
+  </data>
+  <data name="Servers_ChainDirect" xml:space="preserve">
+    <value>Direct (None)</value>
+  </data>
+  <data name="Servers_HeaderUsername" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="Servers_ImportDialogTitle" xml:space="preserve">
+    <value>Import Subscriptions or Share Links</value>
+  </data>
+  <data name="Servers_ImportDialogHint" xml:space="preserve">
+    <value>Paste one or more links below (one per line):</value>
+  </data>
+  <data name="Servers_ImportPlaceholder" xml:space="preserve">
+    <value>Paste subscription URLs (http/https) or share links (vless://, vmess://, ss://, etc.)
+Multiple lines are supported</value>
+  </data>
+  <data name="Servers_ImportSuccessTitle" xml:space="preserve">
+    <value>Import Succeeded</value>
+  </data>
+  <data name="Servers_ImportBothFmt" xml:space="preserve">
+    <value>Imported and synced {0} subscription(s) and added {1} server(s).</value>
+  </data>
+  <data name="Servers_ImportSubsFmt" xml:space="preserve">
+    <value>Imported and synced {0} subscription(s).</value>
+  </data>
+  <data name="Servers_ImportNodesFmt" xml:space="preserve">
+    <value>Added {0} server(s).</value>
+  </data>
+  <data name="Servers_ImportFailTitle" xml:space="preserve">
+    <value>Import Failed</value>
+  </data>
+  <data name="Servers_ImportFailMsg" xml:space="preserve">
+    <value>No valid subscription URLs or share links were found. Please check your input.</value>
+  </data>
+  <data name="Servers_ImportErrorTitle" xml:space="preserve">
+    <value>Import Error</value>
+  </data>
+  <data name="Servers_IpDatacenterTag" xml:space="preserve">
+    <value>IDC</value>
+  </data>
+  <data name="Servers_IpFetchFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Servers_ShowFullIp" xml:space="preserve">
+    <value>Show Full IP</value>
+  </data>
+  <data name="Servers_HideExitIp" xml:space="preserve">
+    <value>Mask Exit IP</value>
+  </data>
+  <data name="Servers_CopyIpSummaryFmt" xml:space="preserve">
+    <value>Exit IP: {0}
+ISP: {1}
+ASN: {2}
+Location: {3}</value>
+  </data>
+  <data name="Servers_ShareDialogTitle" xml:space="preserve">
+    <value>Share Server</value>
+  </data>
+  <data name="Servers_CopyLinkTooltip" xml:space="preserve">
+    <value>Copy Link</value>
+  </data>
+  <data name="Servers_ShareFailTitle" xml:space="preserve">
+    <value>Cannot Share Server</value>
+  </data>
+  <data name="Servers_ShareFailMsg" xml:space="preserve">
+    <value>Generating a share link is not yet supported for this protocol.</value>
+  </data>
+  <data name="Servers_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete Server</value>
+  </data>
+  <data name="Servers_DeleteConfirmFmt" xml:space="preserve">
+    <value>Are you sure you want to delete &quot;{0}&quot;?</value>
+  </data>
+  <data name="Servers_SubSyncingBtn" xml:space="preserve">
+    <value>Syncing...</value>
+  </data>
+  <data name="Servers_SubImportSyncBtn" xml:space="preserve">
+    <value>Import &amp; Sync</value>
+  </data>
+  <data name="SubDialog_AddTitle" xml:space="preserve">
+    <value>Add Subscription</value>
+  </data>
+  <data name="SubDialog_ManageTitle" xml:space="preserve">
+    <value>Manage Subscriptions</value>
+  </data>
+  <data name="SubDialog_AddBtn" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="SubDialog_DoneBtn" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="SubDialog_AddFailTitle" xml:space="preserve">
+    <value>Failed to Add Subscription</value>
+  </data>
+  <data name="SubDialog_UpdateFailTitle" xml:space="preserve">
+    <value>Failed to Update Subscription</value>
+  </data>
+  <data name="SubDialog_LastSyncFmt" xml:space="preserve">
+    <value>Last synced: {0}</value>
+  </data>
+  <data name="SubDialog_RefreshTooltip" xml:space="preserve">
+    <value>Sync Subscription</value>
+  </data>
+  <data name="SubDialog_DelConfirmTitle" xml:space="preserve">
+    <value>Delete Subscription?</value>
+  </data>
+  <data name="SubDialog_DelConfirmDesc" xml:space="preserve">
+    <value>All servers imported from this subscription will also be removed.</value>
+  </data>
+  <data name="SubDialog_DelTooltip" xml:space="preserve">
+    <value>Delete Subscription</value>
+  </data>
+  <data name="SubDialog_AutoRefreshOff" xml:space="preserve">
+    <value>Next auto-sync: Off</value>
+  </data>
+  <data name="SubDialog_AutoRefreshPending" xml:space="preserve">
+    <value>Next auto-sync: On next launch</value>
+  </data>
+  <data name="SubDialog_AutoRefreshNextFmt" xml:space="preserve">
+    <value>Next auto-sync: {0}</value>
+  </data>
+  <data name="SubDialog_Title.Text" xml:space="preserve">
+    <value>Add Subscription</value>
+  </data>
+  <data name="SubDialog_SegAdd.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Add Subscription</value>
+  </data>
+  <data name="SubDialog_SegManage.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Manage Subscriptions</value>
+  </data>
+  <data name="SubDialog_UrlInput.Header" xml:space="preserve">
+    <value>Subscription URL</value>
+  </data>
+  <data name="SubDialog_NameInput.Header" xml:space="preserve">
+    <value>Remarks / Name (Optional)</value>
+  </data>
+  <data name="SubDialog_NameInput.PlaceholderText" xml:space="preserve">
+    <value>Leave blank to use URL hostname</value>
+  </data>
+  <data name="SubDialog_Hint.Text" xml:space="preserve">
+    <value>All servers from the subscription will be fetched and imported automatically</value>
+  </data>
+  <data name="SubDialog_AutoRefreshTitle.Text" xml:space="preserve">
+    <value>Auto-Refresh Subscriptions</value>
+  </data>
+  <data name="SubDialog_AutoRefreshDesc.Text" xml:space="preserve">
+    <value>Sync automatically every 24 hours</value>
+  </data>
+  <data name="SubDialog_EmptyText.Text" xml:space="preserve">
+    <value>No subscriptions yet</value>
+  </data>
+  <data name="Servers_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search servers...</value>
+  </data>
+  <data name="Servers_GroupFilterBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Filter Group</value>
+  </data>
+  <data name="Servers_FilterLabel.Text" xml:space="preserve">
+    <value>Group:</value>
+  </data>
+  <data name="Servers_SortBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Sort</value>
+  </data>
+  <data name="Servers_SortDefaultItem.Text" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="Servers_SortActiveItem.Text" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Servers_SortProtocolItem.Text" xml:space="preserve">
+    <value>Protocol</value>
+  </data>
+  <data name="Servers_SortLatencyItem.Text" xml:space="preserve">
+    <value>Latency</value>
+  </data>
+  <data name="Servers_ActiveBadge.Text" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Servers_AddManualBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Add Server Manually</value>
+  </data>
+  <data name="Servers_ImportClipboardBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Import Links / Subscriptions</value>
+  </data>
+  <data name="Servers_ManageSubBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Manage Subscriptions</value>
+  </data>
+  <data name="Servers_PingAllBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Test All Latencies</value>
+  </data>
+  <data name="Servers_QrShareBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Share QR Code</value>
+  </data>
+  <data name="Servers_EmptyTitle.Text" xml:space="preserve">
+    <value>No Server Selected</value>
+  </data>
+  <data name="Servers_EmptySubtitle.Text" xml:space="preserve">
+    <value>Select a server from the list on the left to inspect its configuration, exit IP, and AI unlock status.</value>
+  </data>
+  <data name="Servers_DetailAddrLabel.Text" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="Servers_DetailPortLabel.Text" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="Servers_DetailTransportLabel.Text" xml:space="preserve">
+    <value>Transport</value>
+  </data>
+  <data name="Servers_DetailLatencyLabel.Text" xml:space="preserve">
+    <value>Latency</value>
+  </data>
+  <data name="Servers_AiSectionTitle.Text" xml:space="preserve">
+    <value>AI Availability</value>
+  </data>
+  <data name="Servers_IpSectionTitle.Text" xml:space="preserve">
+    <value>Exit IP &amp; Network</value>
+  </data>
+  <data name="Servers_RefreshAiIpBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Re-check AI Availability &amp; Exit IP</value>
+  </data>
+  <data name="Servers_ExitIpLabel.Text" xml:space="preserve">
+    <value>Exit IP</value>
+  </data>
+  <data name="Servers_ToggleIpMaskBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show Full IP</value>
+  </data>
+  <data name="Servers_CopyIpStatusBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Copy Network Info</value>
+  </data>
+  <data name="Servers_IspLabel.Text" xml:space="preserve">
+    <value>ISP</value>
+  </data>
+  <data name="Servers_AsnLabel.Text" xml:space="preserve">
+    <value>ASN</value>
+  </data>
+  <data name="Servers_LocationLabel.Text" xml:space="preserve">
+    <value>Location</value>
+  </data>
+  <data name="Servers_EditTitle.Text" xml:space="preserve">
+    <value>Add Server Manually</value>
+  </data>
+  <data name="Servers_EditSubtitle.Text" xml:space="preserve">
+    <value>Fill in the server connection parameters below.</value>
+  </data>
+  <data name="Servers_FormName.Header" xml:space="preserve">
+    <value>Remarks / Name</value>
+  </data>
+  <data name="Servers_FormName.PlaceholderText" xml:space="preserve">
+    <value>e.g. Hong Kong VLESS-XTLS</value>
+  </data>
+  <data name="Servers_FormProtocol.Header" xml:space="preserve">
+    <value>Protocol</value>
+  </data>
+  <data name="Servers_FormProxyChain.Header" xml:space="preserve">
+    <value>Detour / Proxy Chain</value>
+  </data>
+  <data name="Servers_FormProxyChainDesc.Text" xml:space="preserve">
+    <value>Route traffic to this server through another upstream proxy</value>
+  </data>
+  <data name="Servers_FormHost.Header" xml:space="preserve">
+    <value>Server Address</value>
+  </data>
+  <data name="Servers_FormHost.PlaceholderText" xml:space="preserve">
+    <value>e.g. hk.example.com</value>
+  </data>
+  <data name="Servers_FormPort.Header" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="Servers_FormEnableShadowTls.Content" xml:space="preserve">
+    <value>Enable Shadow-TLS</value>
+  </data>
+  <data name="Servers_FormShadowTlsVer.Header" xml:space="preserve">
+    <value>Shadow-TLS Version</value>
+  </data>
+  <data name="Servers_FormShadowTlsPwd.Header" xml:space="preserve">
+    <value>Shadow-TLS Password</value>
+  </data>
+  <data name="Servers_FormShadowTlsPwd.PlaceholderText" xml:space="preserve">
+    <value>Enter Shadow-TLS password</value>
+  </data>
+  <data name="Servers_FormShadowTlsSni.Header" xml:space="preserve">
+    <value>SNI (Server Name)</value>
+  </data>
+  <data name="Servers_FormShadowTlsSni.PlaceholderText" xml:space="preserve">
+    <value>e.g. support.apple.com</value>
+  </data>
+  <data name="Servers_FormPassword.Header" xml:space="preserve">
+    <value>Password / Token</value>
+  </data>
+  <data name="Servers_FormPassword.PlaceholderText" xml:space="preserve">
+    <value>Enter password or token</value>
+  </data>
+  <data name="Servers_FormWgPrivKey.Header" xml:space="preserve">
+    <value>Private Key</value>
+  </data>
+  <data name="Servers_FormWgPrivKey.PlaceholderText" xml:space="preserve">
+    <value>Enter WireGuard private key</value>
+  </data>
+  <data name="Servers_FormWgLocalAddr.Header" xml:space="preserve">
+    <value>Local Address</value>
+  </data>
+  <data name="Servers_FormWgPsk.Header" xml:space="preserve">
+    <value>Pre-Shared Key</value>
+  </data>
+  <data name="Servers_FormWgPsk.PlaceholderText" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="Servers_FormWgMtu.PlaceholderText" xml:space="preserve">
+    <value>1408 (0 for default)</value>
+  </data>
+  <data name="Servers_FormNowhereSpec.PlaceholderText" xml:space="preserve">
+    <value>Enter Nowhere spec</value>
+  </data>
+  <data name="Servers_FormSnellPsk.Header" xml:space="preserve">
+    <value>Pre-Shared Key (PSK)</value>
+  </data>
+  <data name="Servers_FormSnellPsk.PlaceholderText" xml:space="preserve">
+    <value>Enter Snell PSK</value>
+  </data>
+  <data name="Servers_FormSnellVer.Header" xml:space="preserve">
+    <value>Snell Version</value>
+  </data>
+  <data name="Servers_FormSnellMode.Header" xml:space="preserve">
+    <value>Traffic Shaping Mode [v6 only]</value>
+  </data>
+  <data name="Servers_FormSnellObfs.Header" xml:space="preserve">
+    <value>HTTP Obfuscation [v1-v5]</value>
+  </data>
+  <data name="Servers_FormSnellObfsOff.Content" xml:space="preserve">
+    <value>Off (none)</value>
+  </data>
+  <data name="Servers_FormSnellObfsHost.Header" xml:space="preserve">
+    <value>Obfs Host</value>
+  </data>
+  <data name="Servers_FormSnellObfsHost.PlaceholderText" xml:space="preserve">
+    <value>e.g. bing.com</value>
+  </data>
+  <data name="Servers_FormObfsType.Header" xml:space="preserve">
+    <value>Obfuscation</value>
+  </data>
+  <data name="Servers_FormObfsPwd.Header" xml:space="preserve">
+    <value>Obfuscation Password</value>
+  </data>
+  <data name="Servers_FormObfsPwd.PlaceholderText" xml:space="preserve">
+    <value>Enter obfuscation password</value>
+  </data>
+  <data name="Servers_FormEncryption.Header" xml:space="preserve">
+    <value>Cipher / Encryption</value>
+  </data>
+  <data name="Servers_FormNetwork.Header" xml:space="preserve">
+    <value>Transport (Network)</value>
+  </data>
+  <data name="Servers_FormHeaderType.Header" xml:space="preserve">
+    <value>Header Type</value>
+  </data>
+  <data name="Servers_FormPath.Header" xml:space="preserve">
+    <value>Path</value>
+  </data>
+  <data name="Servers_FormWsHost.Header" xml:space="preserve">
+    <value>Host Header</value>
+  </data>
+  <data name="Servers_FormFlow.Header" xml:space="preserve">
+    <value>XTLS Flow</value>
+  </data>
+  <data name="Servers_FormSecurity.Header" xml:space="preserve">
+    <value>Transport Security</value>
+  </data>
+  <data name="Servers_FormFingerprint.Header" xml:space="preserve">
+    <value>uTLS Fingerprint</value>
+  </data>
+  <data name="Servers_FormAllowInsecure.Content" xml:space="preserve">
+    <value>Allow Insecure Certificates</value>
+  </data>
+  <data name="Servers_FormSaveBtn.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Servers_FormCancelBtn.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Servers_SubMgrTitle.Text" xml:space="preserve">
+    <value>Subscriptions</value>
+  </data>
+  <data name="Servers_SubMgrSubtitle.Text" xml:space="preserve">
+    <value>Import and sync subscription feeds in bulk.</value>
+  </data>
+  <data name="Servers_SubSegAdd.Content" xml:space="preserve">
+    <value>Add Subscription</value>
+  </data>
+  <data name="Servers_SubSegList.Content" xml:space="preserve">
+    <value>Saved Subscriptions</value>
+  </data>
+  <data name="Servers_SubFormName.Header" xml:space="preserve">
+    <value>Subscription Name</value>
+  </data>
+  <data name="Servers_SubFormName.PlaceholderText" xml:space="preserve">
+    <value>e.g. My Provider</value>
+  </data>
+  <data name="Servers_SubFormUrl.Header" xml:space="preserve">
+    <value>Subscription URL</value>
+  </data>
+  <data name="Servers_SubSaveBtn.Content" xml:space="preserve">
+    <value>Import &amp; Sync</value>
+  </data>
+  <data name="Servers_SubBackBtn1.Content" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Servers_SubBackBtn2.Content" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Servers_SubLastSync.Text" xml:space="preserve">
+    <value>Last Synced:</value>
+  </data>
+  <data name="Servers_SubSyncItemBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Sync Now</value>
+  </data>
+  <data name="Servers_SubDelItemBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Servers_ActiveNodeText.Text" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="Servers_ReopenSheetBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show Live Overview</value>
+  </data>
+  <data name="Servers_ProxyModeBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Proxy Mode</value>
+  </data>
+  <data name="Servers_FlyoutSys.Text" xml:space="preserve">
+    <value>System Proxy</value>
+  </data>
+  <data name="Servers_FlyoutTun.Text" xml:space="preserve">
+    <value>TUN Mode</value>
+  </data>
+  <data name="Servers_FlyoutManual.Text" xml:space="preserve">
+    <value>Local Only</value>
+  </data>
+  <data name="Servers_FlyoutTunSys.Text" xml:space="preserve">
+    <value>TUN + System Proxy</value>
+  </data>
+  <data name="Servers_FlyoutSmart.Text" xml:space="preserve">
+    <value>Rule</value>
+  </data>
+  <data name="Servers_FlyoutGlobal.Text" xml:space="preserve">
+    <value>Global</value>
+  </data>
+  <data name="Servers_FlyoutDirect.Text" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="Servers_QrHint.Text" xml:space="preserve">
+    <value>Scan with a mobile or desktop proxy client</value>
+  </data>
+  <data name="Servers_QrCopyText.Text" xml:space="preserve">
+    <value>Copy Share Link</value>
+  </data>
+  <data name="Servers_SheetTitle.Text" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="Servers_SheetNodeLabel.Text" xml:space="preserve">
+    <value>Active Server</value>
+  </data>
+  <data name="Servers_SheetUptimeLabel.Text" xml:space="preserve">
+    <value>Uptime</value>
+  </data>
+  <data name="Servers_SheetLatencyLabel.Text" xml:space="preserve">
+    <value>Latency</value>
+  </data>
+  <data name="Servers_SheetDownLabel.Text" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Servers_SheetUpLabel.Text" xml:space="preserve">
+    <value>Upload</value>
+  </data>
+  <data name="Settings_CatAppearanceTitle" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="Settings_CatAppearanceSub" xml:space="preserve">
+    <value>Customize theme, display language, window backdrop, and interface layout</value>
+  </data>
+  <data name="Settings_CatColorsTitle" xml:space="preserve">
+    <value>Protocol Colors</value>
+  </data>
+  <data name="Settings_CatColorsSub" xml:space="preserve">
+    <value>Customize badge colors for each proxy protocol</value>
+  </data>
+  <data name="Settings_CatRoutingTitle" xml:space="preserve">
+    <value>Routing</value>
+  </data>
+  <data name="Settings_CatRoutingSub" xml:space="preserve">
+    <value>Configure bypass rules, GeoIP/GeoSite sets, and ad blocking</value>
+  </data>
+  <data name="Settings_CatDnsTitle" xml:space="preserve">
+    <value>DNS</value>
+  </data>
+  <data name="Settings_CatDnsSub" xml:space="preserve">
+    <value>Configure remote/direct DNS resolvers and FakeDNS</value>
+  </data>
+  <data name="Settings_CatTailscaleTitle" xml:space="preserve">
+    <value>Tailscale</value>
+  </data>
+  <data name="Settings_CatTailscaleSub" xml:space="preserve">
+    <value>Connect sing-box to your Tailscale tailnet</value>
+  </data>
+  <data name="Settings_CatBackupTitle" xml:space="preserve">
+    <value>Backup &amp; Restore</value>
+  </data>
+  <data name="Settings_CatBackupSub" xml:space="preserve">
+    <value>Export or restore servers, subscriptions, and preferences</value>
+  </data>
+  <data name="Settings_CatAutostartTitle" xml:space="preserve">
+    <value>Startup &amp; Behavior</value>
+  </data>
+  <data name="Settings_CatAutostartSub" xml:space="preserve">
+    <value>Configure launch on startup, ports, and tray behavior</value>
+  </data>
+  <data name="Settings_CatAboutTitle" xml:space="preserve">
+    <value>About &amp; Core</value>
+  </data>
+  <data name="Settings_CatAboutSub" xml:space="preserve">
+    <value>Client version updates and sing-box core management</value>
+  </data>
+  <data name="Settings_MasterTitle.Text" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Settings_MasterSubtitle.Text" xml:space="preserve">
+    <value>Preferences &amp; core configuration</value>
+  </data>
+  <data name="Settings_CatItemAppearance.Text" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="Settings_CatItemColors.Text" xml:space="preserve">
+    <value>Protocol Colors</value>
+  </data>
+  <data name="Settings_CatItemRouting.Text" xml:space="preserve">
+    <value>Routing</value>
+  </data>
+  <data name="Settings_CatItemDns.Text" xml:space="preserve">
+    <value>DNS</value>
+  </data>
+  <data name="Settings_CatItemTailscale.Text" xml:space="preserve">
+    <value>Tailscale</value>
+  </data>
+  <data name="Settings_CatItemAutostart.Text" xml:space="preserve">
+    <value>Startup</value>
+  </data>
+  <data name="Settings_CatItemBackup.Text" xml:space="preserve">
+    <value>Backup &amp; Restore</value>
+  </data>
+  <data name="Settings_CatItemAbout.Text" xml:space="preserve">
+    <value>About &amp; Core</value>
+  </data>
+  <data name="Settings_DetailTitle.Text" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="Settings_DetailSubtitle.Text" xml:space="preserve">
+    <value>Customize theme, display language, window backdrop, and interface layout</value>
+  </data>
+  <data name="Settings_AppearanceSectionHeader.Text" xml:space="preserve">
+    <value>Language, Theme &amp; Window Backdrop</value>
+  </data>
+  <data name="Settings_LanguageTitle.Text" xml:space="preserve">
+    <value>Display Language</value>
+  </data>
+  <data name="Settings_LanguageDesc.Text" xml:space="preserve">
+    <value>Switch the client interface language (Simplified Chinese / English)</value>
+  </data>
+  <data name="Settings_LanguageRestartBar.Title" xml:space="preserve">
+    <value>Language Preference Saved</value>
+  </data>
+  <data name="Settings_LanguageRestartBar.Message" xml:space="preserve">
+    <value>Restart Swell Proxy to apply the new language (active proxy connections will resume automatically).</value>
+  </data>
+  <data name="Settings_LanguageRestartBtn.Content" xml:space="preserve">
+    <value>Restart Now</value>
+  </data>
+  <data name="Settings_ThemeTitle.Text" xml:space="preserve">
+    <value>App Theme</value>
+  </data>
+  <data name="Settings_ThemeDesc.Text" xml:space="preserve">
+    <value>Choose light, dark, or system color mode</value>
+  </data>
+  <data name="Settings_ThemeLight.Content" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="Settings_ThemeDark.Content" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="Settings_ThemeSystem.Content" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="Settings_BackdropTitle.Text" xml:space="preserve">
+    <value>Window Backdrop</value>
+  </data>
+  <data name="Settings_BackdropDesc.Text" xml:space="preserve">
+    <value>Select the translucent material used for the main window</value>
+  </data>
+  <data name="Settings_BackdropMica.Content" xml:space="preserve">
+    <value>Mica</value>
+  </data>
+  <data name="Settings_BackdropAcrylic.Content" xml:space="preserve">
+    <value>Acrylic</value>
+  </data>
+  <data name="Settings_ClassicDashTitle.Text" xml:space="preserve">
+    <value>Enable Classic Dashboard</value>
+  </data>
+  <data name="Settings_ClassicDashDesc.Text" xml:space="preserve">
+    <value>Show or hide the Dashboard tab in the sidebar</value>
+  </data>
+  <data name="Settings_PrivacyTitle.Text" xml:space="preserve">
+    <value>Privacy Lock Mode</value>
+  </data>
+  <data name="Settings_PrivacyDesc.Text" xml:space="preserve">
+    <value>Require a password on launch and allow locking to the system tray</value>
+  </data>
+  <data name="Settings_PluginsTitle.Text" xml:space="preserve">
+    <value>Enable JavaScript Plugins</value>
+  </data>
+  <data name="Settings_PluginsDesc.Text" xml:space="preserve">
+    <value>Show the Plugins tab in the sidebar and enable JavaScript extensions</value>
+  </data>
+  <data name="Settings_TsHeader.Text" xml:space="preserve">
+    <value>Tailscale Private Network</value>
+  </data>
+  <data name="Settings_TsEnableTitle.Text" xml:space="preserve">
+    <value>Enable Tailscale Endpoint</value>
+  </data>
+  <data name="Settings_TsEnableDesc.Text" xml:space="preserve">
+    <value>Join sing-box to your private tailnet (requires sing-box with Tailscale support)</value>
+  </data>
+  <data name="Settings_TsAuthTitle.Text" xml:space="preserve">
+    <value>Auth Key</value>
+  </data>
+  <data name="Settings_TsAuthDesc.Text" xml:space="preserve">
+    <value>Pre-authentication key (tskey-auth-...); leave empty to print a login URL in Logs on startup</value>
+  </data>
+  <data name="Settings_TsHostTitle.Text" xml:space="preserve">
+    <value>Node Hostname</value>
+  </data>
+  <data name="Settings_TsHostDesc.Text" xml:space="preserve">
+    <value>Device name shown in your tailnet; leave empty to use the system hostname</value>
+  </data>
+  <data name="Settings_TsStateTitle.Text" xml:space="preserve">
+    <value>State Directory</value>
+  </data>
+  <data name="Settings_TsStateDesc.Text" xml:space="preserve">
+    <value>Folder storing Tailscale authentication state across restarts; leave empty for default</value>
+  </data>
+  <data name="Settings_TsStateInput.PlaceholderText" xml:space="preserve">
+    <value>Leave empty for default</value>
+  </data>
+  <data name="Settings_TsStateBrowse.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Browse Folder</value>
+  </data>
+  <data name="Settings_TsCtrlTitle.Text" xml:space="preserve">
+    <value>Control Server URL</value>
+  </data>
+  <data name="Settings_TsCtrlDesc.Text" xml:space="preserve">
+    <value>Leave empty for official Tailscale, or enter a self-hosted Headscale URL</value>
+  </data>
+  <data name="Settings_TsCtrlInput.PlaceholderText" xml:space="preserve">
+    <value>Empty = Official Tailscale</value>
+  </data>
+  <data name="Settings_TsCtrlOfficialBtn.Content" xml:space="preserve">
+    <value>Official</value>
+  </data>
+  <data name="Settings_TsCtrlClearBtn.Content" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Settings_TsEphTitle.Text" xml:space="preserve">
+    <value>Ephemeral Node</value>
+  </data>
+  <data name="Settings_TsEphDesc.Text" xml:space="preserve">
+    <value>Automatically remove this node from the tailnet when disconnected</value>
+  </data>
+  <data name="Settings_TsAccRoutesTitle.Text" xml:space="preserve">
+    <value>Accept Subnet Routes</value>
+  </data>
+  <data name="Settings_TsAccRoutesDesc.Text" xml:space="preserve">
+    <value>Accept subnet routes advertised by other nodes in your tailnet</value>
+  </data>
+  <data name="Settings_TsAdvRoutesTitle.Text" xml:space="preserve">
+    <value>Advertise Subnet Routes</value>
+  </data>
+  <data name="Settings_TsAdvRoutesDesc.Text" xml:space="preserve">
+    <value>Share local subnets with your tailnet (comma-separated CIDRs, e.g. 192.168.1.0/24)</value>
+  </data>
+  <data name="Settings_TsExitTitle.Text" xml:space="preserve">
+    <value>Exit Node</value>
+  </data>
+  <data name="Settings_TsExitDesc.Text" xml:space="preserve">
+    <value>Route outbound traffic through a specific tailnet peer (IP or hostname)</value>
+  </data>
+  <data name="Settings_TsExitInput.PlaceholderText" xml:space="preserve">
+    <value>100.x.x.x or empty</value>
+  </data>
+  <data name="Settings_TsAdvExitTitle.Text" xml:space="preserve">
+    <value>Advertise as Exit Node</value>
+  </data>
+  <data name="Settings_TsAdvExitDesc.Text" xml:space="preserve">
+    <value>Offer this device as an exit node for other peers in your tailnet</value>
+  </data>
+  <data name="Settings_TsNotesTitle.Text" xml:space="preserve">
+    <value>Usage Notes</value>
+  </data>
+  <data name="Settings_TsNote1.Text" xml:space="preserve">
+    <value>• On first launch without an Auth Key, check the Logs page for the login URL to authorize in your browser</value>
+  </data>
+  <data name="Settings_TsNote2.Text" xml:space="preserve">
+    <value>• Once a state file exists, the Auth Key is ignored and existing credentials are reused</value>
+  </data>
+  <data name="Settings_TsNote3.Text" xml:space="preserve">
+    <value>• Requires a sing-box build with Tailscale support (sing-box 1.12.0+)</value>
+  </data>
+  <data name="Settings_RoutingHeader.Text" xml:space="preserve">
+    <value>Base Routing &amp; Privacy Policies</value>
+  </data>
+  <data name="Settings_BypassCnTitle.Text" xml:space="preserve">
+    <value>Bypass Mainland China</value>
+  </data>
+  <data name="Settings_BypassCnDesc.Text" xml:space="preserve">
+    <value>Connect directly to mainland China IPs and domains without going through the proxy</value>
+  </data>
+  <data name="Settings_UpdateGeoBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Update Geo rule-set files (geosite-cn.srs, geoip-cn.srs, ads)</value>
+  </data>
+  <data name="Settings_BlockAdsTitle.Text" xml:space="preserve">
+    <value>Block Ads &amp; Trackers</value>
+  </data>
+  <data name="Settings_BlockAdsDesc.Text" xml:space="preserve">
+    <value>Block known advertising and tracking domains using built-in rule-sets</value>
+  </data>
+  <data name="Settings_AdvRoutingTitle.Text" xml:space="preserve">
+    <value>Enable Advanced Routing Module</value>
+  </data>
+  <data name="Settings_AdvRoutingDesc.Text" xml:space="preserve">
+    <value>Show the Routing tab in the sidebar for per-service policies and custom domain/IP/process rules</value>
+  </data>
+  <data name="Settings_DnsHeader.Text" xml:space="preserve">
+    <value>DNS Resolver Configuration</value>
+  </data>
+  <data name="Settings_DirectDnsTitle.Text" xml:space="preserve">
+    <value>Direct DNS</value>
+  </data>
+  <data name="Settings_DirectDnsDesc.Text" xml:space="preserve">
+    <value>Resolver used for domestic domains and direct outbound connections</value>
+  </data>
+  <data name="Settings_DirectDnsInput.PlaceholderText" xml:space="preserve">
+    <value>Auto if empty (e.g. 223.5.5.5)</value>
+  </data>
+  <data name="Settings_DirectDnsAliBtn.Content" xml:space="preserve">
+    <value>AliDNS</value>
+  </data>
+  <data name="Settings_DirectDnsTencentBtn.Content" xml:space="preserve">
+    <value>DNSPod</value>
+  </data>
+  <data name="Settings_ProxyDnsTitle.Text" xml:space="preserve">
+    <value>Remote / Proxy DNS</value>
+  </data>
+  <data name="Settings_ProxyDnsDesc.Text" xml:space="preserve">
+    <value>Resolver queried through the proxy outbound to prevent DNS poisoning</value>
+  </data>
+  <data name="Settings_ProxyDnsInput.PlaceholderText" xml:space="preserve">
+    <value>e.g. https://1.1.1.1/dns-query</value>
+  </data>
+  <data name="Settings_ProxyDnsGoogleBtn.Content" xml:space="preserve">
+    <value>Google</value>
+  </data>
+  <data name="Settings_DnsStratTitle.Text" xml:space="preserve">
+    <value>Query Strategy</value>
+  </data>
+  <data name="Settings_DnsStratDesc.Text" xml:space="preserve">
+    <value>Preferred IP address family during DNS resolution</value>
+  </data>
+  <data name="Settings_DnsStratIpv4Only.Content" xml:space="preserve">
+    <value>IPv4 Only</value>
+  </data>
+  <data name="Settings_DnsStratPreferIpv4.Content" xml:space="preserve">
+    <value>Prefer IPv4</value>
+  </data>
+  <data name="Settings_DnsStratPreferIpv6.Content" xml:space="preserve">
+    <value>Prefer IPv6</value>
+  </data>
+  <data name="Settings_DnsStratIpv6Only.Content" xml:space="preserve">
+    <value>IPv6 Only</value>
+  </data>
+  <data name="Settings_DnsCacheTitle.Text" xml:space="preserve">
+    <value>Enable DNS Cache</value>
+  </data>
+  <data name="Settings_DnsCacheDesc.Text" xml:space="preserve">
+    <value>Cache resolved DNS responses to reduce lookup latency</value>
+  </data>
+  <data name="Settings_FakeDnsBadge.Text" xml:space="preserve">
+    <value>Experimental</value>
+  </data>
+  <data name="Settings_FakeDnsDesc.Text" xml:space="preserve">
+    <value>Return synthetic 198.18.x.x IPs over TUN for instant connection startup</value>
+  </data>
+  <data name="Settings_BlockIpv6Title.Text" xml:space="preserve">
+    <value>Prevent IPv6 DNS Leak</value>
+  </data>
+  <data name="Settings_BlockIpv6Desc.Text" xml:space="preserve">
+    <value>Suppress AAAA queries in TUN mode to prevent IPv6 location leaks</value>
+  </data>
+  <data name="Settings_AllowIpv6Title.Text" xml:space="preserve">
+    <value>Allow IPv6 DNS Queries</value>
+  </data>
+  <data name="Settings_AllowIpv6Desc.Text" xml:space="preserve">
+    <value>Allow AAAA queries in TUN mode so IPv6-only domains can resolve (disabled by default)</value>
+  </data>
+  <data name="Settings_FlushDnsTitle.Text" xml:space="preserve">
+    <value>Auto-Flush System DNS Cache</value>
+  </data>
+  <data name="Settings_FlushDnsDesc.Text" xml:space="preserve">
+    <value>Clear the Windows DNS resolver cache automatically when starting or switching servers</value>
+  </data>
+  <data name="Settings_ColorsHeader.Text" xml:space="preserve">
+    <value>Protocol Color Badges</value>
+  </data>
+  <data name="Settings_ColorsDesc.Text" xml:space="preserve">
+    <value>Customize badge colors for each proxy protocol in cards and lists</value>
+  </data>
+  <data name="Settings_ColorsResetText.Text" xml:space="preserve">
+    <value>Reset Colors</value>
+  </data>
+  <data name="Settings_ColorsFallback.Text" xml:space="preserve">
+    <value>Other / Fallback</value>
+  </data>
+  <data name="Settings_AutostartHeader.Text" xml:space="preserve">
+    <value>System Startup</value>
+  </data>
+  <data name="Settings_AutostartTitle.Text" xml:space="preserve">
+    <value>Launch at Windows Sign-In</value>
+  </data>
+  <data name="Settings_AutostartDesc.Text" xml:space="preserve">
+    <value>Automatically start Swell Proxy minimized in the system tray when signing in</value>
+  </data>
+  <data name="Settings_PortHeader.Text" xml:space="preserve">
+    <value>Local Proxy Inbound</value>
+  </data>
+  <data name="Settings_MixedPortTitle.Text" xml:space="preserve">
+    <value>Mixed Proxy Port (SOCKS5 &amp; HTTP)</value>
+  </data>
+  <data name="Settings_MixedPortDesc.Text" xml:space="preserve">
+    <value>Local port shared by SOCKS5 and HTTP proxy listeners (1024–65535); changes restart the core automatically</value>
+  </data>
+  <data name="Settings_AllowLanTitle.Text" xml:space="preserve">
+    <value>Allow LAN Connections</value>
+  </data>
+  <data name="Settings_AllowLanDesc.Text" xml:space="preserve">
+    <value>Allow other devices on your local network to connect via the address below (ensure Windows Firewall permits access)</value>
+  </data>
+  <data name="Settings_BackupHeader.Text" xml:space="preserve">
+    <value>Export &amp; Restore Configuration</value>
+  </data>
+  <data name="Settings_ExportTitle.Text" xml:space="preserve">
+    <value>Export Configuration Backup</value>
+  </data>
+  <data name="Settings_ExportDesc.Text" xml:space="preserve">
+    <value>Export all manual servers, subscriptions, and preferences to a .zip archive</value>
+  </data>
+  <data name="Settings_ExportBtn.Content" xml:space="preserve">
+    <value>Export Backup</value>
+  </data>
+  <data name="Settings_ImportTitle.Text" xml:space="preserve">
+    <value>Restore from Backup</value>
+  </data>
+  <data name="Settings_ImportDesc.Text" xml:space="preserve">
+    <value>⚠️ Restoring overwrites all current servers, subscriptions, and settings</value>
+  </data>
+  <data name="Settings_ImportBtn.Content" xml:space="preserve">
+    <value>Restore Backup</value>
+  </data>
+  <data name="Settings_AboutEditionText.Text" xml:space="preserve">
+    <value>(Native WinUI 3 Fluent Edition)</value>
+  </data>
+  <data name="Settings_CoreSectionHeader.Text" xml:space="preserve">
+    <value>Core &amp; Onboarding Management</value>
+  </data>
+  <data name="Settings_UpdateInfoBar.Title" xml:space="preserve">
+    <value>New Version Available</value>
+  </data>
+  <data name="Settings_CoreTitle.Text" xml:space="preserve">
+    <value>Sing-box Core Engine</value>
+  </data>
+  <data name="Settings_SingboxVerLoading.Text" xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="Settings_RestoreCoreBtn.Content" xml:space="preserve">
+    <value>Restore Bundled Core</value>
+  </data>
+  <data name="Settings_RestoreCoreBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Revert to the bundled sing-box executable</value>
+  </data>
+  <data name="Settings_ReplaceCoreBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Replace sing-box.exe manually (supports 1.13 / 1.14 / 1.15+)</value>
+  </data>
+  <data name="Settings_CheckCoreBtn.Content" xml:space="preserve">
+    <value>Check for Updates</value>
+  </data>
+  <data name="Settings_AppUpdateTitle.Text" xml:space="preserve">
+    <value>Client Updates</value>
+  </data>
+  <data name="Settings_AppUpdateDesc.Text" xml:space="preserve">
+    <value>Check GitHub Releases for a newer Swell Proxy version</value>
+  </data>
+  <data name="Settings_CheckAppBtn.Content" xml:space="preserve">
+    <value>Check for Updates</value>
+  </data>
+  <data name="Settings_ResetOnboardTitle.Text" xml:space="preserve">
+    <value>Reset Welcome Guide</value>
+  </data>
+  <data name="Settings_ResetOnboardDesc.Text" xml:space="preserve">
+    <value>Re-open the setup wizard now and clear completion state</value>
+  </data>
+  <data name="Settings_ResetOnboardBtn.Content" xml:space="preserve">
+    <value>Reset Guide</value>
+  </data>
+  <data name="Settings_CoreVer115Fmt" xml:space="preserve">
+    <value>Current version: {0} (1.15+ native TUN stack enabled)</value>
+  </data>
+  <data name="Settings_CoreVerFmt" xml:space="preserve">
+    <value>Current version: {0}</value>
+  </data>
+  <data name="Settings_TunStackDesc115" xml:space="preserve">
+    <value>sing-box 1.15+ detected: automatically using the built-in high-performance TCP/IP stack</value>
+  </data>
+  <data name="Settings_TunStackDescDefault" xml:space="preserve">
+    <value>Network stack for TUN inbound; mixed is recommended (sing-box 1.15+ uses its native stack automatically)</value>
+  </data>
+  <data name="Settings_VmCoreVerFmt" xml:space="preserve">
+    <value>Core Version: {0}</value>
+  </data>
+  <data name="Settings_VmAppVerFmt" xml:space="preserve">
+    <value>Version v{0}.{1}.{2}</value>
+  </data>
+  <data name="Settings_LanIpFallback" xml:space="preserve">
+    <value>LAN IP</value>
+  </data>
+  <data name="Settings_ExportingBtn" xml:space="preserve">
+    <value>Exporting...</value>
+  </data>
+  <data name="Settings_ExportBtnText" xml:space="preserve">
+    <value>Export Backup</value>
+  </data>
+  <data name="Settings_ExportSuccessTitle" xml:space="preserve">
+    <value>Backup Exported</value>
+  </data>
+  <data name="Settings_ExportSuccessFmt" xml:space="preserve">
+    <value>Backup archive saved to:
+{0}</value>
+  </data>
+  <data name="Settings_ExportFailTitle" xml:space="preserve">
+    <value>Export Failed</value>
+  </data>
+  <data name="Settings_ImportConfirmTitle" xml:space="preserve">
+    <value>Restore Backup?</value>
+  </data>
+  <data name="Settings_ImportConfirmMsg" xml:space="preserve">
+    <value>Restoring a backup will overwrite all current servers, subscriptions, and preferences. This cannot be undone.
+
+Continue?</value>
+  </data>
+  <data name="Settings_ImportConfirmPrimary" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="Settings_BackupFilterName" xml:space="preserve">
+    <value>Swell Proxy Backup</value>
+  </data>
+  <data name="Settings_SelectBackupTitle" xml:space="preserve">
+    <value>Select Backup Archive</value>
+  </data>
+  <data name="Settings_ImportingBtn" xml:space="preserve">
+    <value>Restoring...</value>
+  </data>
+  <data name="Settings_ImportBtnText" xml:space="preserve">
+    <value>Restore Backup</value>
+  </data>
+  <data name="Settings_ImportSuccessTitle" xml:space="preserve">
+    <value>Backup Restored</value>
+  </data>
+  <data name="Settings_ImportSuccessMsg" xml:space="preserve">
+    <value>Backup restored successfully! All servers and preferences have been reloaded.</value>
+  </data>
+  <data name="Settings_ImportFailTitle" xml:space="preserve">
+    <value>Restore Failed</value>
+  </data>
+  <data name="Settings_CheckingBtn" xml:space="preserve">
+    <value>Checking...</value>
+  </data>
+  <data name="Settings_CheckUpdateBtnText" xml:space="preserve">
+    <value>Check for Updates</value>
+  </data>
+  <data name="Settings_CoreCheckTitle" xml:space="preserve">
+    <value>Core Update Check</value>
+  </data>
+  <data name="Settings_CoreUpToDateFmt" xml:space="preserve">
+    <value>Already up to date, or GitHub could not be reached.
+Installed version: {0}</value>
+  </data>
+  <data name="Settings_CoreStopWarning" xml:space="preserve">
+    <value>
+
+⚠️ The active proxy will stop temporarily during the update.</value>
+  </data>
+  <data name="Settings_NewVerTitle" xml:space="preserve">
+    <value>Update Available</value>
+  </data>
+  <data name="Settings_CoreConfirmUpdateFmt" xml:space="preserve">
+    <value>Update sing-box core to {0}?{1}</value>
+  </data>
+  <data name="Settings_ConfirmUpdateBtn" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="Settings_PreparingDownload" xml:space="preserve">
+    <value>Preparing download...</value>
+  </data>
+  <data name="Settings_UpdatingCoreTitle" xml:space="preserve">
+    <value>Updating Core</value>
+  </data>
+  <data name="Settings_CoreReconnectNote" xml:space="preserve">
+    <value>
+
+Proxy was stopped; reconnect from the main screen when ready.</value>
+  </data>
+  <data name="Settings_UpdateDoneTitle" xml:space="preserve">
+    <value>Update Complete</value>
+  </data>
+  <data name="Settings_UpdateDoneFmt" xml:space="preserve">
+    <value>Successfully updated to {0}.{1}</value>
+  </data>
+  <data name="Settings_UpdateFailTitle" xml:space="preserve">
+    <value>Update Failed</value>
+  </data>
+  <data name="Settings_CheckFailTitle" xml:space="preserve">
+    <value>Update Check Failed</value>
+  </data>
+  <data name="Settings_CheckFailFmt" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="Settings_AppCheckTitle" xml:space="preserve">
+    <value>Client Update Check</value>
+  </data>
+  <data name="Settings_AppUpToDateMsg" xml:space="preserve">
+    <value>Swell Proxy is already up to date, or GitHub could not be reached.</value>
+  </data>
+  <data name="Settings_AppConfirmUpdateFmt" xml:space="preserve">
+    <value>Update Swell Proxy to {0}?
+The update will be downloaded and applied on restart.</value>
+  </data>
+  <data name="Settings_UpdatingAppTitle" xml:space="preserve">
+    <value>Updating Client</value>
+  </data>
+  <data name="Settings_AppReadyTitle" xml:space="preserve">
+    <value>Update Ready</value>
+  </data>
+  <data name="Settings_AppReadyFmt" xml:space="preserve">
+    <value>Version {0} has been downloaded and verified!
+
+Click Restart Now to close the app and install the update.</value>
+  </data>
+  <data name="Settings_RestartNowBtn" xml:space="preserve">
+    <value>Restart Now</value>
+  </data>
+  <data name="Settings_ExeFilterName" xml:space="preserve">
+    <value>Executable Files</value>
+  </data>
+  <data name="Settings_SelectCoreTitle" xml:space="preserve">
+    <value>Select sing-box Executable</value>
+  </data>
+  <data name="Settings_InvalidCoreTitle" xml:space="preserve">
+    <value>Invalid Core Executable</value>
+  </data>
+  <data name="Settings_InvalidCoreFmt" xml:space="preserve">
+    <value>The selected file failed sing-box version verification ({0}). Replacement was cancelled.
+
+Please choose a valid sing-box.exe (1.13 / 1.14 / 1.15+).</value>
+  </data>
+  <data name="Settings_CoreReplace115Note" xml:space="preserve">
+    <value>
+• Automatically enabled sing-box 1.15+ native TUN stack compatibility</value>
+  </data>
+  <data name="Settings_CoreReplaceOkTitle" xml:space="preserve">
+    <value>Core Replaced</value>
+  </data>
+  <data name="Settings_CoreReplaceOkFmt" xml:space="preserve">
+    <value>Switched core to: {0}
+File: {1}{2}
+
+Reconnect the proxy to apply the new core.</value>
+  </data>
+  <data name="Settings_CoreReplaceFailTitle" xml:space="preserve">
+    <value>Core Replacement Failed</value>
+  </data>
+  <data name="Settings_CoreReplaceFailFmt" xml:space="preserve">
+    <value>Failed to overwrite the core executable (the file may be locked):
+{0}</value>
+  </data>
+  <data name="Settings_CoreRestoredTitle" xml:space="preserve">
+    <value>Bundled Core Restored</value>
+  </data>
+  <data name="Settings_CoreRestoredFmt" xml:space="preserve">
+    <value>Restored bundled core ({0}).{1}</value>
+  </data>
+  <data name="Settings_CoreRestoredReconnect" xml:space="preserve">
+    <value>
+
+Reconnect the proxy on the main screen.</value>
+  </data>
+  <data name="Settings_CoreRestoreFailTitle" xml:space="preserve">
+    <value>Restore Failed</value>
+  </data>
+  <data name="Settings_ResetOnboardOkTitle" xml:space="preserve">
+    <value>Guide Reset</value>
+  </data>
+  <data name="Settings_ResetOnboardOkMsg" xml:space="preserve">
+    <value>The welcome guide has been reset and opened!</value>
+  </data>
+  <data name="Settings_ErrorTitle" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Settings_GeoOkTitle" xml:space="preserve">
+    <value>Geo Data Updated</value>
+  </data>
+  <data name="Settings_GeoOkMsg" xml:space="preserve">
+    <value>Updated geosite-cn.srs, geoip-cn.srs, and geosite-category-ads-all.srs.
+If currently connected, reconnect the proxy to apply the updated rule-sets.</value>
+  </data>
+  <data name="Settings_GeoFailTitle" xml:space="preserve">
+    <value>Geo Update Failed</value>
+  </data>
+  <data name="Settings_GeoFailPrefix" xml:space="preserve">
+    <value>Failed to download rule-sets (check your network connection):
+</value>
+  </data>
+  <data name="Settings_GeoNoProxy" xml:space="preserve">
+    <value>Direct connection (no local proxy)</value>
+  </data>
+  <data name="Settings_GeoWithProxyFmt" xml:space="preserve">
+    <value>Via local proxy {0}</value>
+  </data>
+  <data name="Settings_GeoDownloadErrFmt" xml:space="preserve">
+    <value>Failed to download {0}.
+URL: {1}
+{2}
+Reason: {3}</value>
+  </data>
+  <data name="Update_BannerFmt" xml:space="preserve">
+    <value>🎉 New client version {0} is available! Click Check for Updates below to install.</value>
+  </data>
+  <data name="Update_FetchingChecksum" xml:space="preserve">
+    <value>Fetching checksum...</value>
+  </data>
+  <data name="Update_InvalidChecksumFmt" xml:space="preserve">
+    <value>Invalid checksum file format</value>
+  </data>
+  <data name="Update_DownloadChecksumErr" xml:space="preserve">
+    <value>Failed to download checksum file: </value>
+  </data>
+  <data name="Update_HashMismatch" xml:space="preserve">
+    <value>Checksum mismatch: downloaded archive SHA-256 does not match expected hash.</value>
+  </data>
+  <data name="Update_Extracting" xml:space="preserve">
+    <value>Extracting update archive...</value>
+  </data>
+  <data name="Update_ExtractErr" xml:space="preserve">
+    <value>Failed to extract update archive: </value>
+  </data>
+  <data name="Update_Verifying" xml:space="preserve">
+    <value>Verifying update contents...</value>
+  </data>
+  <data name="Update_MissingFiles" xml:space="preserve">
+    <value>Invalid update package: required files are missing.</value>
+  </data>
+  <data name="Update_MissingUpdater" xml:space="preserve">
+    <value>Updater helper executable is missing; please download the full release archive.</value>
+  </data>
+  <data name="Update_PreparingRestart" xml:space="preserve">
+    <value>Preparing to restart...</value>
+  </data>
+  <data name="Update_DownloadingWithTotalFmt" xml:space="preserve">
+    <value>Downloading {0} ... {1:0.0} / {2:0.0} MB</value>
+  </data>
+  <data name="Update_DownloadingNoTotalFmt" xml:space="preserve">
+    <value>Downloading {0} ... {1:0.0} MB</value>
+  </data>
+  <data name="Core_NoChecksumSkip" xml:space="preserve">
+    <value>No checksum asset published; skipping hash verification...</value>
+  </data>
+  <data name="Core_PreparingEnv" xml:space="preserve">
+    <value>Preparing environment...</value>
+  </data>
+  <data name="Core_InstallingFmt" xml:space="preserve">
+    <value>Installing {0}...</value>
+  </data>
+  <data name="Core_MissingTargetFmt" xml:space="preserve">
+    <value>{0} was not found in the archive</value>
+  </data>
+  <data name="Core_UpdatedStatusFmt" xml:space="preserve">
+    <value>Update complete! Current version: {0}</value>
+  </data>
+  <data name="Core_NotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="Core_CannotExec" xml:space="preserve">
+    <value>Failed to execute</value>
+  </data>
+  <data name="Core_InvalidBinary" xml:space="preserve">
+    <value>Not a valid sing-box binary</value>
+  </data>
+  <data name="Core_InstalledUnknownVer" xml:space="preserve">
+    <value>Installed (version unreadable)</value>
+  </data>
+  <data name="FilePicker_AllFiles" xml:space="preserve">
+    <value>All Files</value>
+  </data>
+  <data name="Routing_Title.Text" xml:space="preserve">
+    <value>Routing Rules</value>
+  </data>
+  <data name="Routing_Subtitle.Text" xml:space="preserve">
+    <value>Configure per-service routing policies, custom rules, and match priority</value>
+  </data>
+  <data name="Routing_GroupTitle.Text" xml:space="preserve">
+    <value>Service Policies</value>
+  </data>
+  <data name="Routing_ResetBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Restore default rules and order</value>
+  </data>
+  <data name="Routing_CustomRulesBtn.Content" xml:space="preserve">
+    <value>Custom Rules</value>
+  </data>
+  <data name="CustomRules_Dialog.Title" xml:space="preserve">
+    <value>Custom Routing Rules</value>
+  </data>
+  <data name="CustomRules_Dialog.PrimaryButtonText" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="CustomRules_Dialog.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="CustomRules_NonSmartBanner.Title" xml:space="preserve">
+    <value>Custom Rules Inactive in Current Mode</value>
+  </data>
+  <data name="CustomRules_NonSmartBanner.Message" xml:space="preserve">
+    <value>Switch back to Rule routing mode for custom rules to take effect.</value>
+  </data>
+  <data name="CustomRules_FromTemplateText.Text" xml:space="preserve">
+    <value>From Template</value>
+  </data>
+  <data name="CustomRules_AddRuleText.Text" xml:space="preserve">
+    <value>Add Rule</value>
+  </data>
+  <data name="CustomRules_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search remark, match pattern, type, or outbound...</value>
+  </data>
+  <data name="CustomRules_EmptyTitle.Text" xml:space="preserve">
+    <value>No Custom Rules Yet</value>
+  </data>
+  <data name="CustomRules_EmptyHint.Text" xml:space="preserve">
+    <value>Click Add Rule above to create one</value>
+  </data>
+  <data name="CustomRules_FooterTip.Text" xml:space="preserve">
+    <value>Tip: Rules match top-to-bottom (drag to reorder). Custom rules are evaluated after built-in service policies and before Geo bypass rules.</value>
+  </data>
+  <data name="CustomRules_TplBackBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Back to List</value>
+  </data>
+  <data name="CustomRules_TplHeader.Text" xml:space="preserve">
+    <value>Add from Template</value>
+  </data>
+  <data name="CustomRules_TplSelectLabel.Text" xml:space="preserve">
+    <value>Rule Template</value>
+  </data>
+  <data name="CustomRules_TplOutboundLabel.Text" xml:space="preserve">
+    <value>Outbound Action</value>
+  </data>
+  <data name="CustomRules_TplEnableSwitch.Header" xml:space="preserve">
+    <value>Enable immediately</value>
+  </data>
+  <data name="CustomRules_TplCancelBtn.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="CustomRules_TplConfirmBtn.Content" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="CustomRules_FormBackBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Back to List</value>
+  </data>
+  <data name="CustomRules_FormRemarkLabel.Text" xml:space="preserve">
+    <value>Remark</value>
+  </data>
+  <data name="CustomRules_FormRemarkBox.PlaceholderText" xml:space="preserve">
+    <value>e.g. Microsoft, Corp Intranet, Steam</value>
+  </data>
+  <data name="CustomRules_FormTypeLabel.Text" xml:space="preserve">
+    <value>Rule Type</value>
+  </data>
+  <data name="CustomRules_TypeDomain.Content" xml:space="preserve">
+    <value>Domain</value>
+  </data>
+  <data name="CustomRules_TypeIp.Content" xml:space="preserve">
+    <value>IP / CIDR</value>
+  </data>
+  <data name="CustomRules_TypeProcess.Content" xml:space="preserve">
+    <value>Process</value>
+  </data>
+  <data name="CustomRules_TypeMixed.Content" xml:space="preserve">
+    <value>Mixed</value>
+  </data>
+  <data name="CustomRules_FormMatchLabel.Text" xml:space="preserve">
+    <value>Match Pattern</value>
+  </data>
+  <data name="CustomRules_BrowseExeText.Text" xml:space="preserve">
+    <value>Browse .exe...</value>
+  </data>
+  <data name="CustomRules_BrowseByName.Content" xml:space="preserve">
+    <value>Process Name</value>
+  </data>
+  <data name="CustomRules_BrowseByPath.Content" xml:space="preserve">
+    <value>Full Path</value>
+  </data>
+  <data name="CustomRules_FormOutboundLabel.Text" xml:space="preserve">
+    <value>Outbound Action</value>
+  </data>
+  <data name="CustomRules_FormCancelBtn.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="CustomRules_FormConfirmBtn.Content" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="AddRule_Dialog.Title" xml:space="preserve">
+    <value>Add Rule</value>
+  </data>
+  <data name="AddRule_Dialog.PrimaryButtonText" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="AddRule_Dialog.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AddRule_TypeLabel.Text" xml:space="preserve">
+    <value>Rule Type</value>
+  </data>
+  <data name="AddRule_TypeDomain.Content" xml:space="preserve">
+    <value>Domain</value>
+  </data>
+  <data name="AddRule_TypeIp.Content" xml:space="preserve">
+    <value>IP / CIDR</value>
+  </data>
+  <data name="AddRule_TypeProcess.Content" xml:space="preserve">
+    <value>Process</value>
+  </data>
+  <data name="AddRule_TypeMixed.Content" xml:space="preserve">
+    <value>Mixed</value>
+  </data>
+  <data name="AddRule_MatchLabel.Text" xml:space="preserve">
+    <value>Match Pattern</value>
+  </data>
+  <data name="AddRule_BrowseExeText.Text" xml:space="preserve">
+    <value>Browse .exe...</value>
+  </data>
+  <data name="AddRule_BrowseByName.Content" xml:space="preserve">
+    <value>Process Name</value>
+  </data>
+  <data name="AddRule_BrowseByPath.Content" xml:space="preserve">
+    <value>Full Path</value>
+  </data>
+  <data name="AddRule_OutboundLabel.Text" xml:space="preserve">
+    <value>Outbound Action</value>
+  </data>
+  <data name="Routing_RuleCountFmt" xml:space="preserve">
+    <value>{0} rules · matched in list order</value>
+  </data>
+  <data name="Routing_EditRuleTooltip" xml:space="preserve">
+    <value>Edit Match Pattern</value>
+  </data>
+  <data name="Routing_DelRuleTooltip" xml:space="preserve">
+    <value>Delete Rule</value>
+  </data>
+  <data name="Routing_ResetTitle" xml:space="preserve">
+    <value>Restore Default Rules</value>
+  </data>
+  <data name="Routing_ResetMsg" xml:space="preserve">
+    <value>This restores the built-in service rules and their default order without affecting custom rules.</value>
+  </data>
+  <data name="Routing_ResetConfirmBtn" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="Routing_ActionProxy" xml:space="preserve">
+    <value>Proxy</value>
+  </data>
+  <data name="Routing_ActionDirect" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="Routing_ActionBlock" xml:space="preserve">
+    <value>Block</value>
+  </data>
+  <data name="Routing_ActionAuto" xml:space="preserve">
+    <value>Auto (URLTest)</value>
+  </data>
+  <data name="Routing_BadgeProxy" xml:space="preserve">
+    <value>Proxy</value>
+  </data>
+  <data name="Routing_BadgeAuto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Routing_TypeProcess" xml:space="preserve">
+    <value>Process</value>
+  </data>
+  <data name="Routing_TypeMixed" xml:space="preserve">
+    <value>Mixed</value>
+  </data>
+  <data name="Routing_TypeDomain" xml:space="preserve">
+    <value>Domain</value>
+  </data>
+  <data name="Routing_BuiltInYoutubeName" xml:space="preserve">
+    <value>YouTube</value>
+  </data>
+  <data name="Routing_BuiltInYoutubeDesc" xml:space="preserve">
+    <value>YouTube video and media traffic</value>
+  </data>
+  <data name="Routing_BuiltInGoogleName" xml:space="preserve">
+    <value>Google Services</value>
+  </data>
+  <data name="Routing_BuiltInGoogleDesc" xml:space="preserve">
+    <value>Google Search, APIs, Play, and static assets</value>
+  </data>
+  <data name="Routing_BuiltInTelegramName" xml:space="preserve">
+    <value>Telegram</value>
+  </data>
+  <data name="Routing_BuiltInTelegramDesc" xml:space="preserve">
+    <value>Telegram domains and dedicated IP ranges</value>
+  </data>
+  <data name="Routing_BuiltInNetflixName" xml:space="preserve">
+    <value>Netflix</value>
+  </data>
+  <data name="Routing_BuiltInNetflixDesc" xml:space="preserve">
+    <value>Netflix streaming domains</value>
+  </data>
+  <data name="Routing_BuiltInTiktokDesc" xml:space="preserve">
+    <value>TikTok and overseas ByteDance services</value>
+  </data>
+  <data name="Routing_BuiltInChatgptDesc" xml:space="preserve">
+    <value>OpenAI and ChatGPT services</value>
+  </data>
+  <data name="Routing_BuiltInClaudeDesc" xml:space="preserve">
+    <value>Claude and Anthropic services</value>
+  </data>
+  <data name="CustomRules_DefaultName" xml:space="preserve">
+    <value>Custom Rule</value>
+  </data>
+  <data name="CustomRules_DefaultDesc" xml:space="preserve">
+    <value>User-defined routing rule</value>
+  </data>
+  <data name="CustomRules_Unnamed" xml:space="preserve">
+    <value>Unnamed Rule</value>
+  </data>
+  <data name="CustomRules_GlobalWarn" xml:space="preserve">
+    <value>Currently in Global mode; custom rules will take effect once you switch back to Rule mode.</value>
+  </data>
+  <data name="CustomRules_DirectWarn" xml:space="preserve">
+    <value>Currently in Direct mode; custom rules will take effect once you switch back to Rule mode.</value>
+  </data>
+  <data name="CustomRules_NodePrefixFmt" xml:space="preserve">
+    <value>Server: {0}</value>
+  </data>
+  <data name="CustomRules_NodeFallback" xml:space="preserve">
+    <value>Server</value>
+  </data>
+  <data name="CustomRules_CountFmt" xml:space="preserve">
+    <value>{0} rules</value>
+  </data>
+  <data name="CustomRules_CountFilteredFmt" xml:space="preserve">
+    <value>{0} rules ({1} matched)</value>
+  </data>
+  <data name="CustomRules_EditTooltip" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="CustomRules_DelTooltip" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="CustomRules_EditTitle" xml:space="preserve">
+    <value>Edit Rule</value>
+  </data>
+  <data name="CustomRules_AddTitle" xml:space="preserve">
+    <value>Add Rule</value>
+  </data>
+  <data name="CustomRules_SaveBtn" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="CustomRules_SelectTplErr" xml:space="preserve">
+    <value>Please select a rule template</value>
+  </data>
+  <data name="CustomRules_DupTplErr" xml:space="preserve">
+    <value>A rule from this template already exists; edit the existing rule instead</value>
+  </data>
+  <data name="CustomRules_EmptyMatchErr" xml:space="preserve">
+    <value>Please enter a match pattern</value>
+  </data>
+  <data name="CustomRules_InvalidIpFmt" xml:space="preserve">
+    <value>Invalid IP address: {0}</value>
+  </data>
+  <data name="CustomRules_InvalidCidrFmt" xml:space="preserve">
+    <value>Invalid CIDR prefix: {0}</value>
+  </data>
+  <data name="CustomRules_Ipv4MaskErrFmt" xml:space="preserve">
+    <value>IPv4 prefix length cannot exceed 32: {0}</value>
+  </data>
+  <data name="CustomRules_Ipv6MaskErrFmt" xml:space="preserve">
+    <value>IPv6 prefix length cannot exceed 128: {0}</value>
+  </data>
+  <data name="CustomRules_PhDomain" xml:space="preserve">
+    <value>youtube.com or geosite:cn</value>
+  </data>
+  <data name="CustomRules_HintDomain" xml:space="preserve">
+    <value>Supports exact domain, regex:, domain_keyword:, domain_suffix:, geosite:, and ruleset:https://.../*.srs</value>
+  </data>
+  <data name="CustomRules_PhIp" xml:space="preserve">
+    <value>192.168.0.0/16 or geoip:cn</value>
+  </data>
+  <data name="CustomRules_HintIp" xml:space="preserve">
+    <value>Supports CIDR ranges and geoip: tags, comma-separated</value>
+  </data>
+  <data name="CustomRules_PhProcess" xml:space="preserve">
+    <value>chrome.exe or C:\Path\app.exe</value>
+  </data>
+  <data name="CustomRules_HintProcess" xml:space="preserve">
+    <value>Enter process names or full executable paths, comma-separated</value>
+  </data>
+  <data name="CustomRules_HintMixed" xml:space="preserve">
+    <value>Supports domain_suffix:, domain:, domain_keyword:, domain_regex:, geosite:, geoip:, ip_cidr:, process_name:, process_path:, ruleset:https://.../*.srs</value>
+  </data>
+  <data name="CustomRules_TplMsDesc" xml:space="preserve">
+    <value>Microsoft, Windows, Office, Azure, and Visual Studio services.</value>
+  </data>
+  <data name="CustomRules_TplAppleDesc" xml:space="preserve">
+    <value>Apple, iCloud, App Store, and Apple system services.</value>
+  </data>
+  <data name="CustomRules_TplGithubDesc" xml:space="preserve">
+    <value>GitHub web, repositories, static assets, and raw content.</value>
+  </data>
+  <data name="CustomRules_TplSteamDesc" xml:space="preserve">
+    <value>Steam Store, Community, and content CDN domains.</value>
+  </data>
+  <data name="CustomRules_TplDiscordDesc" xml:space="preserve">
+    <value>Discord web, invite links, and voice/media services.</value>
+  </data>
+  <data name="CustomRules_TplSpotifyDesc" xml:space="preserve">
+    <value>Spotify login, streaming, and CDN domains.</value>
+  </data>
+  <data name="CustomRules_TplBiliDesc" xml:space="preserve">
+    <value>Bilibili web, API, and video CDN domains.</value>
+  </data>
+  <data name="CustomRules_TplLanName" xml:space="preserve">
+    <value>LAN / Private Subnets</value>
+  </data>
+  <data name="CustomRules_TplLanDesc" xml:space="preserve">
+    <value>Standard LAN, loopback, and IPv6 private/link-local ranges.</value>
+  </data>
+  <data name="Traffic_Title.Text" xml:space="preserve">
+    <value>Traffic &amp; Analytics</value>
+  </data>
+  <data name="Traffic_Subtitle.Text" xml:space="preserve">
+    <value>Monitor real-time throughput, session usage, and historical proxy statistics</value>
+  </data>
+  <data name="Traffic_LiveSpeedLabel.Text" xml:space="preserve">
+    <value>Live Throughput</value>
+  </data>
+  <data name="Traffic_CoreStatusLabel.Text" xml:space="preserve">
+    <value>Core Status</value>
+  </data>
+  <data name="Traffic_SessionHeader.Text" xml:space="preserve">
+    <value>Current Session (Proxy Only)</value>
+  </data>
+  <data name="Traffic_SessionUpLabel.Text" xml:space="preserve">
+    <value>Upload</value>
+  </data>
+  <data name="Traffic_SessionDownLabel.Text" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Traffic_SessionTotalLabel.Text" xml:space="preserve">
+    <value>Session Total</value>
+  </data>
+  <data name="Traffic_MonthHeader.Text" xml:space="preserve">
+    <value>This Month</value>
+  </data>
+  <data name="Traffic_MonthUpLabel.Text" xml:space="preserve">
+    <value>Monthly Upload</value>
+  </data>
+  <data name="Traffic_MonthDownLabel.Text" xml:space="preserve">
+    <value>Monthly Download</value>
+  </data>
+  <data name="Traffic_MonthTotalLabel.Text" xml:space="preserve">
+    <value>Monthly Total</value>
+  </data>
+  <data name="Traffic_DailyChartHeader.Text" xml:space="preserve">
+    <value>Daily Proxy Traffic (Last 30 Days)</value>
+  </data>
+  <data name="Traffic_HeatmapHeader.Text" xml:space="preserve">
+    <value>Activity Heatmap</value>
+  </data>
+  <data name="Traffic_HeatmapDaily.Content" xml:space="preserve">
+    <value>Daily</value>
+  </data>
+  <data name="Traffic_HeatmapWeekly.Content" xml:space="preserve">
+    <value>Weekly</value>
+  </data>
+  <data name="Traffic_HeatmapCumulative.Content" xml:space="preserve">
+    <value>Cumulative</value>
+  </data>
+  <data name="Conn_Title.Text" xml:space="preserve">
+    <value>Active Connections</value>
+  </data>
+  <data name="Conn_Subtitle.Text" xml:space="preserve">
+    <value>Inspect real-time network connections and routing paths through sing-box</value>
+  </data>
+  <data name="Conn_ClearText.Text" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Conn_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Filter by host, IP, or rule...</value>
+  </data>
+  <data name="Conn_TopologyHeader.Text" xml:space="preserve">
+    <value>Connection Topology</value>
+  </data>
+  <data name="Conn_ColType.Text" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Conn_ColHost.Text" xml:space="preserve">
+    <value>Destination</value>
+  </data>
+  <data name="Conn_ColStatus.Text" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Conn_ColNode.Text" xml:space="preserve">
+    <value>Outbound</value>
+  </data>
+  <data name="Conn_ColRule.Text" xml:space="preserve">
+    <value>Rule</value>
+  </data>
+  <data name="Conn_ColDuration.Text" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="Conn_ColSize.Text" xml:space="preserve">
+    <value>Traffic</value>
+  </data>
+  <data name="Logs_Title.Text" xml:space="preserve">
+    <value>Core Logs</value>
+  </data>
+  <data name="Logs_Subtitle.Text" xml:space="preserve">
+    <value>View real-time sing-box core logs and system events</value>
+  </data>
+  <data name="Logs_CopyLineItem.Text" xml:space="preserve">
+    <value>Copy Line</value>
+  </data>
+  <data name="Logs_AutoScrollBtn.Content" xml:space="preserve">
+    <value>Auto-Scroll</value>
+  </data>
+  <data name="Logs_CopyAllBtn.Content" xml:space="preserve">
+    <value>Copy All</value>
+  </data>
+  <data name="Logs_ClearBtn.Content" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Traffic_StatusActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Traffic_StatusInactive" xml:space="preserve">
+    <value>Inactive</value>
+  </data>
+  <data name="Traffic_UpTooltipFmt" xml:space="preserve">
+    <value>Upload: {0}</value>
+  </data>
+  <data name="Traffic_DownTooltipFmt" xml:space="preserve">
+    <value>Download: {0}</value>
+  </data>
+  <data name="Traffic_NoTrafficTipFmt" xml:space="preserve">
+    <value>{0:yyyy/M/d}  No traffic</value>
+  </data>
+  <data name="Traffic_DaysFmt" xml:space="preserve">
+    <value>{0} days</value>
+  </data>
+  <data name="Topology_LocalDevice" xml:space="preserve">
+    <value>This Device</value>
+  </data>
+  <data name="Topology_Others" xml:space="preserve">
+    <value>Others</value>
+  </data>
+  <data name="Conn_StopCapture" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="Conn_StartCapture" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="Conn_StatusActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Logs_LineCountFmt" xml:space="preserve">
+    <value>({0} lines)</value>
+  </data>
+  <data name="Logs_StatusRunning" xml:space="preserve">
+    <value>Core Running</value>
+  </data>
+  <data name="Logs_StatusStopped" xml:space="preserve">
+    <value>Core Stopped</value>
+  </data>
+  <data name="Plugins_Title.Text" xml:space="preserve">
+    <value>Plugins</value>
+  </data>
+  <data name="Plugins_Subtitle.Text" xml:space="preserve">
+    <value>Extend Swell Proxy with lightweight JavaScript plugins</value>
+  </data>
+  <data name="Plugins_AddText.Text" xml:space="preserve">
+    <value>Add Plugin</value>
+  </data>
+  <data name="Plugins_OpenFolderBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Open Plugins Folder</value>
+  </data>
+  <data name="Plugins_EmptyTitle.Text" xml:space="preserve">
+    <value>No Plugins Installed</value>
+  </data>
+  <data name="Plugins_EmptyDesc.Text" xml:space="preserve">
+    <value>Click Add Plugin to import a local .js script or install from a URL</value>
+  </data>
+  <data name="Plugins_EmptyAddBtn.Content" xml:space="preserve">
+    <value>Add Plugin</value>
+  </data>
+  <data name="Onboard_WelcomeTitle.Text" xml:space="preserve">
+    <value>Welcome to Swell Proxy</value>
+  </data>
+  <data name="Onboard_WelcomeDesc.Text" xml:space="preserve">
+    <value>Next-generation WinUI 3 proxy client powered by sing-box.
+Fast, reliable, and seamless smart routing.</value>
+  </data>
+  <data name="Onboard_Step2Title.Text" xml:space="preserve">
+    <value>Smart Routing &amp; Filtering</value>
+  </data>
+  <data name="Onboard_Step2Desc.Text" xml:space="preserve">
+    <value>Recommended routing presets for fast, clean connectivity.</value>
+  </data>
+  <data name="Onboard_BypassCnTitle.Text" xml:space="preserve">
+    <value>Bypass LAN &amp; Mainland China</value>
+  </data>
+  <data name="Onboard_BypassCnDesc.Text" xml:space="preserve">
+    <value>Route domestic and LAN traffic directly to save proxy bandwidth.</value>
+  </data>
+  <data name="Onboard_AdBlockTitle.Text" xml:space="preserve">
+    <value>Block Ads &amp; Trackers</value>
+  </data>
+  <data name="Onboard_AdBlockDesc.Text" xml:space="preserve">
+    <value>Block advertising and tracking domains at the DNS/routing layer.</value>
+  </data>
+  <data name="Onboard_AdvRouteTitle.Text" xml:space="preserve">
+    <value>Enable Advanced Routing Module</value>
+  </data>
+  <data name="Onboard_AdvRouteDesc.Text" xml:space="preserve">
+    <value>Show the Routing tab in the sidebar for per-service policies and custom rules.</value>
+  </data>
+  <data name="Onboard_Step3Title.Text" xml:space="preserve">
+    <value>Quick Subscription Import</value>
+  </data>
+  <data name="Onboard_Step3Desc.Text" xml:space="preserve">
+    <value>Paste a subscription URL or share link to get started right away (optional).</value>
+  </data>
+  <data name="Onboard_SubInput.PlaceholderText" xml:space="preserve">
+    <value>https://... or vless://...</value>
+  </data>
+  <data name="Onboard_PrevBtn.Content" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Onboard_NextBtn.Content" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Privacy_LockedTitle.Text" xml:space="preserve">
+    <value>Privacy Lock Enabled</value>
+  </data>
+  <data name="Privacy_LockedDesc.Text" xml:space="preserve">
+    <value>Swell Proxy is locked. Enter your password to continue.</value>
+  </data>
+  <data name="Privacy_PwdInput.PlaceholderText" xml:space="preserve">
+    <value>Enter password</value>
+  </data>
+  <data name="Privacy_ErrorText.Text" xml:space="preserve">
+    <value>Incorrect password, please try again</value>
+  </data>
+  <data name="Privacy_UnlockBtn.Content" xml:space="preserve">
+    <value>Unlock</value>
+  </data>
+  <data name="ClipToast_Title.Text" xml:space="preserve">
+    <value>Proxy Share Link Detected</value>
+  </data>
+  <data name="ClipToast_CloseBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="ClipToast_ImportBtn.Content" xml:space="preserve">
+    <value>Import Server (Enter)</value>
+  </data>
+  <data name="Plugins_TypeNetwork" xml:space="preserve">
+    <value>Remote Plugin</value>
+  </data>
+  <data name="Plugins_TypeLocal" xml:space="preserve">
+    <value>Local Plugin</value>
+  </data>
+  <data name="Plugins_RunManualTip" xml:space="preserve">
+    <value>Run Now</value>
+  </data>
+  <data name="Plugins_DelTip" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Plugins_ImportLocalRadio" xml:space="preserve">
+    <value>Import local file (.js)</value>
+  </data>
+  <data name="Plugins_InstallUrlRadio" xml:space="preserve">
+    <value>Install from URL</value>
+  </data>
+  <data name="Plugins_AddDialogTitle" xml:space="preserve">
+    <value>Add Plugin</value>
+  </data>
+  <data name="Plugins_ContinueBtn" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="Plugins_AddedTitle" xml:space="preserve">
+    <value>Plugin Added</value>
+  </data>
+  <data name="Plugins_AddedFmt" xml:space="preserve">
+    <value>Loaded {0} (Triggers: {1})</value>
+  </data>
+  <data name="Plugins_DownloadingTitle" xml:space="preserve">
+    <value>Downloading...</value>
+  </data>
+  <data name="Plugins_InstallOkTitle" xml:space="preserve">
+    <value>Plugin Installed</value>
+  </data>
+  <data name="Plugins_InstallOkFmt" xml:space="preserve">
+    <value>{0} (Triggers: {1})</value>
+  </data>
+  <data name="Plugins_InstallFailTitle" xml:space="preserve">
+    <value>Installation Failed</value>
+  </data>
+  <data name="Plugins_ExecOkTitle" xml:space="preserve">
+    <value>Execution Complete</value>
+  </data>
+  <data name="Plugins_ExecOkMsg" xml:space="preserve">
+    <value>Plugin executed manually</value>
+  </data>
+  <data name="Plugins_ExecFailTitle" xml:space="preserve">
+    <value>Execution Failed</value>
+  </data>
+  <data name="Plugins_DelTitle" xml:space="preserve">
+    <value>Delete Plugin</value>
+  </data>
+  <data name="Plugins_DelConfirmFmt" xml:space="preserve">
+    <value>Delete plugin &apos;{0}&apos;?</value>
+  </data>
+  <data name="Plugins_DelConfirmBtn" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Plugins_DeletedTitle" xml:space="preserve">
+    <value>Plugin Removed</value>
+  </data>
+  <data name="Onboard_DetectingRegion" xml:space="preserve">
+    <value>Detecting your network region...</value>
+  </data>
+  <data name="Onboard_RegionCn" xml:space="preserve">
+    <value>Auto-detected region: Mainland China — domestic direct-bypass preset enabled.</value>
+  </data>
+  <data name="Onboard_RegionOverseas" xml:space="preserve">
+    <value>Auto-detected region: Overseas — configure bypass rules as needed.</value>
+  </data>
+  <data name="Onboard_RegionFallback" xml:space="preserve">
+    <value>Ready — configure routing presets on the next step.</value>
+  </data>
+  <data name="Onboard_StartBtn" xml:space="preserve">
+    <value>Get Started</value>
+  </data>
+  <data name="Onboard_NextBtnText" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Onboard_ImportingSub" xml:space="preserve">
+    <value>Downloading and importing subscription...</value>
+  </data>
+  <data name="Onboard_ImportOkFmt" xml:space="preserve">
+    <value>Imported {0} server(s)!</value>
+  </data>
+  <data name="Onboard_ImportFailFmt" xml:space="preserve">
+    <value>Import failed: {0}</value>
+  </data>
+  <data name="ClipToast_NodeInfoFmt" xml:space="preserve">
+    <value>Protocol: {0} | Name: {1}</value>
+  </data>
+</root>

@@ -50,7 +50,7 @@ namespace AnywhereWinUI.Views
 
         private void RefreshRuleCount()
         {
-            RuleCountText.Text = $"共 {_rules.Count} 条规则，按列表顺序匹配";
+            RuleCountText.Text = string.Format(L.Routing_RuleCountFmt, _rules.Count);
         }
 
         private void RulesListView_ContainerContentChanging(
@@ -115,7 +115,7 @@ namespace AnywhereWinUI.Views
                 CornerRadius = new CornerRadius(6),
                 Content = new FontIcon { Glyph = "\uE70F", FontSize = 13 }
             };
-            ToolTipService.SetToolTip(editButton, "编辑匹配规则");
+            ToolTipService.SetToolTip(editButton, L.Routing_EditRuleTooltip);
             editButton.Click += EditRuleButton_Click;
             Grid.SetColumn(editButton, 3);
 
@@ -135,7 +135,7 @@ namespace AnywhereWinUI.Views
                     Foreground = new SolidColorBrush(Color.FromArgb(255, 196, 43, 28))
                 }
             };
-            ToolTipService.SetToolTip(deleteButton, "删除规则");
+            ToolTipService.SetToolTip(deleteButton, L.Routing_DelRuleTooltip);
             deleteButton.Click += DeleteRuleButton_Click;
             Grid.SetColumn(deleteButton, 4);
 
@@ -318,10 +318,10 @@ namespace AnywhereWinUI.Views
             var dialog = new ContentDialog
             {
                 XamlRoot = XamlRoot,
-                Title = "恢复默认规则",
-                Content = "这会恢复默认应用规则和默认顺序，不影响自定义规则。",
-                PrimaryButtonText = "恢复",
-                CloseButtonText = "取消",
+                Title = L.Routing_ResetTitle,
+                Content = L.Routing_ResetMsg,
+                PrimaryButtonText = L.Routing_ResetConfirmBtn,
+                CloseButtonText = L.Dialog_Cancel,
                 DefaultButton = ContentDialogButton.Close
             };
 
@@ -351,9 +351,9 @@ namespace AnywhereWinUI.Views
         private static string FormatRuleType(string type) => type switch
         {
             "ip" => "IP",
-            "process" => "进程",
-            "mixed" => "混合",
-            _ => "域名"
+            "process" => L.Routing_TypeProcess,
+            "mixed" => L.Routing_TypeMixed,
+            _ => L.Routing_TypeDomain
         };
 
         private static string GetRuleSubtitle(RoutingRuleItem rule)

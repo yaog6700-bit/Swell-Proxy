@@ -29,11 +29,13 @@
                 </Viewbox>
 
                 <StackPanel Spacing="8" HorizontalAlignment="Center">
-                    <TextBlock Text="隐私保护模式已开启"
+                    <TextBlock x:Uid="Privacy_LockedTitle"
+                               Text="隐私保护模式已开启"
                                FontSize="20"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
-                    <TextBlock Text="操作界面已锁定，请输入解锁密码以继续"
+                    <TextBlock x:Uid="Privacy_LockedDesc"
+                               Text="操作界面已锁定，请输入解锁密码以继续"
                                FontSize="13"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                TextWrapping="Wrap"
@@ -42,16 +44,19 @@
 
                 <StackPanel Spacing="12">
                     <PasswordBox x:Name="PasswordInput"
+                                 x:Uid="Privacy_PwdInput"
                                  PlaceholderText="请输入解锁密码"
                                  KeyUp="PasswordInput_KeyUp"
                                  HorizontalAlignment="Stretch" />
                     <TextBlock x:Name="ErrorText"
+                               x:Uid="Privacy_ErrorText"
                                Text="密码错误，请重试"
                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
                                FontSize="12"
                                HorizontalAlignment="Center"
                                Visibility="Collapsed" />
                     <Button x:Name="UnlockButton"
+                            x:Uid="Privacy_UnlockBtn"
                             Content="解锁"
                             Style="{ThemeResource AccentButtonStyle}"
                             HorizontalAlignment="Stretch"

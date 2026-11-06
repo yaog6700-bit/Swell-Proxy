@@ -17,7 +17,7 @@ namespace AnywhereWinUI.Views
             this.InitializeComponent();
             _node = node;
             RootGrid.RequestedTheme = ContentDialogExtensions.ResolveAppTheme();
-            NodeInfoText.Text = $"类型: {node.Protocol} | 名称: {node.Name}";
+            NodeInfoText.Text = string.Format(L.ClipToast_NodeInfoFmt, node.Protocol, node.Name);
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);

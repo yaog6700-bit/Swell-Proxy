@@ -22,8 +22,8 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel>
-                <TextBlock Text="插件" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                <TextBlock Text="使用 JavaScript 插件扩展 Swell Proxy 的功能"
+                <TextBlock x:Uid="Plugins_Title" Text="插件" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                <TextBlock x:Uid="Plugins_Subtitle" Text="使用 JavaScript 插件扩展 Swell Proxy 的功能"
                            FontSize="12"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            Margin="0,4,0,0"/>
@@ -34,10 +34,10 @@
                         Style="{StaticResource AccentButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon Glyph="&#xE710;" FontSize="14"/>
-                        <TextBlock Text="添加插件"/>
+                        <TextBlock x:Uid="Plugins_AddText" Text="添加插件"/>
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnOpenFolder" Click="BtnOpenFolder_Click" ToolTipService.ToolTip="打开插件目录">
+                <Button x:Name="BtnOpenFolder" x:Uid="Plugins_OpenFolderBtn" Click="BtnOpenFolder_Click" ToolTipService.ToolTip="打开插件目录">
                     <FontIcon Glyph="&#xE8B7;" FontSize="14"/>
                 </Button>
             </StackPanel>
@@ -55,13 +55,13 @@
                             Margin="0,80,0,0" Spacing="12">
                     <FontIcon Glyph="&#xECAA;" FontSize="48"
                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                    <TextBlock Text="还没有插件" HorizontalAlignment="Center"
+                    <TextBlock x:Uid="Plugins_EmptyTitle" Text="还没有插件" HorizontalAlignment="Center"
                                Style="{StaticResource SubtitleTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                    <TextBlock Text="点击「添加插件」导入一个本地 .js 文件来开始使用" 
+                    <TextBlock x:Uid="Plugins_EmptyDesc" Text="点击「添加插件」导入一个本地 .js 文件来开始使用" 
                                HorizontalAlignment="Center"
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                    <Button Content="添加插件" HorizontalAlignment="Center"
+                    <Button x:Uid="Plugins_EmptyAddBtn" Content="添加插件" HorizontalAlignment="Center"
                             Style="{StaticResource AccentButtonStyle}"
                             Click="BtnAddPlugin_Click"/>
                 </StackPanel>

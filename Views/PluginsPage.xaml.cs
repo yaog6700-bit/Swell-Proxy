@@ -128,7 +128,7 @@ namespace AnywhereWinUI.Views
             });
             metaRow.Children.Add(new TextBlock
             {
-                Text = manifest.Type == "Http" ? "网络插件" : "本地插件",
+                Text = manifest.Type == "Http" ? L.Plugins_TypeNetwork : L.Plugins_TypeLocal,
                 Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
                 Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                 VerticalAlignment = VerticalAlignment.Center,
@@ -201,7 +201,7 @@ namespace AnywhereWinUI.Views
                 runContent.Children.Add(runRing);
 
                 var runBtn = new Button { Content = runContent };
-                ToolTipService.SetToolTip(runBtn, "手动运行");
+                ToolTipService.SetToolTip(runBtn, L.Plugins_RunManualTip);
                 runBtn.Click += async (_, _) =>
                 {
                     runBtn.IsEnabled = false;
@@ -235,7 +235,7 @@ namespace AnywhereWinUI.Views
             {
                 Content = new FontIcon { Glyph = "\uE74D", FontSize = 14 }
             };
-            ToolTipService.SetToolTip(delBtn, "删除");
+            ToolTipService.SetToolTip(delBtn, L.Plugins_DelTip);
             delBtn.Click += async (_, _) => await DeletePluginAsync(manifest.Id, manifest.Name);
             controls.Children.Add(delBtn);
 
@@ -257,8 +257,8 @@ namespace AnywhereWinUI.Views
                 Margin = new Thickness(0, 8, 0, 0)
             };
 
-            var localRadio = new RadioButton { Content = "从本地文件导入 (.js)", IsChecked = true, Margin = new Thickness(0, 0, 0, 4) };
-            var urlRadio = new RadioButton { Content = "从 URL 安装", Margin = new Thickness(0, 0, 0, 8) };
+            var localRadio = new RadioButton { Content = L.Plugins_ImportLocalRadio, IsChecked = true, Margin = new Thickness(0, 0, 0, 4) };
+            var urlRadio = new RadioButton { Content = L.Plugins_InstallUrlRadio, Margin = new Thickness(0, 0, 0, 8) };
 
             urlBox.IsEnabled = false;
             urlRadio.Checked += (_, _) => urlBox.IsEnabled = true;
@@ -271,10 +271,10 @@ namespace AnywhereWinUI.Views
 
             var dialog = new ContentDialog
             {
-                Title = "添加插件",
+                Title = L.Plugins_AddDialogTitle,
                 Content = panel,
-                PrimaryButtonText = "继续",
-                CloseButtonText = "取消",
+                PrimaryButtonText = L.Plugins_ContinueBtn,
+                CloseButtonText = L.Dialog_Cancel,
                 XamlRoot = XamlRoot,
                 DefaultButton = ContentDialogButton.Primary
             };
@@ -326,7 +326,7 @@ namespace AnywhereWinUI.Views
             };
 
             await PluginManager.Instance.AddPluginAsync(manifest);
-            ShowInfo("插件已添加", $"已成功加载插件 {manifest.Name}（触发器: {string.Join(", ", triggers)}）", InfoBarSeverity.Success);
+            ShowInfo(L.Plugins_AddedTitle, string.Format(L.Plugins_AddedFmt, manifest.Name, string.Join(", ", triggers)), InfoBarSeverity.Success);
             RefreshList();
         }
 
@@ -348,7 +348,7 @@ namespace AnywhereWinUI.Views
                 Disabled = false
             };
 
-            ShowInfo("正在下载...", filename, InfoBarSeverity.Informational);
+            ShowInfo(L.Plugins_DownloadingTitle, filename, InfoBarSeverity.Informational);
             try
             {
                 await PluginManager.Instance.AddPluginAsync(manifest);
@@ -365,12 +365,12 @@ namespace AnywhereWinUI.Views
                     await PluginManager.Instance.SaveAsync();
                 }
 
-                ShowInfo("安装成功", $"{manifest.Name}（触发器: {string.Join(", ", manifest.Triggers)}）", InfoBarSeverity.Success);
+                ShowInfo(L.Plugins_InstallOkTitle, string.Format(L.Plugins_InstallOkFmt, manifest.Name, string.Join(", ", manifest.Triggers)), InfoBarSeverity.Success);
                 RefreshList();
             }
             catch (Exception ex)
             {
-                ShowInfo("安装失败", ex.Message, InfoBarSeverity.Error);
+                ShowInfo(L.Plugins_InstallFailTitle, ex.Message, InfoBarSeverity.Error);
             }
         }
 
@@ -394,11 +394,11 @@ namespace AnywhereWinUI.Views
             try
             {
                 await PluginManager.Instance.ManualTriggerAsync(id);
-                ShowInfo("执行完成", "插件已手动触发", InfoBarSeverity.Success);
+                ShowInfo(L.Plugins_ExecOkTitle, L.Plugins_ExecOkMsg, InfoBarSeverity.Success);
             }
             catch (Exception ex)
             {
-                ShowInfo("执行失败", ex.Message, InfoBarSeverity.Error);
+                ShowInfo(L.Plugins_ExecFailTitle, ex.Message, InfoBarSeverity.Error);
             }
         }
 
@@ -406,16 +406,16 @@ namespace AnywhereWinUI.Views
         {
             var dlg = new ContentDialog
             {
-                Title = "删除插件",
-                Content = $"确定要删除「{name}」吗？",
-                PrimaryButtonText = "删除",
-                CloseButtonText = "取消",
+                Title = L.Plugins_DelTitle,
+                Content = string.Format(L.Plugins_DelConfirmFmt, name),
+                PrimaryButtonText = L.Plugins_DelConfirmBtn,
+                CloseButtonText = L.Dialog_Cancel,
                 XamlRoot = XamlRoot
             };
             if (await dlg.WithAppTheme().ShowAsync() != ContentDialogResult.Primary) return;
 
             await PluginManager.Instance.RemovePluginAsync(id);
-            ShowInfo("已删除", name, InfoBarSeverity.Informational);
+            ShowInfo(L.Plugins_DeletedTitle, name, InfoBarSeverity.Informational);
             RefreshList();
         }
 

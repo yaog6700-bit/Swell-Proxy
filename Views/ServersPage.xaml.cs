@@ -54,7 +54,7 @@ namespace AnywhereWinUI.Views
             return string.IsNullOrWhiteSpace(Name) ? HostPortDisplay : Name;
         }
 
-        private string _pingText = "未测速";
+        private string _pingText = L.Servers_PingUntested;
         public string PingText
         {
             get => _pingText;
@@ -231,16 +231,16 @@ namespace AnywhereWinUI.Views
             var mode = AppSession.Instance.ProxyModeIndex;
             if (mode == 0) {
                 ProxyModeIcon.Glyph = "\uEC27";
-                ToolTipService.SetToolTip(ProxyModeButton, "系统代理");
+                ToolTipService.SetToolTip(ProxyModeButton, L.ProxyMode_System);
             } else if (mode == 1) {
                 ProxyModeIcon.Glyph = "\uE839";
-                ToolTipService.SetToolTip(ProxyModeButton, "TUN模式");
+                ToolTipService.SetToolTip(ProxyModeButton, L.ProxyMode_Tun);
             } else if (mode == 3) {
                 ProxyModeIcon.Glyph = "\uE83D";
-                ToolTipService.SetToolTip(ProxyModeButton, "TUN + 系统代理");
+                ToolTipService.SetToolTip(ProxyModeButton, L.ProxyMode_TunSystem);
             } else {
                 ProxyModeIcon.Glyph = "\uF384";
-                ToolTipService.SetToolTip(ProxyModeButton, "仅手动代理");
+                ToolTipService.SetToolTip(ProxyModeButton, L.ProxyMode_Manual);
             }
         }
 
@@ -249,7 +249,7 @@ namespace AnywhereWinUI.Views
             var mode = AppSession.Instance.RoutingMode;
             bool isTun = AppSession.Instance.EnableTunMode;
             
-            string modeName = mode == "direct" ? "直接连接" : mode == "global" ? "全局路由" : "智能分流";
+            string modeName = mode == "direct" ? L.RouteMode_Direct : mode == "global" ? L.RouteMode_Global : L.RouteMode_Smart;
             ToolTipService.SetToolTip(RoutingModeButton, isTun ? $"TUN ({modeName})" : modeName);
 
             switch (mode)
@@ -324,7 +324,7 @@ namespace AnywhereWinUI.Views
                     ReopenTopSheetButton.Visibility = Visibility.Visible;
                 }
 
-                string selectedName = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId)?.Name ?? "未知节点";
+                string selectedName = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId)?.Name ?? L.Common_UnknownNode;
                 ActiveNodeText.Text = selectedName;
 
                 if (Application.Current.Resources.TryGetValue("TextFillColorPrimaryBrush", out var txtPri) && txtPri is Microsoft.UI.Xaml.Media.Brush priBrush)
@@ -352,7 +352,7 @@ namespace AnywhereWinUI.Views
                     ActiveNodeText.Foreground = fallbackBrush;
                 }
 
-                ActiveNodeText.Text = "未连接";
+                ActiveNodeText.Text = L.Common_Disconnected;
                 
                 _aiCheckCts?.Cancel();
                 UpdateAiAndIpDisplay();
@@ -393,10 +393,10 @@ namespace AnywhereWinUI.Views
                             {
                                 var dialog = new ContentDialog
                                 {
-                                    Title = "需要管理员权限",
-                                    Content = "开启 TUN 模式需要管理员权限以创建虚拟网卡和接管系统路由。\n即将请求 UAC 提权并以管理员身份重启客户端。",
-                                    PrimaryButtonText = "确认提权",
-                                    CloseButtonText = "取消",
+                                    Title = L.Tun_AdminRequiredTitle,
+                                    Content = L.Tun_AdminRequiredMsg,
+                                    PrimaryButtonText = L.Tun_AdminConfirmBtn,
+                                    CloseButtonText = L.Dialog_Cancel,
                                     XamlRoot = this.XamlRoot
                                 };
 
@@ -431,9 +431,9 @@ namespace AnywhereWinUI.Views
                         StartStopButton.IsChecked = false;
                         var dialog = new ContentDialog
                         {
-                            Title = "启动失败",
-                            Content = "核心启动失败，请检查配置或在日志页面查看详细信息。\n错误信息: " + CoreManager.Instance.LastError,
-                            CloseButtonText = "确定",
+                            Title = L.Core_StartFailedTitle,
+                            Content = Loc.Format("Core_StartFailedWithError", CoreManager.Instance.LastError),
+                            CloseButtonText = L.Dialog_OK,
                             XamlRoot = this.XamlRoot
                         };
                         _ = dialog.WithAppTheme().ShowAsync();
@@ -459,9 +459,9 @@ namespace AnywhereWinUI.Views
                 StartStopButton.IsChecked = false;
                 var dialog = new ContentDialog
                 {
-                    Title = "配置生成失败",
-                    Content = "生成节点配置时发生异常，可能配置缺失或不兼容。\n" + ex.Message,
-                    CloseButtonText = "确定",
+                    Title = L.Core_ConfigBuildFailedTitle,
+                    Content = Loc.Format("Core_ConfigBuildFailedMsg", ex.Message),
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 _ = dialog.WithAppTheme().ShowAsync();
@@ -672,8 +672,8 @@ namespace AnywhereWinUI.Views
         {
             var selected = ViewModel.GroupFilters.FirstOrDefault(g =>
                 string.Equals(g.Id, ViewModel.SelectedGroupFilterId, StringComparison.Ordinal));
-            var name = selected?.Name ?? "全部服务器";
-            ToolTipService.SetToolTip(GroupFilterToggleButton, $"筛选分组：{name}");
+            var name = selected?.Name ?? L.Servers_FilterAll;
+            ToolTipService.SetToolTip(GroupFilterToggleButton, Loc.Format("Servers_FilterTooltipFmt", name));
         }
 
         private void UpdateSortMenuCheckedState()
@@ -685,12 +685,12 @@ namespace AnywhereWinUI.Views
 
             var sortName = ViewModel.SortMode switch
             {
-                ServerSortMode.Active => "当前连接",
-                ServerSortMode.Protocol => "协议",
-                ServerSortMode.Latency => "延迟",
-                _ => "默认"
+                ServerSortMode.Active => L.Servers_SortActive,
+                ServerSortMode.Protocol => L.Servers_SortProtocol,
+                ServerSortMode.Latency => L.Servers_SortLatency,
+                _ => L.Servers_SortDefault
             };
-            ToolTipService.SetToolTip(SortButton, $"排序：{sortName}");
+            ToolTipService.SetToolTip(SortButton, Loc.Format("Servers_SortTooltipFmt", sortName));
         }
 
         private void NodeItem_PointerEntered(object sender, PointerRoutedEventArgs e)
@@ -806,7 +806,7 @@ namespace AnywhereWinUI.Views
                     }
                     else
                     {
-                        TopSheetLatencyText.Text = "超时";
+                        TopSheetLatencyText.Text = L.Servers_PingTimeout;
                         TopSheetLatencyText.Foreground = new SolidColorBrush(Colors.Gray);
                     }
                 });
@@ -867,7 +867,7 @@ namespace AnywhereWinUI.Views
             _currentShareUrl = node != null ? NodesManager.ToShareUrl(node) : string.Empty;
 
             // Reset copy button state
-            CopyLinkButtonText.Text = "复制分享链接";
+            CopyLinkButtonText.Text = L.Servers_CopyShareLink;
             var grad = new LinearGradientBrush
             {
                 StartPoint = new Windows.Foundation.Point(0, 0.5),
@@ -1038,7 +1038,7 @@ namespace AnywhereWinUI.Views
             catch { }
 
             // Visual feedback: green + "已复制！"
-            CopyLinkButtonText.Text   = "已复制！";
+            CopyLinkButtonText.Text   = L.Servers_Copied;
             CopyLinkButton.Background = new SolidColorBrush(Color.FromArgb(255, 16, 185, 129));
 
             // Auto-revert after 1.5 s
@@ -1049,7 +1049,7 @@ namespace AnywhereWinUI.Views
                 _copyResetTimer?.Stop();
                 _copyResetTimer = null;
 
-                CopyLinkButtonText.Text = "复制分享链接";
+                CopyLinkButtonText.Text = L.Servers_CopyShareLink;
                 var grad = new LinearGradientBrush
                 {
                     StartPoint = new Windows.Foundation.Point(0, 0.5),
@@ -1094,26 +1094,26 @@ namespace AnywhereWinUI.Views
 
             var editItem = new MenuFlyoutItem
             {
-                Text = "编辑",
+                Text = L.Servers_MenuEdit,
                 Icon = new FontIcon { Glyph = "\uE70F" }
             };
             editItem.Click += EditManualServerDetail_Click;
 
             var deleteItem = new MenuFlyoutItem
             {
-                Text = "删除",
+                Text = L.Servers_MenuDelete,
                 Icon = new FontIcon { Glyph = "\uE74D" }
             };
             deleteItem.Click += DeleteServerDetail_Click;
 
             var shareItem = new MenuFlyoutItem
             {
-                Text = "分享",
+                Text = L.Servers_MenuShare,
                 Icon = new FontIcon { Glyph = "\uE72D" }
             };
             shareItem.Click += ShareServer_Click;
 
-            var favoriteText = server.IsFavorite ? "取消收藏" : "加入收藏";
+            var favoriteText = server.IsFavorite ? L.Servers_MenuRemoveFav : L.Servers_MenuAddFav;
             var favoriteIcon = server.IsFavorite ? "\uE735" : "\uE734";
             var favoriteItem = new MenuFlyoutItem
             {
@@ -1195,7 +1195,7 @@ namespace AnywhereWinUI.Views
 
             UpdateFormFieldsVisibility();
 
-            EditFormTitle.Text = "手动添加服务器";
+            EditFormTitle.Text = L.Servers_AddManualTitle;
             ShowPanel("edit");
         }
 
@@ -1218,7 +1218,7 @@ namespace AnywhereWinUI.Views
                 // Create input dialog elements
                 var textBox = new TextBox
                 {
-                    PlaceholderText = "在此粘贴您的订阅链接 (http/https) 或节点分享链接 (vmess://, vless://, ss:// 等)\n支持多行批量输入",
+                    PlaceholderText = L.Servers_ImportPlaceholder,
                     AcceptsReturn = true,
                     Height = 160,
                     Text = initialText,
@@ -1238,7 +1238,7 @@ namespace AnywhereWinUI.Views
                         {
                             new TextBlock
                             {
-                                Text = "将链接粘贴在下方，每行输入一个：",
+                                Text = L.Servers_ImportDialogHint,
                                 FontSize = 12,
                                 Opacity = 0.8
                             },
@@ -1250,9 +1250,9 @@ namespace AnywhereWinUI.Views
 
                 var dialog = new ContentDialog
                 {
-                    Title = "导入订阅或节点链接",
-                    PrimaryButtonText = "确定",
-                    CloseButtonText = "取消",
+                    Title = L.Servers_ImportDialogTitle,
+                    PrimaryButtonText = L.Dialog_OK,
+                    CloseButtonText = L.Dialog_Cancel,
                     DefaultButton = ContentDialogButton.Primary,
                     Content = scrollViewer,
                     XamlRoot = this.XamlRoot
@@ -1272,17 +1272,17 @@ namespace AnywhereWinUI.Views
                     // Show success feedback
                     string msg = string.Empty;
                     if (addedSubsCount > 0 && addedNodesCount > 0)
-                        msg = $"成功导入并同步了 {addedSubsCount} 个订阅，且添加了 {addedNodesCount} 个单节点。";
+                        msg = Loc.Format("Servers_ImportBothFmt", addedSubsCount, addedNodesCount);
                     else if (addedSubsCount > 0)
-                        msg = $"成功导入并同步了 {addedSubsCount} 个订阅。";
+                        msg = Loc.Format("Servers_ImportSubsFmt", addedSubsCount);
                     else
-                        msg = $"成功添加了 {addedNodesCount} 个单节点。";
+                        msg = Loc.Format("Servers_ImportNodesFmt", addedNodesCount);
 
                     var successDialog = new ContentDialog
                     {
-                        Title = "导入成功",
+                        Title = L.Servers_ImportSuccessTitle,
                         Content = msg,
-                        CloseButtonText = "确定",
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await successDialog.WithAppTheme().ShowAsync();
@@ -1291,9 +1291,9 @@ namespace AnywhereWinUI.Views
                 {
                     var failDialog = new ContentDialog
                     {
-                        Title = "导入失败",
-                        Content = "未检测到有效的订阅链接或节点分享链接，请检查输入格式是否正确。",
-                        CloseButtonText = "确定",
+                        Title = L.Servers_ImportFailTitle,
+                        Content = L.Servers_ImportFailMsg,
+                        CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
                     await failDialog.WithAppTheme().ShowAsync();
@@ -1303,9 +1303,9 @@ namespace AnywhereWinUI.Views
             {
                 var errDialog = new ContentDialog
                 {
-                    Title = "导入时发生错误",
+                    Title = L.Servers_ImportErrorTitle,
                     Content = ex.Message,
-                    CloseButtonText = "确定",
+                    CloseButtonText = L.Dialog_OK,
                     XamlRoot = this.XamlRoot
                 };
                 try { await errDialog.WithAppTheme().ShowAsync(); } catch { }
@@ -1330,10 +1330,10 @@ namespace AnywhereWinUI.Views
                             await Task.Delay(100);
                             var dialog = new ContentDialog
                             {
-                                Title = "需要管理员权限",
-                                Content = "开启 TUN 模式需要管理员权限以创建虚拟网卡和接管系统路由。\n即将请求 UAC 提权并以管理员身份重启客户端。",
-                                PrimaryButtonText = "确认提权",
-                                CloseButtonText = "取消",
+                                Title = L.Tun_AdminRequiredTitle,
+                                Content = L.Tun_AdminRequiredMsg,
+                                PrimaryButtonText = L.Tun_AdminConfirmBtn,
+                                CloseButtonText = L.Dialog_Cancel,
                                 XamlRoot = this.XamlRoot
                             };
                             var result = await dialog.WithAppTheme().ShowAsync();
@@ -1473,7 +1473,7 @@ namespace AnywhereWinUI.Views
                     DetailFavoriteIcon.Glyph = selected.IsFavorite ? "\uE735" : "\uE734"; // Solid / Outline star
 
                     // Reset statuses
-                    DetailLatencyText.Text = "未测试";
+                    DetailLatencyText.Text = L.Servers_PingUntested;
                     
                     try
                     {
@@ -1720,7 +1720,7 @@ namespace AnywhereWinUI.Views
                         var org = ipInfo.asOrganization ?? "-";
                         if (IsDatacenter(org))
                         {
-                            _ipOrgCache = $"{org} [机房]";
+                            _ipOrgCache = $"{org} [{L.Servers_IpDatacenterTag}]";
                         }
                         else
                         {
@@ -1736,7 +1736,7 @@ namespace AnywhereWinUI.Views
                     else
                     {
                         _activeIpAddress = "-";
-                        _ipOrgCache = "获取失败";
+                        _ipOrgCache = L.Servers_IpFetchFailed;
                         _ipAsnCache = "-";
                         _ipLocationCache = "-";
                     }
@@ -1779,7 +1779,7 @@ namespace AnywhereWinUI.Views
             IpMaskIcon.Glyph = _isIpMasked ? "\uED1A" : "\uE890";
             if (ToggleIpMaskButton != null)
             {
-                ToolTipService.SetToolTip(ToggleIpMaskButton, _isIpMasked ? "显示完整 IP" : "隐藏出口 IP");
+                ToolTipService.SetToolTip(ToggleIpMaskButton, _isIpMasked ? L.Servers_ShowFullIp : L.Servers_HideExitIp);
             }
 
             if (_activeIpAddress == "-" || string.IsNullOrEmpty(_activeIpAddress))
@@ -1823,14 +1823,10 @@ namespace AnywhereWinUI.Views
         {
             if (_activeIpAddress == "-" || string.IsNullOrEmpty(_activeIpAddress)) return;
 
-            var sb = new StringBuilder();
-            sb.AppendLine($"出口 IP: {_activeIpAddress}");
-            sb.AppendLine($"ISP 运营商: {IpOrgText.Text}");
-            sb.AppendLine($"ASN 编号: {IpAsnText.Text}");
-            sb.AppendLine($"地理位置: {IpLocationText.Text}");
+            var summary = Loc.Format("Servers_CopyIpSummaryFmt", _activeIpAddress, IpOrgText.Text, IpAsnText.Text, IpLocationText.Text);
 
             var package = new DataPackage();
-            package.SetText(sb.ToString());
+            package.SetText(summary);
             Clipboard.SetContent(package);
         }
 
@@ -1880,7 +1876,7 @@ namespace AnywhereWinUI.Views
                         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
                         var titleText = new TextBlock
                         {
-                            Text = "分享节点",
+                            Text = L.Servers_ShareDialogTitle,
                             FontSize = 20,
                             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                             VerticalAlignment = VerticalAlignment.Center,
@@ -1910,7 +1906,7 @@ namespace AnywhereWinUI.Views
                         };
                         if (Application.Current.Resources.TryGetValue("SubtleButtonStyle", out var subtleStyle2))
                             nameCopyBtn.Style = (Style)subtleStyle2;
-                        ToolTipService.SetToolTip(nameCopyBtn, "复制链接");
+                        ToolTipService.SetToolTip(nameCopyBtn, L.Servers_CopyLinkTooltip);
 
                         nameCopyBtn.Click += async (_, _) =>
                         {
@@ -1960,9 +1956,9 @@ namespace AnywhereWinUI.Views
                     {
                         var failDialog = new ContentDialog
                         {
-                            Title = "分享失败",
-                            Content = "该节点的协议配置暂时不支持生成分享链接。",
-                            CloseButtonText = "确定",
+                            Title = L.Servers_ShareFailTitle,
+                            Content = L.Servers_ShareFailMsg,
+                            CloseButtonText = L.Dialog_OK,
                             XamlRoot = this.XamlRoot
                         };
                         try { await failDialog.WithAppTheme().ShowAsync(); } catch { }
@@ -2199,7 +2195,7 @@ namespace AnywhereWinUI.Views
 
                 UpdateFormFieldsVisibility();
 
-                EditFormTitle.Text = "编辑节点参数";
+                EditFormTitle.Text = L.Servers_EditNodeTitle;
                 ShowPanel("edit");
             }
         }
@@ -2210,10 +2206,10 @@ namespace AnywhereWinUI.Views
             {
                 var dialog = new ContentDialog
                 {
-                    Title = "删除确认",
-                    Content = $"确定要删除节点“{selected.Name}”吗？",
-                    PrimaryButtonText = "确定",
-                    CloseButtonText = "取消",
+                    Title = L.Servers_DeleteConfirmTitle,
+                    Content = Loc.Format("Servers_DeleteConfirmFmt", selected.Name),
+                    PrimaryButtonText = L.Dialog_OK,
+                    CloseButtonText = L.Dialog_Cancel,
                     DefaultButton = ContentDialogButton.Close,
                     XamlRoot = this.XamlRoot
                 };
@@ -2486,12 +2482,12 @@ namespace AnywhereWinUI.Views
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(url)) return;
 
             SaveSubButton.IsEnabled = false;
-            SaveSubButton.Content = "导入同步中...";
+            SaveSubButton.Content = L.Servers_SubSyncingBtn;
 
             await ViewModel.AddSubscriptionAsync(name, url);
 
             SaveSubButton.IsEnabled = true;
-            SaveSubButton.Content = "导入并同步";
+            SaveSubButton.Content = L.Servers_SubImportSyncBtn;
 
             CancelEdit_Click(sender, e);
         }
@@ -2599,7 +2595,7 @@ namespace AnywhereWinUI.Views
             ServerProxyChainInput.Items.Clear();
 
             // Add Direct Option
-            var directItem = new ComboBoxItem { Content = "直连 (Direct)", Tag = "" };
+            var directItem = new ComboBoxItem { Content = L.Servers_ChainDirect, Tag = "" };
             ServerProxyChainInput.Items.Add(directItem);
             ServerProxyChainInput.SelectedItem = directItem;
 
@@ -2663,7 +2659,7 @@ namespace AnywhereWinUI.Views
             {
                 if (proto == "NAIVEPROXY" || proto == "SOCKS" || proto == "HTTP")
                 {
-                    ServerUuidInput.Header = "用户名 (Username)";
+                    ServerUuidInput.Header = L.Servers_HeaderUsername;
                 }
                 else if (proto == "TUIC")
                 {

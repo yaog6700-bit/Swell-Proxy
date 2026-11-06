@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Services;
 
 namespace AnywhereWinUI.ViewModels
@@ -18,10 +19,10 @@ namespace AnywhereWinUI.ViewModels
         private void PopulateActions()
         {
             AvailableActions.Clear();
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE724", Label = "默认代理", Tag = "proxy" });
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE945", Label = "直连", Tag = "direct" });
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE733", Label = "拦截", Tag = "block" });
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE81C", Label = "自动优选", Tag = "urltest" });
+            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE724", Label = L.Routing_ActionProxy, Tag = "proxy" });
+            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE945", Label = L.Routing_ActionDirect, Tag = "direct" });
+            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE733", Label = L.Routing_ActionBlock, Tag = "block" });
+            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE81C", Label = L.Routing_ActionAuto, Tag = "urltest" });
 
             var nodes = NodesManager.Instance.Nodes;
             if (nodes.Count > 0)

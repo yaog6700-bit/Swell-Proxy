@@ -153,7 +153,7 @@ namespace AnywhereWinUI.Models
 
         private void UpdateStatusColors(string status, bool isDark)
         {
-            if (status.Contains("进行中") || status.Contains("200") || status.Contains("201") || status.Contains("204"))
+            if (status.Contains("进行中") || status.Contains("Active", StringComparison.OrdinalIgnoreCase) || status.Contains("200") || status.Contains("201") || status.Contains("204"))
                 StatusForeground = isDark ? _darkSuccessFg : _lightSuccessFg;
             else if (status.Contains("404") || status.Contains("Timeout"))
                 StatusForeground = isDark ? _darkCautionFg : _lightCautionFg;

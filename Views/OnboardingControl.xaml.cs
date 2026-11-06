@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
 using System.Threading.Tasks;
+using AnywhereWinUI.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -45,7 +46,7 @@ namespace AnywhereWinUI.Views
 
                 if (isLocalChina)
                 {
-                    RegionBannerText.Text = "正在基于网络检测您的物理位置...";
+                    RegionBannerText.Text = L.Onboard_DetectingRegion;
                     try 
                     {
                         var ipService = new AnywhereWinUI.Services.IpInfoService();
@@ -71,19 +72,19 @@ namespace AnywhereWinUI.Views
 
                 if (_isUserInChina)
                 {
-                    RegionBannerText.Text = "自动检测：识别到您位于 中国大陆，已自动为您预设直连绕过规则。";
+                    RegionBannerText.Text = L.Onboard_RegionCn;
                     BypassChinaToggle.IsOn = true;
                 }
                 else
                 {
-                    RegionBannerText.Text = "自动检测：识别到您位于 海外地区，可按需配置直连规则。";
+                    RegionBannerText.Text = L.Onboard_RegionOverseas;
                     BypassChinaToggle.IsOn = false;
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Region detection failed: {ex.Message}");
-                RegionBannerText.Text = "自动检测已就绪，可按需配置规则。";
+                RegionBannerText.Text = L.Onboard_RegionFallback;
             }
         }
         public void ResetState()
@@ -101,7 +102,7 @@ namespace AnywhereWinUI.Views
             
             // 按钮显示状态
             PrevButton.Visibility = _currentPage > 0 ? Visibility.Visible : Visibility.Collapsed;
-            NextButton.Content = _currentPage == 2 ? "立即开启" : "下一步";
+            NextButton.Content = _currentPage == 2 ? L.Onboard_StartBtn : L.Onboard_NextBtnText;
             
             // 进度圆点状态切换动画效果
             if (_activeBrush == null)
@@ -163,7 +164,7 @@ namespace AnywhereWinUI.Views
             {
                 ImportProgressRing.IsActive = true;
                 ImportStatusText.Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
-                ImportStatusText.Text = "正在下载并导入订阅...";
+                ImportStatusText.Text = L.Onboard_ImportingSub;
                 NextButton.IsEnabled = false;
                 PrevButton.IsEnabled = false;
                 
@@ -174,7 +175,7 @@ namespace AnywhereWinUI.Views
                         inputText.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                     {
                         // 作为订阅处理
-                        string subName = $"订阅_{DateTime.Now:MMdd_HHmm}";
+                        string subName = $"{L.Servers_AutoSubPrefix}_{DateTime.Now:MMdd_HHmm}";
                         AnywhereWinUI.Services.NodesManager.Instance.AddSubscription(subName, inputText);
                         var sub = System.Linq.Enumerable.LastOrDefault(AnywhereWinUI.Services.NodesManager.Instance.Subscriptions);
                         
@@ -223,7 +224,7 @@ namespace AnywhereWinUI.Views
                     }
                     
                     ImportStatusText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.Green);
-                    ImportStatusText.Text = $"成功导入 {importedCount} 个节点！";
+                    ImportStatusText.Text = string.Format(L.Onboard_ImportOkFmt, importedCount);
                     
                     // 通知 ServersViewModel 重新加载节点列表
                     var serversViewModel = AnywhereWinUI.App.Current.Services.GetService(typeof(AnywhereWinUI.ViewModels.ServersViewModel)) as AnywhereWinUI.ViewModels.ServersViewModel;
@@ -238,7 +239,7 @@ namespace AnywhereWinUI.Views
                 catch (Exception ex)
                 {
                     ImportStatusText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.Red);
-                    ImportStatusText.Text = $"导入失败: {ex.Message}";
+                    ImportStatusText.Text = string.Format(L.Onboard_ImportFailFmt, ex.Message);
                     ImportProgressRing.IsActive = false;
                     NextButton.IsEnabled = true;
                     PrevButton.IsEnabled = true;

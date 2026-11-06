@@ -1,0 +1,2276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Language_FollowSystem" xml:space="preserve">
+    <value>跟随系统</value>
+  </data>
+  <data name="Dialog_OK" xml:space="preserve">
+    <value>确定</value>
+  </data>
+  <data name="Dialog_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Dialog_Confirm" xml:space="preserve">
+    <value>确认</value>
+  </data>
+  <data name="Common_Connected" xml:space="preserve">
+    <value>已连接</value>
+  </data>
+  <data name="Common_Disconnected" xml:space="preserve">
+    <value>未连接</value>
+  </data>
+  <data name="Common_NoNodeSelected" xml:space="preserve">
+    <value>未选择节点</value>
+  </data>
+  <data name="Common_UnknownNode" xml:space="preserve">
+    <value>未知节点</value>
+  </data>
+  <data name="ProxyMode_System" xml:space="preserve">
+    <value>系统代理</value>
+  </data>
+  <data name="ProxyMode_Tun" xml:space="preserve">
+    <value>TUN模式</value>
+  </data>
+  <data name="ProxyMode_Manual" xml:space="preserve">
+    <value>仅手动代理</value>
+  </data>
+  <data name="ProxyMode_Local" xml:space="preserve">
+    <value>本地代理</value>
+  </data>
+  <data name="ProxyMode_TunSystem" xml:space="preserve">
+    <value>TUN + 系统代理</value>
+  </data>
+  <data name="RouteMode_Smart" xml:space="preserve">
+    <value>智能分流</value>
+  </data>
+  <data name="RouteMode_Global" xml:space="preserve">
+    <value>全局路由</value>
+  </data>
+  <data name="RouteMode_Direct" xml:space="preserve">
+    <value>直接连接</value>
+  </data>
+  <data name="RouteMode_GlobalProxy" xml:space="preserve">
+    <value>全局代理</value>
+  </data>
+  <data name="RouteMode_DirectAll" xml:space="preserve">
+    <value>全部直连</value>
+  </data>
+  <data name="MainWindow_SwitchToLight" xml:space="preserve">
+    <value>切换至浅色模式</value>
+  </data>
+  <data name="MainWindow_SwitchToDark" xml:space="preserve">
+    <value>切换至深色模式</value>
+  </data>
+  <data name="Tray_ConnectedTooltip" xml:space="preserve">
+    <value>Swell Proxy - 已连接</value>
+  </data>
+  <data name="Tray_DisconnectedTooltip" xml:space="preserve">
+    <value>Swell Proxy - 未连接</value>
+  </data>
+  <data name="Tray_ShowMainWindow" xml:space="preserve">
+    <value>显示主界面</value>
+  </data>
+  <data name="Tray_UnlockWindow" xml:space="preserve">
+    <value>解锁主界面</value>
+  </data>
+  <data name="Tray_LockAndHide" xml:space="preserve">
+    <value>锁定并隐藏</value>
+  </data>
+  <data name="Tray_Exit" xml:space="preserve">
+    <value>退出程序</value>
+  </data>
+  <data name="Privacy_SetPwdTitle" xml:space="preserve">
+    <value>设置隐私密码</value>
+  </data>
+  <data name="Privacy_SetPwdHeader" xml:space="preserve">
+    <value>请输入隐私保护密码</value>
+  </data>
+  <data name="Privacy_SetPwdPlaceholder" xml:space="preserve">
+    <value>设置一个用于解锁的密码</value>
+  </data>
+  <data name="Nav_Dashboard.Content" xml:space="preserve">
+    <value>仪表盘</value>
+  </data>
+  <data name="Nav_Dashboard.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>仪表盘</value>
+  </data>
+  <data name="Nav_Servers.Content" xml:space="preserve">
+    <value>服务器</value>
+  </data>
+  <data name="Nav_Servers.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>服务器节点</value>
+  </data>
+  <data name="Nav_Routing.Content" xml:space="preserve">
+    <value>分流规则</value>
+  </data>
+  <data name="Nav_Routing.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>分流规则</value>
+  </data>
+  <data name="Nav_Traffic.Content" xml:space="preserve">
+    <value>流量与数据</value>
+  </data>
+  <data name="Nav_Traffic.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>流量与数据</value>
+  </data>
+  <data name="Nav_Connections.Content" xml:space="preserve">
+    <value>活动连接</value>
+  </data>
+  <data name="Nav_Connections.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>活动连接</value>
+  </data>
+  <data name="Nav_Logs.Content" xml:space="preserve">
+    <value>请求日志</value>
+  </data>
+  <data name="Nav_Logs.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>请求日志</value>
+  </data>
+  <data name="Nav_Plugins.Content" xml:space="preserve">
+    <value>插件</value>
+  </data>
+  <data name="Nav_Plugins.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>JS 插件管理</value>
+  </data>
+  <data name="Nav_Settings.Content" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Nav_Settings.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>应用设置</value>
+  </data>
+  <data name="MainWindow_MiniModeBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>切换迷你窗口</value>
+  </data>
+  <data name="MainWindow_ThemeBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>切换主题</value>
+  </data>
+  <data name="MainWindow_MiniExpandBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>展开</value>
+  </data>
+  <data name="MainWindow_MiniCloseBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>隐藏到托盘</value>
+  </data>
+  <data name="MainWindow_MiniServerName.Text" xml:space="preserve">
+    <value>未选择节点</value>
+  </data>
+  <data name="MainWindow_MiniProxyMode.Text" xml:space="preserve">
+    <value>智能分流</value>
+  </data>
+  <data name="MainWindow_MiniStatus.Text" xml:space="preserve">
+    <value>未连接</value>
+  </data>
+  <data name="Tun_AdminRequiredTitle" xml:space="preserve">
+    <value>需要管理员权限</value>
+  </data>
+  <data name="Tun_AdminRequiredMsg" xml:space="preserve">
+    <value>开启 TUN 模式需要管理员权限以创建虚拟网卡和接管系统路由。
+即将请求 UAC 提权并以管理员身份重启客户端。</value>
+  </data>
+  <data name="Tun_AdminConfirmBtn" xml:space="preserve">
+    <value>确认提权</value>
+  </data>
+  <data name="Core_StartFailedTitle" xml:space="preserve">
+    <value>启动失败</value>
+  </data>
+  <data name="Core_StartFailedDashboard" xml:space="preserve">
+    <value>代理引擎启动失败，请检查配置。
+详细信息请查看日志页面。</value>
+  </data>
+  <data name="Core_StartFailedWithError" xml:space="preserve">
+    <value>核心启动失败，请检查配置或在日志页面查看详细信息。
+错误信息: {0}</value>
+  </data>
+  <data name="Core_ConfigBuildFailedTitle" xml:space="preserve">
+    <value>配置生成失败</value>
+  </data>
+  <data name="Core_ConfigBuildFailedMsg" xml:space="preserve">
+    <value>生成节点配置时发生异常，可能配置缺失或不兼容。
+{0}</value>
+  </data>
+  <data name="Dashboard_InfoConnectedMsg" xml:space="preserve">
+    <value>成功连接到 {0}</value>
+  </data>
+  <data name="Dashboard_InfoStoppedTitle" xml:space="preserve">
+    <value>已断开</value>
+  </data>
+  <data name="Dashboard_InfoStoppedMsg" xml:space="preserve">
+    <value>代理引擎已停止</value>
+  </data>
+  <data name="Dashboard_RemainingDaysFmt" xml:space="preserve">
+    <value>{0} 天</value>
+  </data>
+  <data name="Dashboard_HeaderTitle.Text" xml:space="preserve">
+    <value>控制台</value>
+  </data>
+  <data name="Dashboard_HeaderSubtitle.Text" xml:space="preserve">
+    <value>简洁现代的网络代理管理器</value>
+  </data>
+  <data name="Dashboard_ToggleHint.Text" xml:space="preserve">
+    <value>点击左侧按钮切换引擎状态</value>
+  </data>
+  <data name="Dashboard_LatencyLabel.Text" xml:space="preserve">
+    <value>延迟:</value>
+  </data>
+  <data name="Dashboard_RoutingModeHeader.Text" xml:space="preserve">
+    <value>路由模式</value>
+  </data>
+  <data name="Dashboard_RouteRule.Content" xml:space="preserve">
+    <value>规则 (Rule)</value>
+  </data>
+  <data name="Dashboard_RouteGlobal.Content" xml:space="preserve">
+    <value>全局 (Global)</value>
+  </data>
+  <data name="Dashboard_RouteDirect.Content" xml:space="preserve">
+    <value>直连 (Direct)</value>
+  </data>
+  <data name="Dashboard_UploadSpeedLabel.Text" xml:space="preserve">
+    <value>上传速度</value>
+  </data>
+  <data name="Dashboard_DownloadSpeedLabel.Text" xml:space="preserve">
+    <value>下载速度</value>
+  </data>
+  <data name="Dashboard_SubInfoHeader.Text" xml:space="preserve">
+    <value>订阅信息</value>
+  </data>
+  <data name="Dashboard_UsedTrafficLabel.Text" xml:space="preserve">
+    <value>已用流量</value>
+  </data>
+  <data name="Dashboard_RemainingTimeLabel.Text" xml:space="preserve">
+    <value>剩余时长</value>
+  </data>
+  <data name="Dashboard_QuickActionsHeader.Text" xml:space="preserve">
+    <value>快捷操作</value>
+  </data>
+  <data name="Dashboard_ProxyModeLabel.Text" xml:space="preserve">
+    <value>代理模式</value>
+  </data>
+  <data name="Dashboard_ProxySys.Content" xml:space="preserve">
+    <value>系统代理</value>
+  </data>
+  <data name="Dashboard_ProxyTun.Content" xml:space="preserve">
+    <value>TUN 模式</value>
+  </data>
+  <data name="Dashboard_ProxyLocal.Content" xml:space="preserve">
+    <value>本地</value>
+  </data>
+  <data name="Dashboard_ProxyTunSys.Content" xml:space="preserve">
+    <value>TUN + 系统</value>
+  </data>
+  <data name="Dashboard_RefreshAllSubsText.Text" xml:space="preserve">
+    <value>更新所有订阅</value>
+  </data>
+  <data name="Servers_PingUntested" xml:space="preserve">
+    <value>未测试</value>
+  </data>
+  <data name="Servers_PingTesting" xml:space="preserve">
+    <value>测试中...</value>
+  </data>
+  <data name="Servers_PingTimeout" xml:space="preserve">
+    <value>超时</value>
+  </data>
+  <data name="Servers_PingFailed" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="Servers_FilterAll" xml:space="preserve">
+    <value>全部服务器</value>
+  </data>
+  <data name="Servers_FilterFavorites" xml:space="preserve">
+    <value>收藏列表</value>
+  </data>
+  <data name="Servers_FilterManual" xml:space="preserve">
+    <value>自建列表</value>
+  </data>
+  <data name="Servers_UnnamedSub" xml:space="preserve">
+    <value>未命名订阅</value>
+  </data>
+  <data name="Servers_AutoSubPrefix" xml:space="preserve">
+    <value>订阅</value>
+  </data>
+  <data name="Servers_FilterTooltipFmt" xml:space="preserve">
+    <value>筛选分组：{0}</value>
+  </data>
+  <data name="Servers_SortDefault" xml:space="preserve">
+    <value>默认</value>
+  </data>
+  <data name="Servers_SortActive" xml:space="preserve">
+    <value>当前连接</value>
+  </data>
+  <data name="Servers_SortProtocol" xml:space="preserve">
+    <value>协议</value>
+  </data>
+  <data name="Servers_SortLatency" xml:space="preserve">
+    <value>延迟</value>
+  </data>
+  <data name="Servers_SortTooltipFmt" xml:space="preserve">
+    <value>排序：{0}</value>
+  </data>
+  <data name="Servers_CopyShareLink" xml:space="preserve">
+    <value>复制分享链接</value>
+  </data>
+  <data name="Servers_Copied" xml:space="preserve">
+    <value>已复制！</value>
+  </data>
+  <data name="Servers_MenuEdit" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="Servers_MenuDelete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Servers_MenuShare" xml:space="preserve">
+    <value>分享</value>
+  </data>
+  <data name="Servers_MenuAddFav" xml:space="preserve">
+    <value>加入收藏</value>
+  </data>
+  <data name="Servers_MenuRemoveFav" xml:space="preserve">
+    <value>取消收藏</value>
+  </data>
+  <data name="Servers_AddManualTitle" xml:space="preserve">
+    <value>手动添加服务器</value>
+  </data>
+  <data name="Servers_EditNodeTitle" xml:space="preserve">
+    <value>编辑节点参数</value>
+  </data>
+  <data name="Servers_ChainDirect" xml:space="preserve">
+    <value>直连 (Direct)</value>
+  </data>
+  <data name="Servers_HeaderUsername" xml:space="preserve">
+    <value>用户名 (Username)</value>
+  </data>
+  <data name="Servers_ImportDialogTitle" xml:space="preserve">
+    <value>导入订阅或节点链接</value>
+  </data>
+  <data name="Servers_ImportDialogHint" xml:space="preserve">
+    <value>将链接粘贴在下方，每行输入一个：</value>
+  </data>
+  <data name="Servers_ImportPlaceholder" xml:space="preserve">
+    <value>在此粘贴您的订阅链接 (http/https) 或节点分享链接 (vmess://, vless://, ss:// 等)
+支持多行批量输入</value>
+  </data>
+  <data name="Servers_ImportSuccessTitle" xml:space="preserve">
+    <value>导入成功</value>
+  </data>
+  <data name="Servers_ImportBothFmt" xml:space="preserve">
+    <value>成功导入并同步了 {0} 个订阅，且添加了 {1} 个单节点。</value>
+  </data>
+  <data name="Servers_ImportSubsFmt" xml:space="preserve">
+    <value>成功导入并同步了 {0} 个订阅。</value>
+  </data>
+  <data name="Servers_ImportNodesFmt" xml:space="preserve">
+    <value>成功添加了 {0} 个单节点。</value>
+  </data>
+  <data name="Servers_ImportFailTitle" xml:space="preserve">
+    <value>导入失败</value>
+  </data>
+  <data name="Servers_ImportFailMsg" xml:space="preserve">
+    <value>未检测到有效的订阅链接或节点分享链接，请检查输入格式是否正确。</value>
+  </data>
+  <data name="Servers_ImportErrorTitle" xml:space="preserve">
+    <value>导入时发生错误</value>
+  </data>
+  <data name="Servers_IpDatacenterTag" xml:space="preserve">
+    <value>机房</value>
+  </data>
+  <data name="Servers_IpFetchFailed" xml:space="preserve">
+    <value>获取失败</value>
+  </data>
+  <data name="Servers_ShowFullIp" xml:space="preserve">
+    <value>显示完整 IP</value>
+  </data>
+  <data name="Servers_HideExitIp" xml:space="preserve">
+    <value>隐藏出口 IP</value>
+  </data>
+  <data name="Servers_CopyIpSummaryFmt" xml:space="preserve">
+    <value>出口 IP: {0}
+ISP 运营商: {1}
+ASN 编号: {2}
+地理位置: {3}</value>
+  </data>
+  <data name="Servers_ShareDialogTitle" xml:space="preserve">
+    <value>分享节点</value>
+  </data>
+  <data name="Servers_CopyLinkTooltip" xml:space="preserve">
+    <value>复制链接</value>
+  </data>
+  <data name="Servers_ShareFailTitle" xml:space="preserve">
+    <value>分享失败</value>
+  </data>
+  <data name="Servers_ShareFailMsg" xml:space="preserve">
+    <value>该节点的协议配置暂时不支持生成分享链接。</value>
+  </data>
+  <data name="Servers_DeleteConfirmTitle" xml:space="preserve">
+    <value>删除确认</value>
+  </data>
+  <data name="Servers_DeleteConfirmFmt" xml:space="preserve">
+    <value>确定要删除节点「{0}」吗？</value>
+  </data>
+  <data name="Servers_SubSyncingBtn" xml:space="preserve">
+    <value>导入同步中...</value>
+  </data>
+  <data name="Servers_SubImportSyncBtn" xml:space="preserve">
+    <value>导入并同步</value>
+  </data>
+  <data name="SubDialog_AddTitle" xml:space="preserve">
+    <value>添加订阅</value>
+  </data>
+  <data name="SubDialog_ManageTitle" xml:space="preserve">
+    <value>管理订阅</value>
+  </data>
+  <data name="SubDialog_AddBtn" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="SubDialog_DoneBtn" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="SubDialog_AddFailTitle" xml:space="preserve">
+    <value>添加订阅失败</value>
+  </data>
+  <data name="SubDialog_UpdateFailTitle" xml:space="preserve">
+    <value>更新订阅失败</value>
+  </data>
+  <data name="SubDialog_LastSyncFmt" xml:space="preserve">
+    <value>上次同步：{0}</value>
+  </data>
+  <data name="SubDialog_RefreshTooltip" xml:space="preserve">
+    <value>刷新订阅</value>
+  </data>
+  <data name="SubDialog_DelConfirmTitle" xml:space="preserve">
+    <value>删除订阅？</value>
+  </data>
+  <data name="SubDialog_DelConfirmDesc" xml:space="preserve">
+    <value>将同时删除该订阅下的所有节点。</value>
+  </data>
+  <data name="SubDialog_DelTooltip" xml:space="preserve">
+    <value>删除订阅</value>
+  </data>
+  <data name="SubDialog_AutoRefreshOff" xml:space="preserve">
+    <value>下次自动同步：已关闭</value>
+  </data>
+  <data name="SubDialog_AutoRefreshPending" xml:space="preserve">
+    <value>下次自动同步：待下次启动时同步</value>
+  </data>
+  <data name="SubDialog_AutoRefreshNextFmt" xml:space="preserve">
+    <value>下次自动同步：{0}</value>
+  </data>
+  <data name="SubDialog_Title.Text" xml:space="preserve">
+    <value>添加订阅</value>
+  </data>
+  <data name="SubDialog_SegAdd.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>添加订阅</value>
+  </data>
+  <data name="SubDialog_SegManage.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>管理订阅</value>
+  </data>
+  <data name="SubDialog_UrlInput.Header" xml:space="preserve">
+    <value>订阅链接</value>
+  </data>
+  <data name="SubDialog_NameInput.Header" xml:space="preserve">
+    <value>备注名称（可选）</value>
+  </data>
+  <data name="SubDialog_NameInput.PlaceholderText" xml:space="preserve">
+    <value>留空则使用链接域名</value>
+  </data>
+  <data name="SubDialog_Hint.Text" xml:space="preserve">
+    <value>将自动拉取并导入订阅中的全部节点</value>
+  </data>
+  <data name="SubDialog_AutoRefreshTitle.Text" xml:space="preserve">
+    <value>自动刷新订阅</value>
+  </data>
+  <data name="SubDialog_AutoRefreshDesc.Text" xml:space="preserve">
+    <value>每 24 小时同步一次</value>
+  </data>
+  <data name="SubDialog_EmptyText.Text" xml:space="preserve">
+    <value>暂无订阅</value>
+  </data>
+  <data name="Servers_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索服务器...</value>
+  </data>
+  <data name="Servers_GroupFilterBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>筛选分组</value>
+  </data>
+  <data name="Servers_FilterLabel.Text" xml:space="preserve">
+    <value>筛选条件:</value>
+  </data>
+  <data name="Servers_SortBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>排序</value>
+  </data>
+  <data name="Servers_SortDefaultItem.Text" xml:space="preserve">
+    <value>默认</value>
+  </data>
+  <data name="Servers_SortActiveItem.Text" xml:space="preserve">
+    <value>当前连接</value>
+  </data>
+  <data name="Servers_SortProtocolItem.Text" xml:space="preserve">
+    <value>协议</value>
+  </data>
+  <data name="Servers_SortLatencyItem.Text" xml:space="preserve">
+    <value>延迟</value>
+  </data>
+  <data name="Servers_ActiveBadge.Text" xml:space="preserve">
+    <value>已激活</value>
+  </data>
+  <data name="Servers_AddManualBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>添加手动节点</value>
+  </data>
+  <data name="Servers_ImportClipboardBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>从剪贴板导入节点/订阅</value>
+  </data>
+  <data name="Servers_ManageSubBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>订阅管理</value>
+  </data>
+  <data name="Servers_PingAllBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>一键测速</value>
+  </data>
+  <data name="Servers_QrShareBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>分享节点（二维码）</value>
+  </data>
+  <data name="Servers_EmptyTitle.Text" xml:space="preserve">
+    <value>未选择服务器</value>
+  </data>
+  <data name="Servers_EmptySubtitle.Text" xml:space="preserve">
+    <value>从左侧列表中选择节点以查看详细配置参数、出口 IP 及 AI 解锁状态。</value>
+  </data>
+  <data name="Servers_DetailAddrLabel.Text" xml:space="preserve">
+    <value>地址</value>
+  </data>
+  <data name="Servers_DetailPortLabel.Text" xml:space="preserve">
+    <value>端口</value>
+  </data>
+  <data name="Servers_DetailTransportLabel.Text" xml:space="preserve">
+    <value>传输</value>
+  </data>
+  <data name="Servers_DetailLatencyLabel.Text" xml:space="preserve">
+    <value>延迟</value>
+  </data>
+  <data name="Servers_AiSectionTitle.Text" xml:space="preserve">
+    <value>AI 解锁状态</value>
+  </data>
+  <data name="Servers_IpSectionTitle.Text" xml:space="preserve">
+    <value>IP 网络状态</value>
+  </data>
+  <data name="Servers_RefreshAiIpBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>重新检测 AI 解锁与出口 IP</value>
+  </data>
+  <data name="Servers_ExitIpLabel.Text" xml:space="preserve">
+    <value>出口 IP</value>
+  </data>
+  <data name="Servers_ToggleIpMaskBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>显示完整 IP</value>
+  </data>
+  <data name="Servers_CopyIpStatusBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>复制 IP 网络状态</value>
+  </data>
+  <data name="Servers_IspLabel.Text" xml:space="preserve">
+    <value>ISP 运营商</value>
+  </data>
+  <data name="Servers_AsnLabel.Text" xml:space="preserve">
+    <value>ASN 编号</value>
+  </data>
+  <data name="Servers_LocationLabel.Text" xml:space="preserve">
+    <value>地理位置</value>
+  </data>
+  <data name="Servers_EditTitle.Text" xml:space="preserve">
+    <value>手动添加服务器</value>
+  </data>
+  <data name="Servers_EditSubtitle.Text" xml:space="preserve">
+    <value>请在下方填写服务器配置参数。</value>
+  </data>
+  <data name="Servers_FormName.Header" xml:space="preserve">
+    <value>节点名称</value>
+  </data>
+  <data name="Servers_FormName.PlaceholderText" xml:space="preserve">
+    <value>例如: 香港 BGP VLESS-XTLS</value>
+  </data>
+  <data name="Servers_FormProtocol.Header" xml:space="preserve">
+    <value>协议类型</value>
+  </data>
+  <data name="Servers_FormProxyChain.Header" xml:space="preserve">
+    <value>前置代理 (Proxy Chain)</value>
+  </data>
+  <data name="Servers_FormProxyChainDesc.Text" xml:space="preserve">
+    <value>选择通过另一个代理服务器连接此节点（链式代理）</value>
+  </data>
+  <data name="Servers_FormHost.Header" xml:space="preserve">
+    <value>地址 / 域名</value>
+  </data>
+  <data name="Servers_FormHost.PlaceholderText" xml:space="preserve">
+    <value>例如: hk.anywhere.com</value>
+  </data>
+  <data name="Servers_FormPort.Header" xml:space="preserve">
+    <value>端口</value>
+  </data>
+  <data name="Servers_FormEnableShadowTls.Content" xml:space="preserve">
+    <value>启用 Shadow-TLS</value>
+  </data>
+  <data name="Servers_FormShadowTlsVer.Header" xml:space="preserve">
+    <value>Shadow-TLS 版本</value>
+  </data>
+  <data name="Servers_FormShadowTlsPwd.Header" xml:space="preserve">
+    <value>Shadow-TLS 密码</value>
+  </data>
+  <data name="Servers_FormShadowTlsPwd.PlaceholderText" xml:space="preserve">
+    <value>请输入 Shadow-TLS 密码</value>
+  </data>
+  <data name="Servers_FormShadowTlsSni.Header" xml:space="preserve">
+    <value>SNI（伪装域名）</value>
+  </data>
+  <data name="Servers_FormShadowTlsSni.PlaceholderText" xml:space="preserve">
+    <value>例如: support.apple.com</value>
+  </data>
+  <data name="Servers_FormPassword.Header" xml:space="preserve">
+    <value>密码 / Token</value>
+  </data>
+  <data name="Servers_FormPassword.PlaceholderText" xml:space="preserve">
+    <value>请输入密码或Token</value>
+  </data>
+  <data name="Servers_FormWgPrivKey.Header" xml:space="preserve">
+    <value>私钥 (Private Key)</value>
+  </data>
+  <data name="Servers_FormWgPrivKey.PlaceholderText" xml:space="preserve">
+    <value>请输入 WireGuard 私钥</value>
+  </data>
+  <data name="Servers_FormWgLocalAddr.Header" xml:space="preserve">
+    <value>本地地址 (Local Address)</value>
+  </data>
+  <data name="Servers_FormWgPsk.Header" xml:space="preserve">
+    <value>预共享密钥 (Pre-Shared Key)</value>
+  </data>
+  <data name="Servers_FormWgPsk.PlaceholderText" xml:space="preserve">
+    <value>可选</value>
+  </data>
+  <data name="Servers_FormWgMtu.PlaceholderText" xml:space="preserve">
+    <value>1408 (为 0 则使用默认)</value>
+  </data>
+  <data name="Servers_FormNowhereSpec.PlaceholderText" xml:space="preserve">
+    <value>请输入 Nowhere 的 Spec</value>
+  </data>
+  <data name="Servers_FormSnellPsk.Header" xml:space="preserve">
+    <value>预共享密钥 (PSK)</value>
+  </data>
+  <data name="Servers_FormSnellPsk.PlaceholderText" xml:space="preserve">
+    <value>请输入 Snell PSK</value>
+  </data>
+  <data name="Servers_FormSnellVer.Header" xml:space="preserve">
+    <value>Snell 版本 (Version)</value>
+  </data>
+  <data name="Servers_FormSnellMode.Header" xml:space="preserve">
+    <value>流量整形 (Mode) [仅 v6]</value>
+  </data>
+  <data name="Servers_FormSnellObfs.Header" xml:space="preserve">
+    <value>HTTP 混淆 (Obfs) [v1-v5]</value>
+  </data>
+  <data name="Servers_FormSnellObfsOff.Content" xml:space="preserve">
+    <value>关闭 (none)</value>
+  </data>
+  <data name="Servers_FormSnellObfsHost.Header" xml:space="preserve">
+    <value>混淆域名 (Obfs Host)</value>
+  </data>
+  <data name="Servers_FormSnellObfsHost.PlaceholderText" xml:space="preserve">
+    <value>例如: bing.com</value>
+  </data>
+  <data name="Servers_FormObfsType.Header" xml:space="preserve">
+    <value>混淆方式 (Obfs)</value>
+  </data>
+  <data name="Servers_FormObfsPwd.Header" xml:space="preserve">
+    <value>混淆密码 (Obfs Password)</value>
+  </data>
+  <data name="Servers_FormObfsPwd.PlaceholderText" xml:space="preserve">
+    <value>请输入混淆密码</value>
+  </data>
+  <data name="Servers_FormEncryption.Header" xml:space="preserve">
+    <value>加密方式</value>
+  </data>
+  <data name="Servers_FormNetwork.Header" xml:space="preserve">
+    <value>传输协议 (Network)</value>
+  </data>
+  <data name="Servers_FormHeaderType.Header" xml:space="preserve">
+    <value>伪装类型 (Header Type)</value>
+  </data>
+  <data name="Servers_FormPath.Header" xml:space="preserve">
+    <value>路径 (Path)</value>
+  </data>
+  <data name="Servers_FormWsHost.Header" xml:space="preserve">
+    <value>伪装域名 (Host)</value>
+  </data>
+  <data name="Servers_FormFlow.Header" xml:space="preserve">
+    <value>流控 (Flow)</value>
+  </data>
+  <data name="Servers_FormSecurity.Header" xml:space="preserve">
+    <value>安全传输 (Security)</value>
+  </data>
+  <data name="Servers_FormFingerprint.Header" xml:space="preserve">
+    <value>指纹 (Fingerprint)</value>
+  </data>
+  <data name="Servers_FormAllowInsecure.Content" xml:space="preserve">
+    <value>允许不安全证书 (Allow Insecure)</value>
+  </data>
+  <data name="Servers_FormSaveBtn.Content" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Servers_FormCancelBtn.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Servers_SubMgrTitle.Text" xml:space="preserve">
+    <value>订阅管理</value>
+  </data>
+  <data name="Servers_SubMgrSubtitle.Text" xml:space="preserve">
+    <value>支持批量导入和同步节点，方便快速更新。</value>
+  </data>
+  <data name="Servers_SubSegAdd.Content" xml:space="preserve">
+    <value>添加新订阅</value>
+  </data>
+  <data name="Servers_SubSegList.Content" xml:space="preserve">
+    <value>我的订阅列表</value>
+  </data>
+  <data name="Servers_SubFormName.Header" xml:space="preserve">
+    <value>订阅名称</value>
+  </data>
+  <data name="Servers_SubFormName.PlaceholderText" xml:space="preserve">
+    <value>例如: GlaDOS VIP 订阅</value>
+  </data>
+  <data name="Servers_SubFormUrl.Header" xml:space="preserve">
+    <value>订阅链接 (URL)</value>
+  </data>
+  <data name="Servers_SubSaveBtn.Content" xml:space="preserve">
+    <value>导入并同步</value>
+  </data>
+  <data name="Servers_SubBackBtn1.Content" xml:space="preserve">
+    <value>返回</value>
+  </data>
+  <data name="Servers_SubBackBtn2.Content" xml:space="preserve">
+    <value>返回</value>
+  </data>
+  <data name="Servers_SubLastSync.Text" xml:space="preserve">
+    <value>上次同步:</value>
+  </data>
+  <data name="Servers_SubSyncItemBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>同步</value>
+  </data>
+  <data name="Servers_SubDelItemBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Servers_ActiveNodeText.Text" xml:space="preserve">
+    <value>未连接</value>
+  </data>
+  <data name="Servers_ReopenSheetBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>查看实时面板</value>
+  </data>
+  <data name="Servers_ProxyModeBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>代理模式</value>
+  </data>
+  <data name="Servers_FlyoutSys.Text" xml:space="preserve">
+    <value>系统代理</value>
+  </data>
+  <data name="Servers_FlyoutTun.Text" xml:space="preserve">
+    <value>TUN模式</value>
+  </data>
+  <data name="Servers_FlyoutManual.Text" xml:space="preserve">
+    <value>仅手动代理</value>
+  </data>
+  <data name="Servers_FlyoutTunSys.Text" xml:space="preserve">
+    <value>TUN + 系统代理</value>
+  </data>
+  <data name="Servers_FlyoutSmart.Text" xml:space="preserve">
+    <value>智能分流</value>
+  </data>
+  <data name="Servers_FlyoutGlobal.Text" xml:space="preserve">
+    <value>全局路由</value>
+  </data>
+  <data name="Servers_FlyoutDirect.Text" xml:space="preserve">
+    <value>直接连接</value>
+  </data>
+  <data name="Servers_QrHint.Text" xml:space="preserve">
+    <value>使用手机/其它代理软件扫码导入</value>
+  </data>
+  <data name="Servers_QrCopyText.Text" xml:space="preserve">
+    <value>复制分享链接</value>
+  </data>
+  <data name="Servers_SheetTitle.Text" xml:space="preserve">
+    <value>概览</value>
+  </data>
+  <data name="Servers_SheetNodeLabel.Text" xml:space="preserve">
+    <value>当前节点</value>
+  </data>
+  <data name="Servers_SheetUptimeLabel.Text" xml:space="preserve">
+    <value>运行时间</value>
+  </data>
+  <data name="Servers_SheetLatencyLabel.Text" xml:space="preserve">
+    <value>网络延迟</value>
+  </data>
+  <data name="Servers_SheetDownLabel.Text" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="Servers_SheetUpLabel.Text" xml:space="preserve">
+    <value>上传</value>
+  </data>
+  <data name="Settings_CatAppearanceTitle" xml:space="preserve">
+    <value>个性化外观</value>
+  </data>
+  <data name="Settings_CatAppearanceSub" xml:space="preserve">
+    <value>自定义主题风格、界面语言、背景材质与显示细节</value>
+  </data>
+  <data name="Settings_CatColorsTitle" xml:space="preserve">
+    <value>协议标识</value>
+  </data>
+  <data name="Settings_CatColorsSub" xml:space="preserve">
+    <value>自定义节点协议在卡片和列表中的颜色分类</value>
+  </data>
+  <data name="Settings_CatRoutingTitle" xml:space="preserve">
+    <value>路由分流</value>
+  </data>
+  <data name="Settings_CatRoutingSub" xml:space="preserve">
+    <value>配置系统级的路由绕过策略与广告拦截规则</value>
+  </data>
+  <data name="Settings_CatDnsTitle" xml:space="preserve">
+    <value>DNS 与解析</value>
+  </data>
+  <data name="Settings_CatDnsSub" xml:space="preserve">
+    <value>配置代理环境下的远端与直连 DNS 防污染及 FakeDNS</value>
+  </data>
+  <data name="Settings_CatTailscaleTitle" xml:space="preserve">
+    <value>Tailscale 组网</value>
+  </data>
+  <data name="Settings_CatTailscaleSub" xml:space="preserve">
+    <value>将 sing-box 接入 Tailscale 私有网络，实现内网穿透与多设备互联</value>
+  </data>
+  <data name="Settings_CatBackupTitle" xml:space="preserve">
+    <value>备份与恢复</value>
+  </data>
+  <data name="Settings_CatBackupSub" xml:space="preserve">
+    <value>备份当前配置或从本地归档进行覆盖恢复</value>
+  </data>
+  <data name="Settings_CatAutostartTitle" xml:space="preserve">
+    <value>开机与启动</value>
+  </data>
+  <data name="Settings_CatAutostartSub" xml:space="preserve">
+    <value>管理客户端的自启动偏好与后台行为</value>
+  </data>
+  <data name="Settings_CatAboutTitle" xml:space="preserve">
+    <value>关于与内核</value>
+  </data>
+  <data name="Settings_CatAboutSub" xml:space="preserve">
+    <value>关于 Swell Proxy 原生客户端及代理内核管理</value>
+  </data>
+  <data name="Settings_MasterTitle.Text" xml:space="preserve">
+    <value>系统设置</value>
+  </data>
+  <data name="Settings_MasterSubtitle.Text" xml:space="preserve">
+    <value>配置客户端偏好与核心</value>
+  </data>
+  <data name="Settings_CatItemAppearance.Text" xml:space="preserve">
+    <value>个性化外观</value>
+  </data>
+  <data name="Settings_CatItemColors.Text" xml:space="preserve">
+    <value>协议标识</value>
+  </data>
+  <data name="Settings_CatItemRouting.Text" xml:space="preserve">
+    <value>路由分流</value>
+  </data>
+  <data name="Settings_CatItemDns.Text" xml:space="preserve">
+    <value>DNS 与解析</value>
+  </data>
+  <data name="Settings_CatItemTailscale.Text" xml:space="preserve">
+    <value>Tailscale 组网</value>
+  </data>
+  <data name="Settings_CatItemAutostart.Text" xml:space="preserve">
+    <value>开机与启动</value>
+  </data>
+  <data name="Settings_CatItemBackup.Text" xml:space="preserve">
+    <value>备份与恢复</value>
+  </data>
+  <data name="Settings_CatItemAbout.Text" xml:space="preserve">
+    <value>关于与内核</value>
+  </data>
+  <data name="Settings_DetailTitle.Text" xml:space="preserve">
+    <value>个性化外观</value>
+  </data>
+  <data name="Settings_DetailSubtitle.Text" xml:space="preserve">
+    <value>自定义主题风格、界面语言、背景材质与显示细节</value>
+  </data>
+  <data name="Settings_AppearanceSectionHeader.Text" xml:space="preserve">
+    <value>语言、外观模式与背景材质</value>
+  </data>
+  <data name="Settings_LanguageTitle.Text" xml:space="preserve">
+    <value>界面显示语言</value>
+  </data>
+  <data name="Settings_LanguageDesc.Text" xml:space="preserve">
+    <value>切换客户端显示语言（简体中文 / English），重启应用后全局生效</value>
+  </data>
+  <data name="Settings_LanguageRestartBar.Title" xml:space="preserve">
+    <value>语言设置已保存</value>
+  </data>
+  <data name="Settings_LanguageRestartBar.Message" xml:space="preserve">
+    <value>重启客户端后即可切换至新语言（若代理正在运行将自动重连）。</value>
+  </data>
+  <data name="Settings_LanguageRestartBtn.Content" xml:space="preserve">
+    <value>立即重启</value>
+  </data>
+  <data name="Settings_ThemeTitle.Text" xml:space="preserve">
+    <value>全局色彩主题</value>
+  </data>
+  <data name="Settings_ThemeDesc.Text" xml:space="preserve">
+    <value>切换客户端的明暗显示状态</value>
+  </data>
+  <data name="Settings_ThemeLight.Content" xml:space="preserve">
+    <value>浅色</value>
+  </data>
+  <data name="Settings_ThemeDark.Content" xml:space="preserve">
+    <value>深色</value>
+  </data>
+  <data name="Settings_ThemeSystem.Content" xml:space="preserve">
+    <value>跟随系统</value>
+  </data>
+  <data name="Settings_BackdropTitle.Text" xml:space="preserve">
+    <value>窗口材质背景</value>
+  </data>
+  <data name="Settings_BackdropDesc.Text" xml:space="preserve">
+    <value>切换客户端窗口的背景毛玻璃样式效果</value>
+  </data>
+  <data name="Settings_BackdropMica.Content" xml:space="preserve">
+    <value>Mica (原生云母)</value>
+  </data>
+  <data name="Settings_BackdropAcrylic.Content" xml:space="preserve">
+    <value>Acrylic (经典亚克力)</value>
+  </data>
+  <data name="Settings_ClassicDashTitle.Text" xml:space="preserve">
+    <value>启用经典控制台首页</value>
+  </data>
+  <data name="Settings_ClassicDashDesc.Text" xml:space="preserve">
+    <value>显示或隐藏左侧边栏的「仪表盘」选项（服务器页面已包含大多数控制台内容）</value>
+  </data>
+  <data name="Settings_PrivacyTitle.Text" xml:space="preserve">
+    <value>全局隐私保护模式</value>
+  </data>
+  <data name="Settings_PrivacyDesc.Text" xml:space="preserve">
+    <value>开启后每次启动应用都需要输入密码，以防止他人查看您的节点和配置</value>
+  </data>
+  <data name="Settings_PluginsTitle.Text" xml:space="preserve">
+    <value>启用插件系统</value>
+  </data>
+  <data name="Settings_PluginsDesc.Text" xml:space="preserve">
+    <value>开启后侧边栏将显示「插件」入口，支持加载 JavaScript 插件扩展客户端功能。关闭后插件不会被加载，与未安装插件系统完全一致</value>
+  </data>
+  <data name="Settings_TsHeader.Text" xml:space="preserve">
+    <value>Tailscale 私有组网</value>
+  </data>
+  <data name="Settings_TsEnableTitle.Text" xml:space="preserve">
+    <value>启用 Tailscale Endpoint</value>
+  </data>
+  <data name="Settings_TsEnableDesc.Text" xml:space="preserve">
+    <value>将 sing-box 作为 Tailscale 节点加入私有网络（tailnet），需要 sing-box 核心支持 Tailscale</value>
+  </data>
+  <data name="Settings_TsAuthTitle.Text" xml:space="preserve">
+    <value>授权 Key (Auth Key)</value>
+  </data>
+  <data name="Settings_TsAuthDesc.Text" xml:space="preserve">
+    <value>Tailscale 预授权 Key（tskey-auth-...），留空则启动时在日志中显示登录 URL</value>
+  </data>
+  <data name="Settings_TsHostTitle.Text" xml:space="preserve">
+    <value>节点主机名 (Hostname)</value>
+  </data>
+  <data name="Settings_TsHostDesc.Text" xml:space="preserve">
+    <value>此节点在 tailnet 中显示的名称，留空则使用系统主机名</value>
+  </data>
+  <data name="Settings_TsStateTitle.Text" xml:space="preserve">
+    <value>状态目录 (State Directory)</value>
+  </data>
+  <data name="Settings_TsStateDesc.Text" xml:space="preserve">
+    <value>保存 Tailscale 认证状态的文件夹，重启后保持登录。留空则使用默认位置</value>
+  </data>
+  <data name="Settings_TsStateInput.PlaceholderText" xml:space="preserve">
+    <value>留空使用默认</value>
+  </data>
+  <data name="Settings_TsStateBrowse.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选择文件夹</value>
+  </data>
+  <data name="Settings_TsCtrlTitle.Text" xml:space="preserve">
+    <value>协调服务器 (Control URL)</value>
+  </data>
+  <data name="Settings_TsCtrlDesc.Text" xml:space="preserve">
+    <value>留空使用官方 Tailscale，或填入 Headscale 自建服务器地址</value>
+  </data>
+  <data name="Settings_TsCtrlInput.PlaceholderText" xml:space="preserve">
+    <value>留空 = 官方 Tailscale</value>
+  </data>
+  <data name="Settings_TsCtrlOfficialBtn.Content" xml:space="preserve">
+    <value>官方</value>
+  </data>
+  <data name="Settings_TsCtrlClearBtn.Content" xml:space="preserve">
+    <value>清空</value>
+  </data>
+  <data name="Settings_TsEphTitle.Text" xml:space="preserve">
+    <value>临时节点模式 (Ephemeral)</value>
+  </data>
+  <data name="Settings_TsEphDesc.Text" xml:space="preserve">
+    <value>断开后节点自动从 tailnet 中移除，适合临时或自动化部署场景</value>
+  </data>
+  <data name="Settings_TsAccRoutesTitle.Text" xml:space="preserve">
+    <value>接受其他节点路由 (Accept Routes)</value>
+  </data>
+  <data name="Settings_TsAccRoutesDesc.Text" xml:space="preserve">
+    <value>允许接收 tailnet 中其他节点通告的子网路由</value>
+  </data>
+  <data name="Settings_TsAdvRoutesTitle.Text" xml:space="preserve">
+    <value>通告本地网段 (Advertise Routes)</value>
+  </data>
+  <data name="Settings_TsAdvRoutesDesc.Text" xml:space="preserve">
+    <value>向 tailnet 共享本机所在网段，多个 CIDR 用逗号分隔，如 192.168.1.0/24</value>
+  </data>
+  <data name="Settings_TsExitTitle.Text" xml:space="preserve">
+    <value>指定出口节点 (Exit Node)</value>
+  </data>
+  <data name="Settings_TsExitDesc.Text" xml:space="preserve">
+    <value>将全部出站流量通过指定的 tailnet 节点转发，填入对端节点 IP 或名称</value>
+  </data>
+  <data name="Settings_TsExitInput.PlaceholderText" xml:space="preserve">
+    <value>100.x.x.x 或留空</value>
+  </data>
+  <data name="Settings_TsAdvExitTitle.Text" xml:space="preserve">
+    <value>通告为出口节点 (Advertise Exit Node)</value>
+  </data>
+  <data name="Settings_TsAdvExitDesc.Text" xml:space="preserve">
+    <value>将本机对外通告为 Exit Node，允许其他 tailnet 节点将流量经由本机出站</value>
+  </data>
+  <data name="Settings_TsNotesTitle.Text" xml:space="preserve">
+    <value>使用须知</value>
+  </data>
+  <data name="Settings_TsNote1.Text" xml:space="preserve">
+    <value>• 首次启用且未填 Auth Key 时，请在日志页查看登录 URL 并用浏览器完成授权</value>
+  </data>
+  <data name="Settings_TsNote2.Text" xml:space="preserve">
+    <value>• 已存在状态文件时，Auth Key 字段会被忽略，直接复用已认证状态</value>
+  </data>
+  <data name="Settings_TsNote3.Text" xml:space="preserve">
+    <value>• sing-box 核心需支持 Tailscale（实验性功能，需 sing-box 1.12.0+）</value>
+  </data>
+  <data name="Settings_RoutingHeader.Text" xml:space="preserve">
+    <value>基础路由与隐私策略</value>
+  </data>
+  <data name="Settings_BypassCnTitle.Text" xml:space="preserve">
+    <value>绕过中国大陆 (Bypass mainland China)</value>
+  </data>
+  <data name="Settings_BypassCnDesc.Text" xml:space="preserve">
+    <value>对所有目标属于中国的 IP 或国内常见域名自动采用直连直达，不经过代理</value>
+  </data>
+  <data name="Settings_UpdateGeoBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>更新 Geo 路由数据文件 (geosite-cn.srs, geoip-cn.srs)</value>
+  </data>
+  <data name="Settings_BlockAdsTitle.Text" xml:space="preserve">
+    <value>全局广告与隐私追踪拦截 (Block ads &amp; trackers)</value>
+  </data>
+  <data name="Settings_BlockAdsDesc.Text" xml:space="preserve">
+    <value>过滤并拦截来自内置规则源中的广告分发网站，保护隐私并节省带宽</value>
+  </data>
+  <data name="Settings_AdvRoutingTitle.Text" xml:space="preserve">
+    <value>启用高级分流模块 (Enable advanced routing module)</value>
+  </data>
+  <data name="Settings_AdvRoutingDesc.Text" xml:space="preserve">
+    <value>开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则</value>
+  </data>
+  <data name="Settings_DnsHeader.Text" xml:space="preserve">
+    <value>DNS 解析器配置</value>
+  </data>
+  <data name="Settings_DirectDnsTitle.Text" xml:space="preserve">
+    <value>直连 DNS (Direct)</value>
+  </data>
+  <data name="Settings_DirectDnsDesc.Text" xml:space="preserve">
+    <value>用于国内域名及直连出站的解析</value>
+  </data>
+  <data name="Settings_DirectDnsInput.PlaceholderText" xml:space="preserve">
+    <value>留空自动 (如 223.5.5.5)</value>
+  </data>
+  <data name="Settings_DirectDnsAliBtn.Content" xml:space="preserve">
+    <value>阿里</value>
+  </data>
+  <data name="Settings_DirectDnsTencentBtn.Content" xml:space="preserve">
+    <value>腾讯</value>
+  </data>
+  <data name="Settings_ProxyDnsTitle.Text" xml:space="preserve">
+    <value>代理 DNS (Proxy)</value>
+  </data>
+  <data name="Settings_ProxyDnsDesc.Text" xml:space="preserve">
+    <value>用于境外的域名解析，需通过代理出站以防止 DNS 污染</value>
+  </data>
+  <data name="Settings_ProxyDnsInput.PlaceholderText" xml:space="preserve">
+    <value>如 https://1.1.1.1/dns-query</value>
+  </data>
+  <data name="Settings_ProxyDnsGoogleBtn.Content" xml:space="preserve">
+    <value>谷歌</value>
+  </data>
+  <data name="Settings_DnsStratTitle.Text" xml:space="preserve">
+    <value>查询策略</value>
+  </data>
+  <data name="Settings_DnsStratDesc.Text" xml:space="preserve">
+    <value>决定 DNS 解析时 IP 版本的偏好</value>
+  </data>
+  <data name="Settings_DnsStratIpv4Only.Content" xml:space="preserve">
+    <value>仅 IPv4</value>
+  </data>
+  <data name="Settings_DnsStratPreferIpv4.Content" xml:space="preserve">
+    <value>优先 IPv4</value>
+  </data>
+  <data name="Settings_DnsStratPreferIpv6.Content" xml:space="preserve">
+    <value>优先 IPv6</value>
+  </data>
+  <data name="Settings_DnsStratIpv6Only.Content" xml:space="preserve">
+    <value>仅 IPv6</value>
+  </data>
+  <data name="Settings_DnsCacheTitle.Text" xml:space="preserve">
+    <value>启用 DNS 缓存</value>
+  </data>
+  <data name="Settings_DnsCacheDesc.Text" xml:space="preserve">
+    <value>大幅提升二次解析速度，降低延迟</value>
+  </data>
+  <data name="Settings_FakeDnsBadge.Text" xml:space="preserve">
+    <value>实验性</value>
+  </data>
+  <data name="Settings_FakeDnsDesc.Text" xml:space="preserve">
+    <value>接管虚拟网卡 DNS，返回 198.18.x.x 假 IP 并拦截真实请求实现秒开</value>
+  </data>
+  <data name="Settings_BlockIpv6Title.Text" xml:space="preserve">
+    <value>拦截 IPv6 DNS 泄露 (Prevent IPv6 leak)</value>
+  </data>
+  <data name="Settings_BlockIpv6Desc.Text" xml:space="preserve">
+    <value>在开启 TUN 模式时屏蔽 AAAA 查询，防止代理环境下的 IPV6 地理信息泄露</value>
+  </data>
+  <data name="Settings_AllowIpv6Title.Text" xml:space="preserve">
+    <value>允许 IPv6 DNS 解析 (Allow IPv6 DNS)</value>
+  </data>
+  <data name="Settings_AllowIpv6Desc.Text" xml:space="preserve">
+    <value>开启后 TUN 模式不再拦截 AAAA 查询，可解决纯 IPv6 域名解析返回空结果的问题（默认关闭）</value>
+  </data>
+  <data name="Settings_FlushDnsTitle.Text" xml:space="preserve">
+    <value>静默刷新系统 DNS (Flush DNS cache)</value>
+  </data>
+  <data name="Settings_FlushDnsDesc.Text" xml:space="preserve">
+    <value>切换节点或开启代理时，调用 Windows 原生 API 瞬间清除本地 DNS 缓存，防止网络不通</value>
+  </data>
+  <data name="Settings_ColorsHeader.Text" xml:space="preserve">
+    <value>节点协议标识</value>
+  </data>
+  <data name="Settings_ColorsDesc.Text" xml:space="preserve">
+    <value>自定义各节点协议在卡片和列表中的颜色标签</value>
+  </data>
+  <data name="Settings_ColorsResetText.Text" xml:space="preserve">
+    <value>重置颜色</value>
+  </data>
+  <data name="Settings_ColorsFallback.Text" xml:space="preserve">
+    <value>其他 / 未匹配协议</value>
+  </data>
+  <data name="Settings_AutostartHeader.Text" xml:space="preserve">
+    <value>系统启动行为</value>
+  </data>
+  <data name="Settings_AutostartTitle.Text" xml:space="preserve">
+    <value>Windows 开机自启动</value>
+  </data>
+  <data name="Settings_AutostartDesc.Text" xml:space="preserve">
+    <value>开启后，客户端将在系统登入时自动静默在托盘运行</value>
+  </data>
+  <data name="Settings_PortHeader.Text" xml:space="preserve">
+    <value>本地代理端口</value>
+  </data>
+  <data name="Settings_MixedPortTitle.Text" xml:space="preserve">
+    <value>混合代理端口 (SOCKS5 &amp; HTTP)</value>
+  </data>
+  <data name="Settings_MixedPortDesc.Text" xml:space="preserve">
+    <value>sing-box 在本机监听的混合代理端口，SOCKS5 和 HTTP 共用同一端口。修改后将自动重启代理内核生效（范围 1024–65535）</value>
+  </data>
+  <data name="Settings_AllowLanTitle.Text" xml:space="preserve">
+    <value>允许局域网设备连接</value>
+  </data>
+  <data name="Settings_AllowLanDesc.Text" xml:space="preserve">
+    <value>开启后，同一局域网内的设备可使用下方地址作为 HTTP/SOCKS5 代理。若无法连接，请检查 Windows 防火墙是否允许访问。</value>
+  </data>
+  <data name="Settings_BackupHeader.Text" xml:space="preserve">
+    <value>配置导出与导入</value>
+  </data>
+  <data name="Settings_ExportTitle.Text" xml:space="preserve">
+    <value>导出配置文件备份</value>
+  </data>
+  <data name="Settings_ExportDesc.Text" xml:space="preserve">
+    <value>将所有的本地自建节点、订阅链接以及色彩标识导出为备份 .zip 归档</value>
+  </data>
+  <data name="Settings_ExportBtn.Content" xml:space="preserve">
+    <value>导出备份</value>
+  </data>
+  <data name="Settings_ImportTitle.Text" xml:space="preserve">
+    <value>导入配置文件恢复</value>
+  </data>
+  <data name="Settings_ImportDesc.Text" xml:space="preserve">
+    <value>⚠️ 此操作将完全覆盖当前所有的节点和参数，建议先做备份</value>
+  </data>
+  <data name="Settings_ImportBtn.Content" xml:space="preserve">
+    <value>导入恢复</value>
+  </data>
+  <data name="Settings_AboutEditionText.Text" xml:space="preserve">
+    <value>(自适应 Fluent 原生版)</value>
+  </data>
+  <data name="Settings_CoreSectionHeader.Text" xml:space="preserve">
+    <value>内核与引导管理</value>
+  </data>
+  <data name="Settings_UpdateInfoBar.Title" xml:space="preserve">
+    <value>发现新版本</value>
+  </data>
+  <data name="Settings_CoreTitle.Text" xml:space="preserve">
+    <value>Sing-box Core 运行核心</value>
+  </data>
+  <data name="Settings_SingboxVerLoading.Text" xml:space="preserve">
+    <value>加载中...</value>
+  </data>
+  <data name="Settings_RestoreCoreBtn.Content" xml:space="preserve">
+    <value>恢复默认核心</value>
+  </data>
+  <data name="Settings_RestoreCoreBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>恢复为客户端自带的原版 sing-box 核心</value>
+  </data>
+  <data name="Settings_ReplaceCoreBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>手动替换本地核心文件（支持 sing-box 1.13 / 1.14 / 1.15+）</value>
+  </data>
+  <data name="Settings_CheckCoreBtn.Content" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+  <data name="Settings_AppUpdateTitle.Text" xml:space="preserve">
+    <value>客户端自动更新</value>
+  </data>
+  <data name="Settings_AppUpdateDesc.Text" xml:space="preserve">
+    <value>检查是否有新版客户端发布</value>
+  </data>
+  <data name="Settings_CheckAppBtn.Content" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+  <data name="Settings_ResetOnboardTitle.Text" xml:space="preserve">
+    <value>重置新手引导</value>
+  </data>
+  <data name="Settings_ResetOnboardDesc.Text" xml:space="preserve">
+    <value>清除已完成标记，下次启动应用时将再次显示新手引导</value>
+  </data>
+  <data name="Settings_ResetOnboardBtn.Content" xml:space="preserve">
+    <value>重置引导</value>
+  </data>
+  <data name="Settings_CoreVer115Fmt" xml:space="preserve">
+    <value>当前版本: {0}（已启用 1.15 原生 TUN 协议栈适配）</value>
+  </data>
+  <data name="Settings_CoreVerFmt" xml:space="preserve">
+    <value>当前版本: {0}</value>
+  </data>
+  <data name="Settings_TunStackDesc115" xml:space="preserve">
+    <value>检测到 sing-box 1.15+ 内核：已自动切换为全新内置高性能 TCP/IP 栈（无需配置 stack）</value>
+  </data>
+  <data name="Settings_TunStackDescDefault" xml:space="preserve">
+    <value>选择 TUN 入站使用的网络栈，mixed 为推荐默认值（sing-box 1.15+ 自动启用全新内置协议栈）</value>
+  </data>
+  <data name="Settings_VmCoreVerFmt" xml:space="preserve">
+    <value>当前核心版本: {0}</value>
+  </data>
+  <data name="Settings_VmAppVerFmt" xml:space="preserve">
+    <value>版本 v{0}.{1}.{2}</value>
+  </data>
+  <data name="Settings_LanIpFallback" xml:space="preserve">
+    <value>本机局域网 IP</value>
+  </data>
+  <data name="Settings_ExportingBtn" xml:space="preserve">
+    <value>导出中...</value>
+  </data>
+  <data name="Settings_ExportBtnText" xml:space="preserve">
+    <value>导出备份</value>
+  </data>
+  <data name="Settings_ExportSuccessTitle" xml:space="preserve">
+    <value>备份成功</value>
+  </data>
+  <data name="Settings_ExportSuccessFmt" xml:space="preserve">
+    <value>备份文件已成功保存至：
+{0}</value>
+  </data>
+  <data name="Settings_ExportFailTitle" xml:space="preserve">
+    <value>备份失败</value>
+  </data>
+  <data name="Settings_ImportConfirmTitle" xml:space="preserve">
+    <value>确认导入备份？</value>
+  </data>
+  <data name="Settings_ImportConfirmMsg" xml:space="preserve">
+    <value>导入备份将彻底覆盖您当前的全部节点、订阅和个性化设置。此操作不可逆。
+
+是否继续？</value>
+  </data>
+  <data name="Settings_ImportConfirmPrimary" xml:space="preserve">
+    <value>确认导入</value>
+  </data>
+  <data name="Settings_BackupFilterName" xml:space="preserve">
+    <value>Swell Proxy 备份</value>
+  </data>
+  <data name="Settings_SelectBackupTitle" xml:space="preserve">
+    <value>选择备份文件</value>
+  </data>
+  <data name="Settings_ImportingBtn" xml:space="preserve">
+    <value>导入中...</value>
+  </data>
+  <data name="Settings_ImportBtnText" xml:space="preserve">
+    <value>导入恢复</value>
+  </data>
+  <data name="Settings_ImportSuccessTitle" xml:space="preserve">
+    <value>恢复成功</value>
+  </data>
+  <data name="Settings_ImportSuccessMsg" xml:space="preserve">
+    <value>备份已成功导入！所有节点与设置已恢复至当前界面。</value>
+  </data>
+  <data name="Settings_ImportFailTitle" xml:space="preserve">
+    <value>恢复失败</value>
+  </data>
+  <data name="Settings_CheckingBtn" xml:space="preserve">
+    <value>正在检查...</value>
+  </data>
+  <data name="Settings_CheckUpdateBtnText" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+  <data name="Settings_CoreCheckTitle" xml:space="preserve">
+    <value>内核检查更新</value>
+  </data>
+  <data name="Settings_CoreUpToDateFmt" xml:space="preserve">
+    <value>当前已是最新版本或网络无法访问。
+本地版本: {0}</value>
+  </data>
+  <data name="Settings_CoreStopWarning" xml:space="preserve">
+    <value>
+
+⚠️ 当前代理将暂时停止，更新后请手动重新连接。</value>
+  </data>
+  <data name="Settings_NewVerTitle" xml:space="preserve">
+    <value>发现新版本</value>
+  </data>
+  <data name="Settings_CoreConfirmUpdateFmt" xml:space="preserve">
+    <value>是否将内核更新至 {0}？{1}</value>
+  </data>
+  <data name="Settings_ConfirmUpdateBtn" xml:space="preserve">
+    <value>确认更新</value>
+  </data>
+  <data name="Settings_PreparingDownload" xml:space="preserve">
+    <value>准备下载...</value>
+  </data>
+  <data name="Settings_UpdatingCoreTitle" xml:space="preserve">
+    <value>正在更新内核</value>
+  </data>
+  <data name="Settings_CoreReconnectNote" xml:space="preserve">
+    <value>
+
+代理已停止，请返回主界面重新连接。</value>
+  </data>
+  <data name="Settings_UpdateDoneTitle" xml:space="preserve">
+    <value>更新完成</value>
+  </data>
+  <data name="Settings_UpdateDoneFmt" xml:space="preserve">
+    <value>已成功更新至 {0}。{1}</value>
+  </data>
+  <data name="Settings_UpdateFailTitle" xml:space="preserve">
+    <value>更新失败</value>
+  </data>
+  <data name="Settings_CheckFailTitle" xml:space="preserve">
+    <value>检查更新失败</value>
+  </data>
+  <data name="Settings_CheckFailFmt" xml:space="preserve">
+    <value>错误信息: {0}</value>
+  </data>
+  <data name="Settings_AppCheckTitle" xml:space="preserve">
+    <value>客户端检查更新</value>
+  </data>
+  <data name="Settings_AppUpToDateMsg" xml:space="preserve">
+    <value>当前客户端已是最新版本或网络无法访问。</value>
+  </data>
+  <data name="Settings_AppConfirmUpdateFmt" xml:space="preserve">
+    <value>是否将客户端更新至 {0}？
+这将会下载最新版本并自动重启应用。</value>
+  </data>
+  <data name="Settings_UpdatingAppTitle" xml:space="preserve">
+    <value>正在更新客户端</value>
+  </data>
+  <data name="Settings_AppReadyTitle" xml:space="preserve">
+    <value>更新准备就绪</value>
+  </data>
+  <data name="Settings_AppReadyFmt" xml:space="preserve">
+    <value>新版本 {0} 下载并校验成功！
+
+点击「立即重启」后，当前应用将关闭并完成更新覆盖。</value>
+  </data>
+  <data name="Settings_RestartNowBtn" xml:space="preserve">
+    <value>立即重启</value>
+  </data>
+  <data name="Settings_ExeFilterName" xml:space="preserve">
+    <value>可执行文件</value>
+  </data>
+  <data name="Settings_SelectCoreTitle" xml:space="preserve">
+    <value>选择 sing-box 核心文件</value>
+  </data>
+  <data name="Settings_InvalidCoreTitle" xml:space="preserve">
+    <value>无效的核心文件</value>
+  </data>
+  <data name="Settings_InvalidCoreFmt" xml:space="preserve">
+    <value>所选文件无法通过 sing-box 版本校验（{0}），已取消替换以保护现有核心。
+
+请选择有效的 sing-box.exe（支持 1.13 / 1.14 / 1.15+）。</value>
+  </data>
+  <data name="Settings_CoreReplace115Note" xml:space="preserve">
+    <value>
+• 已自动启用 sing-box 1.15 原生 TUN 协议栈与新规范配置适配</value>
+  </data>
+  <data name="Settings_CoreReplaceOkTitle" xml:space="preserve">
+    <value>内核替换成功</value>
+  </data>
+  <data name="Settings_CoreReplaceOkFmt" xml:space="preserve">
+    <value>已成功切换内核为：{0}
+文件：{1}{2}
+
+请返回主界面重新连接代理以应用新内核。</value>
+  </data>
+  <data name="Settings_CoreReplaceFailTitle" xml:space="preserve">
+    <value>内核替换失败</value>
+  </data>
+  <data name="Settings_CoreReplaceFailFmt" xml:space="preserve">
+    <value>覆盖内核文件时发生错误（可能文件被系统锁定占用）：
+{0}</value>
+  </data>
+  <data name="Settings_CoreRestoredTitle" xml:space="preserve">
+    <value>已恢复默认核心</value>
+  </data>
+  <data name="Settings_CoreRestoredFmt" xml:space="preserve">
+    <value>已成功恢复为原版核心（{0}）。{1}</value>
+  </data>
+  <data name="Settings_CoreRestoredReconnect" xml:space="preserve">
+    <value>
+
+请返回主界面重新连接代理。</value>
+  </data>
+  <data name="Settings_CoreRestoreFailTitle" xml:space="preserve">
+    <value>恢复核心失败</value>
+  </data>
+  <data name="Settings_ResetOnboardOkTitle" xml:space="preserve">
+    <value>重置成功</value>
+  </data>
+  <data name="Settings_ResetOnboardOkMsg" xml:space="preserve">
+    <value>新手引导已重置并唤起！</value>
+  </data>
+  <data name="Settings_ErrorTitle" xml:space="preserve">
+    <value>发生错误</value>
+  </data>
+  <data name="Settings_GeoOkTitle" xml:space="preserve">
+    <value>Geo 更新成功</value>
+  </data>
+  <data name="Settings_GeoOkMsg" xml:space="preserve">
+    <value>最新路由数据 (geosite-cn.srs, geoip-cn.srs, geosite-category-ads-all.srs) 已经更新完成！
+若目前正在连接状态，请在仪表盘重新连接代理以使最新规则生效。</value>
+  </data>
+  <data name="Settings_GeoFailTitle" xml:space="preserve">
+    <value>Geo 更新失败</value>
+  </data>
+  <data name="Settings_GeoFailPrefix" xml:space="preserve">
+    <value>下载数据时发生错误 (请检查网络): 
+</value>
+  </data>
+  <data name="Settings_GeoNoProxy" xml:space="preserve">
+    <value>未使用本地代理</value>
+  </data>
+  <data name="Settings_GeoWithProxyFmt" xml:space="preserve">
+    <value>使用本地代理 {0}</value>
+  </data>
+  <data name="Settings_GeoDownloadErrFmt" xml:space="preserve">
+    <value>下载 {0} 失败。
+URL: {1}
+{2}
+原因: {3}</value>
+  </data>
+  <data name="Update_BannerFmt" xml:space="preserve">
+    <value>🎉 发现新版客户端 {0}！点击下方的「检查更新」按钮即可获取最新功能与修复体验。</value>
+  </data>
+  <data name="Update_FetchingChecksum" xml:space="preserve">
+    <value>正在获取校验文件…</value>
+  </data>
+  <data name="Update_InvalidChecksumFmt" xml:space="preserve">
+    <value>更新校验文件格式异常</value>
+  </data>
+  <data name="Update_DownloadChecksumErr" xml:space="preserve">
+    <value>无法下载更新校验文件：</value>
+  </data>
+  <data name="Update_HashMismatch" xml:space="preserve">
+    <value>更新包校验失败：SHA256 与服务器公布的不一致。</value>
+  </data>
+  <data name="Update_Extracting" xml:space="preserve">
+    <value>正在解压更新包…</value>
+  </data>
+  <data name="Update_ExtractErr" xml:space="preserve">
+    <value>更新包解压失败：</value>
+  </data>
+  <data name="Update_Verifying" xml:space="preserve">
+    <value>正在验证更新包…</value>
+  </data>
+  <data name="Update_MissingFiles" xml:space="preserve">
+    <value>更新包内容异常：缺少必要文件。</value>
+  </data>
+  <data name="Update_MissingUpdater" xml:space="preserve">
+    <value>缺少升级辅助组件，请重新下载完整安装包。</value>
+  </data>
+  <data name="Update_PreparingRestart" xml:space="preserve">
+    <value>正在准备重启…</value>
+  </data>
+  <data name="Update_DownloadingWithTotalFmt" xml:space="preserve">
+    <value>正在下载 {0} … {1:0.0} / {2:0.0} MB</value>
+  </data>
+  <data name="Update_DownloadingNoTotalFmt" xml:space="preserve">
+    <value>正在下载 {0} … {1:0.0} MB</value>
+  </data>
+  <data name="Core_NoChecksumSkip" xml:space="preserve">
+    <value>无可用校验文件，跳过安全哈希验证步骤…</value>
+  </data>
+  <data name="Core_PreparingEnv" xml:space="preserve">
+    <value>正在准备环境…</value>
+  </data>
+  <data name="Core_InstallingFmt" xml:space="preserve">
+    <value>正在安装 {0}…</value>
+  </data>
+  <data name="Core_MissingTargetFmt" xml:space="preserve">
+    <value>更新包内未找到 {0}</value>
+  </data>
+  <data name="Core_UpdatedStatusFmt" xml:space="preserve">
+    <value>更新完成！当前版本：{0}</value>
+  </data>
+  <data name="Core_NotInstalled" xml:space="preserve">
+    <value>未安装</value>
+  </data>
+  <data name="Core_CannotExec" xml:space="preserve">
+    <value>无法执行</value>
+  </data>
+  <data name="Core_InvalidBinary" xml:space="preserve">
+    <value>非有效 sing-box 核心</value>
+  </data>
+  <data name="Core_InstalledUnknownVer" xml:space="preserve">
+    <value>已安装 (无法读取版本)</value>
+  </data>
+  <data name="FilePicker_AllFiles" xml:space="preserve">
+    <value>所有文件</value>
+  </data>
+  <data name="Routing_Title.Text" xml:space="preserve">
+    <value>分流规则</value>
+  </data>
+  <data name="Routing_Subtitle.Text" xml:space="preserve">
+    <value>配置智能分流拦截规则，支持应用规则、自定义规则与顺序匹配</value>
+  </data>
+  <data name="Routing_GroupTitle.Text" xml:space="preserve">
+    <value>策略组配置</value>
+  </data>
+  <data name="Routing_ResetBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>恢复默认规则和默认顺序</value>
+  </data>
+  <data name="Routing_CustomRulesBtn.Content" xml:space="preserve">
+    <value>配置自定义规则</value>
+  </data>
+  <data name="CustomRules_Dialog.Title" xml:space="preserve">
+    <value>自定义路由规则</value>
+  </data>
+  <data name="CustomRules_Dialog.PrimaryButtonText" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="CustomRules_Dialog.CloseButtonText" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="CustomRules_NonSmartBanner.Title" xml:space="preserve">
+    <value>当前模式下规则不生效</value>
+  </data>
+  <data name="CustomRules_NonSmartBanner.Message" xml:space="preserve">
+    <value>您处于全局/直连模式，切回智能分流后规则自动生效。</value>
+  </data>
+  <data name="CustomRules_FromTemplateText.Text" xml:space="preserve">
+    <value>从模板添加</value>
+  </data>
+  <data name="CustomRules_AddRuleText.Text" xml:space="preserve">
+    <value>添加规则</value>
+  </data>
+  <data name="CustomRules_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索备注、匹配内容、类型或出站</value>
+  </data>
+  <data name="CustomRules_EmptyTitle.Text" xml:space="preserve">
+    <value>还没有自定义规则</value>
+  </data>
+  <data name="CustomRules_EmptyHint.Text" xml:space="preserve">
+    <value>点击「添加规则」开始配置</value>
+  </data>
+  <data name="CustomRules_FooterTip.Text" xml:space="preserve">
+    <value>提示：规则按列表顺序匹配，可拖拽排序。自定义规则在内置应用规则之后、Geo 绕行规则之前生效。</value>
+  </data>
+  <data name="CustomRules_TplBackBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>返回列表</value>
+  </data>
+  <data name="CustomRules_TplHeader.Text" xml:space="preserve">
+    <value>从模板添加</value>
+  </data>
+  <data name="CustomRules_TplSelectLabel.Text" xml:space="preserve">
+    <value>规则模板</value>
+  </data>
+  <data name="CustomRules_TplOutboundLabel.Text" xml:space="preserve">
+    <value>出站方式</value>
+  </data>
+  <data name="CustomRules_TplEnableSwitch.Header" xml:space="preserve">
+    <value>添加后立即启用</value>
+  </data>
+  <data name="CustomRules_TplCancelBtn.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="CustomRules_TplConfirmBtn.Content" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="CustomRules_FormBackBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>返回列表</value>
+  </data>
+  <data name="CustomRules_FormRemarkLabel.Text" xml:space="preserve">
+    <value>备注</value>
+  </data>
+  <data name="CustomRules_FormRemarkBox.PlaceholderText" xml:space="preserve">
+    <value>例如：Microsoft、公司内网、游戏平台</value>
+  </data>
+  <data name="CustomRules_FormTypeLabel.Text" xml:space="preserve">
+    <value>规则类型</value>
+  </data>
+  <data name="CustomRules_TypeDomain.Content" xml:space="preserve">
+    <value>域名 (Domain)</value>
+  </data>
+  <data name="CustomRules_TypeIp.Content" xml:space="preserve">
+    <value>IP / CIDR</value>
+  </data>
+  <data name="CustomRules_TypeProcess.Content" xml:space="preserve">
+    <value>进程 (Process)</value>
+  </data>
+  <data name="CustomRules_TypeMixed.Content" xml:space="preserve">
+    <value>混合 (Mixed)</value>
+  </data>
+  <data name="CustomRules_FormMatchLabel.Text" xml:space="preserve">
+    <value>匹配内容</value>
+  </data>
+  <data name="CustomRules_BrowseExeText.Text" xml:space="preserve">
+    <value>浏览 exe...</value>
+  </data>
+  <data name="CustomRules_BrowseByName.Content" xml:space="preserve">
+    <value>匹配同名进程</value>
+  </data>
+  <data name="CustomRules_BrowseByPath.Content" xml:space="preserve">
+    <value>匹配完整路径</value>
+  </data>
+  <data name="CustomRules_FormOutboundLabel.Text" xml:space="preserve">
+    <value>出站方式</value>
+  </data>
+  <data name="CustomRules_FormCancelBtn.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="CustomRules_FormConfirmBtn.Content" xml:space="preserve">
+    <value>确认</value>
+  </data>
+  <data name="AddRule_Dialog.Title" xml:space="preserve">
+    <value>添加规则</value>
+  </data>
+  <data name="AddRule_Dialog.PrimaryButtonText" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="AddRule_Dialog.CloseButtonText" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="AddRule_TypeLabel.Text" xml:space="preserve">
+    <value>规则类型</value>
+  </data>
+  <data name="AddRule_TypeDomain.Content" xml:space="preserve">
+    <value>域名</value>
+  </data>
+  <data name="AddRule_TypeIp.Content" xml:space="preserve">
+    <value>IP / CIDR</value>
+  </data>
+  <data name="AddRule_TypeProcess.Content" xml:space="preserve">
+    <value>进程</value>
+  </data>
+  <data name="AddRule_TypeMixed.Content" xml:space="preserve">
+    <value>混合</value>
+  </data>
+  <data name="AddRule_MatchLabel.Text" xml:space="preserve">
+    <value>匹配内容</value>
+  </data>
+  <data name="AddRule_BrowseExeText.Text" xml:space="preserve">
+    <value>浏览 exe...</value>
+  </data>
+  <data name="AddRule_BrowseByName.Content" xml:space="preserve">
+    <value>进程名</value>
+  </data>
+  <data name="AddRule_BrowseByPath.Content" xml:space="preserve">
+    <value>完整路径</value>
+  </data>
+  <data name="AddRule_OutboundLabel.Text" xml:space="preserve">
+    <value>出站方式</value>
+  </data>
+  <data name="Routing_RuleCountFmt" xml:space="preserve">
+    <value>共 {0} 条规则，按列表顺序匹配</value>
+  </data>
+  <data name="Routing_EditRuleTooltip" xml:space="preserve">
+    <value>编辑匹配规则</value>
+  </data>
+  <data name="Routing_DelRuleTooltip" xml:space="preserve">
+    <value>删除规则</value>
+  </data>
+  <data name="Routing_ResetTitle" xml:space="preserve">
+    <value>恢复默认规则</value>
+  </data>
+  <data name="Routing_ResetMsg" xml:space="preserve">
+    <value>这会恢复默认应用规则和默认顺序，不影响自定义规则。</value>
+  </data>
+  <data name="Routing_ResetConfirmBtn" xml:space="preserve">
+    <value>恢复</value>
+  </data>
+  <data name="Routing_ActionProxy" xml:space="preserve">
+    <value>默认代理</value>
+  </data>
+  <data name="Routing_ActionDirect" xml:space="preserve">
+    <value>直连</value>
+  </data>
+  <data name="Routing_ActionBlock" xml:space="preserve">
+    <value>拦截</value>
+  </data>
+  <data name="Routing_ActionAuto" xml:space="preserve">
+    <value>自动优选</value>
+  </data>
+  <data name="Routing_BadgeProxy" xml:space="preserve">
+    <value>代理</value>
+  </data>
+  <data name="Routing_BadgeAuto" xml:space="preserve">
+    <value>自动</value>
+  </data>
+  <data name="Routing_TypeProcess" xml:space="preserve">
+    <value>进程</value>
+  </data>
+  <data name="Routing_TypeMixed" xml:space="preserve">
+    <value>混合</value>
+  </data>
+  <data name="Routing_TypeDomain" xml:space="preserve">
+    <value>域名</value>
+  </data>
+  <data name="Routing_BuiltInYoutubeName" xml:space="preserve">
+    <value>YouTube / 油管</value>
+  </data>
+  <data name="Routing_BuiltInYoutubeDesc" xml:space="preserve">
+    <value>YouTube 视频与媒体流量</value>
+  </data>
+  <data name="Routing_BuiltInGoogleName" xml:space="preserve">
+    <value>Google / 谷歌服务</value>
+  </data>
+  <data name="Routing_BuiltInGoogleDesc" xml:space="preserve">
+    <value>Google 搜索、API、Play 与静态资源</value>
+  </data>
+  <data name="Routing_BuiltInTelegramName" xml:space="preserve">
+    <value>Telegram / 电报</value>
+  </data>
+  <data name="Routing_BuiltInTelegramDesc" xml:space="preserve">
+    <value>Telegram 域名与专用 IP 段</value>
+  </data>
+  <data name="Routing_BuiltInNetflixName" xml:space="preserve">
+    <value>Netflix / 奈飞</value>
+  </data>
+  <data name="Routing_BuiltInNetflixDesc" xml:space="preserve">
+    <value>Netflix 流媒体域名</value>
+  </data>
+  <data name="Routing_BuiltInTiktokDesc" xml:space="preserve">
+    <value>TikTok 与字节海外服务</value>
+  </data>
+  <data name="Routing_BuiltInChatgptDesc" xml:space="preserve">
+    <value>OpenAI 与 ChatGPT 服务</value>
+  </data>
+  <data name="Routing_BuiltInClaudeDesc" xml:space="preserve">
+    <value>Claude 与 Anthropic 服务</value>
+  </data>
+  <data name="CustomRules_DefaultName" xml:space="preserve">
+    <value>自定义规则</value>
+  </data>
+  <data name="CustomRules_DefaultDesc" xml:space="preserve">
+    <value>用户自定义分流规则</value>
+  </data>
+  <data name="CustomRules_Unnamed" xml:space="preserve">
+    <value>未命名规则</value>
+  </data>
+  <data name="CustomRules_GlobalWarn" xml:space="preserve">
+    <value>您正处于全局模式，自定义规则不会写入配置。切回智能分流模式后自动生效。</value>
+  </data>
+  <data name="CustomRules_DirectWarn" xml:space="preserve">
+    <value>您正处于直连模式，自定义规则不会写入配置。切回智能分流模式后自动生效。</value>
+  </data>
+  <data name="CustomRules_NodePrefixFmt" xml:space="preserve">
+    <value>节点：{0}</value>
+  </data>
+  <data name="CustomRules_NodeFallback" xml:space="preserve">
+    <value>节点</value>
+  </data>
+  <data name="CustomRules_CountFmt" xml:space="preserve">
+    <value>共 {0} 条规则</value>
+  </data>
+  <data name="CustomRules_CountFilteredFmt" xml:space="preserve">
+    <value>共 {0} 条规则，匹配 {1} 条</value>
+  </data>
+  <data name="CustomRules_EditTooltip" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="CustomRules_DelTooltip" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="CustomRules_EditTitle" xml:space="preserve">
+    <value>编辑规则</value>
+  </data>
+  <data name="CustomRules_AddTitle" xml:space="preserve">
+    <value>添加规则</value>
+  </data>
+  <data name="CustomRules_SaveBtn" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="CustomRules_SelectTplErr" xml:space="preserve">
+    <value>请选择规则模板</value>
+  </data>
+  <data name="CustomRules_DupTplErr" xml:space="preserve">
+    <value>已存在相同模板规则，可直接编辑现有规则</value>
+  </data>
+  <data name="CustomRules_EmptyMatchErr" xml:space="preserve">
+    <value>请填写匹配内容</value>
+  </data>
+  <data name="CustomRules_InvalidIpFmt" xml:space="preserve">
+    <value>无效的 IP 地址: {0}</value>
+  </data>
+  <data name="CustomRules_InvalidCidrFmt" xml:space="preserve">
+    <value>无效的 CIDR 前缀: {0}</value>
+  </data>
+  <data name="CustomRules_Ipv4MaskErrFmt" xml:space="preserve">
+    <value>IPv4 掩码不能大于 32: {0}</value>
+  </data>
+  <data name="CustomRules_Ipv6MaskErrFmt" xml:space="preserve">
+    <value>IPv6 掩码不能大于 128: {0}</value>
+  </data>
+  <data name="CustomRules_PhDomain" xml:space="preserve">
+    <value>youtube.com 或 geosite:cn</value>
+  </data>
+  <data name="CustomRules_HintDomain" xml:space="preserve">
+    <value>支持精确匹配、regex:、domain_keyword:、domain_suffix:、geosite:、ruleset:https://.../*.srs 前缀</value>
+  </data>
+  <data name="CustomRules_PhIp" xml:space="preserve">
+    <value>192.168.0.0/16 或 geoip:cn</value>
+  </data>
+  <data name="CustomRules_HintIp" xml:space="preserve">
+    <value>支持 CIDR 格式与 geoip: 标签，多个用逗号分隔</value>
+  </data>
+  <data name="CustomRules_PhProcess" xml:space="preserve">
+    <value>chrome.exe 或完整路径</value>
+  </data>
+  <data name="CustomRules_HintProcess" xml:space="preserve">
+    <value>填写进程名或完整路径，多个用逗号分隔</value>
+  </data>
+  <data name="CustomRules_HintMixed" xml:space="preserve">
+    <value>支持 domain_suffix:、domain:、domain_keyword:、domain_regex:、geosite:、geoip:、ip_cidr:、process_name:、process_path:、ruleset:https://.../*.srs</value>
+  </data>
+  <data name="CustomRules_TplMsDesc" xml:space="preserve">
+    <value>Microsoft、Windows、Office、Azure、Visual Studio 等常用服务。</value>
+  </data>
+  <data name="CustomRules_TplAppleDesc" xml:space="preserve">
+    <value>Apple、iCloud、App Store 与系统服务。</value>
+  </data>
+  <data name="CustomRules_TplGithubDesc" xml:space="preserve">
+    <value>GitHub 网页、仓库、静态资源与 raw 内容。</value>
+  </data>
+  <data name="CustomRules_TplSteamDesc" xml:space="preserve">
+    <value>Steam 商店、社区与下载相关域名。</value>
+  </data>
+  <data name="CustomRules_TplDiscordDesc" xml:space="preserve">
+    <value>Discord 网页、邀请链接与语音/媒体服务。</value>
+  </data>
+  <data name="CustomRules_TplSpotifyDesc" xml:space="preserve">
+    <value>Spotify 登录、播放与 CDN 域名。</value>
+  </data>
+  <data name="CustomRules_TplBiliDesc" xml:space="preserve">
+    <value>哔哩哔哩网页、接口与视频 CDN。</value>
+  </data>
+  <data name="CustomRules_TplLanName" xml:space="preserve">
+    <value>局域网 / 私有网段</value>
+  </data>
+  <data name="CustomRules_TplLanDesc" xml:space="preserve">
+    <value>常见局域网、回环与 IPv6 私有/链路本地地址。</value>
+  </data>
+  <data name="Traffic_Title.Text" xml:space="preserve">
+    <value>流量与数据</value>
+  </data>
+  <data name="Traffic_Subtitle.Text" xml:space="preserve">
+    <value>实时监控当前会话及历史网络流量统计</value>
+  </data>
+  <data name="Traffic_LiveSpeedLabel.Text" xml:space="preserve">
+    <value>实时速率</value>
+  </data>
+  <data name="Traffic_CoreStatusLabel.Text" xml:space="preserve">
+    <value>核心连接状态</value>
+  </data>
+  <data name="Traffic_SessionHeader.Text" xml:space="preserve">
+    <value>当前会话（仅代理流量）</value>
+  </data>
+  <data name="Traffic_SessionUpLabel.Text" xml:space="preserve">
+    <value>上传流量</value>
+  </data>
+  <data name="Traffic_SessionDownLabel.Text" xml:space="preserve">
+    <value>下载流量</value>
+  </data>
+  <data name="Traffic_SessionTotalLabel.Text" xml:space="preserve">
+    <value>会话总量</value>
+  </data>
+  <data name="Traffic_MonthHeader.Text" xml:space="preserve">
+    <value>本月累计</value>
+  </data>
+  <data name="Traffic_MonthUpLabel.Text" xml:space="preserve">
+    <value>本月上传</value>
+  </data>
+  <data name="Traffic_MonthDownLabel.Text" xml:space="preserve">
+    <value>本月下载</value>
+  </data>
+  <data name="Traffic_MonthTotalLabel.Text" xml:space="preserve">
+    <value>本月总计</value>
+  </data>
+  <data name="Traffic_DailyChartHeader.Text" xml:space="preserve">
+    <value>每日代理流量（近 30 天，单位: MB）</value>
+  </data>
+  <data name="Traffic_HeatmapHeader.Text" xml:space="preserve">
+    <value>流量热力图</value>
+  </data>
+  <data name="Traffic_HeatmapDaily.Content" xml:space="preserve">
+    <value>每日</value>
+  </data>
+  <data name="Traffic_HeatmapWeekly.Content" xml:space="preserve">
+    <value>每周</value>
+  </data>
+  <data name="Traffic_HeatmapCumulative.Content" xml:space="preserve">
+    <value>累计</value>
+  </data>
+  <data name="Conn_Title.Text" xml:space="preserve">
+    <value>活动连接</value>
+  </data>
+  <data name="Conn_Subtitle.Text" xml:space="preserve">
+    <value>实时监控并分析经过本地代理引擎的所有网络请求</value>
+  </data>
+  <data name="Conn_ClearText.Text" xml:space="preserve">
+    <value>清空</value>
+  </data>
+  <data name="Conn_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索域名或 IP...</value>
+  </data>
+  <data name="Conn_TopologyHeader.Text" xml:space="preserve">
+    <value>连接拓扑</value>
+  </data>
+  <data name="Conn_ColType.Text" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="Conn_ColHost.Text" xml:space="preserve">
+    <value>目标主机</value>
+  </data>
+  <data name="Conn_ColStatus.Text" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="Conn_ColNode.Text" xml:space="preserve">
+    <value>出站节点</value>
+  </data>
+  <data name="Conn_ColRule.Text" xml:space="preserve">
+    <value>规则</value>
+  </data>
+  <data name="Conn_ColDuration.Text" xml:space="preserve">
+    <value>耗时</value>
+  </data>
+  <data name="Conn_ColSize.Text" xml:space="preserve">
+    <value>大小</value>
+  </data>
+  <data name="Logs_Title.Text" xml:space="preserve">
+    <value>请求日志</value>
+  </data>
+  <data name="Logs_Subtitle.Text" xml:space="preserve">
+    <value>查看本地代理核心的实时流转日志与系统状态</value>
+  </data>
+  <data name="Logs_CopyLineItem.Text" xml:space="preserve">
+    <value>复制此行</value>
+  </data>
+  <data name="Logs_AutoScrollBtn.Content" xml:space="preserve">
+    <value>自动滚动</value>
+  </data>
+  <data name="Logs_CopyAllBtn.Content" xml:space="preserve">
+    <value>复制全部</value>
+  </data>
+  <data name="Logs_ClearBtn.Content" xml:space="preserve">
+    <value>清除缓存</value>
+  </data>
+  <data name="Traffic_StatusActive" xml:space="preserve">
+    <value>活跃</value>
+  </data>
+  <data name="Traffic_StatusInactive" xml:space="preserve">
+    <value>未激活</value>
+  </data>
+  <data name="Traffic_UpTooltipFmt" xml:space="preserve">
+    <value>上传: {0}</value>
+  </data>
+  <data name="Traffic_DownTooltipFmt" xml:space="preserve">
+    <value>下载: {0}</value>
+  </data>
+  <data name="Traffic_NoTrafficTipFmt" xml:space="preserve">
+    <value>{0:yyyy/M/d}  无流量</value>
+  </data>
+  <data name="Traffic_DaysFmt" xml:space="preserve">
+    <value>{0} 天</value>
+  </data>
+  <data name="Topology_LocalDevice" xml:space="preserve">
+    <value>本机设备</value>
+  </data>
+  <data name="Topology_Others" xml:space="preserve">
+    <value>其他</value>
+  </data>
+  <data name="Conn_StopCapture" xml:space="preserve">
+    <value>停止捕获</value>
+  </data>
+  <data name="Conn_StartCapture" xml:space="preserve">
+    <value>开始捕获</value>
+  </data>
+  <data name="Conn_StatusActive" xml:space="preserve">
+    <value>进行中</value>
+  </data>
+  <data name="Logs_LineCountFmt" xml:space="preserve">
+    <value>({0} 行)</value>
+  </data>
+  <data name="Logs_StatusRunning" xml:space="preserve">
+    <value>核心运行中</value>
+  </data>
+  <data name="Logs_StatusStopped" xml:space="preserve">
+    <value>核心已停止</value>
+  </data>
+  <data name="Plugins_Title.Text" xml:space="preserve">
+    <value>插件</value>
+  </data>
+  <data name="Plugins_Subtitle.Text" xml:space="preserve">
+    <value>使用 JavaScript 插件扩展 Swell Proxy 的功能</value>
+  </data>
+  <data name="Plugins_AddText.Text" xml:space="preserve">
+    <value>添加插件</value>
+  </data>
+  <data name="Plugins_OpenFolderBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>打开插件目录</value>
+  </data>
+  <data name="Plugins_EmptyTitle.Text" xml:space="preserve">
+    <value>还没有插件</value>
+  </data>
+  <data name="Plugins_EmptyDesc.Text" xml:space="preserve">
+    <value>点击「添加插件」导入一个本地 .js 文件来开始使用</value>
+  </data>
+  <data name="Plugins_EmptyAddBtn.Content" xml:space="preserve">
+    <value>添加插件</value>
+  </data>
+  <data name="Onboard_WelcomeTitle.Text" xml:space="preserve">
+    <value>欢迎开启 Swell Proxy</value>
+  </data>
+  <data name="Onboard_WelcomeDesc.Text" xml:space="preserve">
+    <value>基于强劲 Sing-Box 核心的下一代透明代理客户端。
+为您提供极速、稳定、无感的智能网络体验。</value>
+  </data>
+  <data name="Onboard_Step2Title.Text" xml:space="preserve">
+    <value>智能分流与过滤</value>
+  </data>
+  <data name="Onboard_Step2Desc.Text" xml:space="preserve">
+    <value>我们已为您预设好最佳的分流策略，让您的网络更加清爽、飞速。</value>
+  </data>
+  <data name="Onboard_BypassCnTitle.Text" xml:space="preserve">
+    <value>绕过局域网与中国大陆 (Bypass CN)</value>
+  </data>
+  <data name="Onboard_BypassCnDesc.Text" xml:space="preserve">
+    <value>大陆流量直接连接不走代理，极大节省您的资源包。</value>
+  </data>
+  <data name="Onboard_AdBlockTitle.Text" xml:space="preserve">
+    <value>开启全局垃圾广告过滤 (Ad-Blocking)</value>
+  </data>
+  <data name="Onboard_AdBlockDesc.Text" xml:space="preserve">
+    <value>在网络底层过滤隐私广告追踪器，提供清爽浏览环境。</value>
+  </data>
+  <data name="Onboard_AdvRouteTitle.Text" xml:space="preserve">
+    <value>启用高级分流模块 (Enable advanced routing module)</value>
+  </data>
+  <data name="Onboard_AdvRouteDesc.Text" xml:space="preserve">
+    <value>开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则。</value>
+  </data>
+  <data name="Onboard_Step3Title.Text" xml:space="preserve">
+    <value>一键订阅初始化</value>
+  </data>
+  <data name="Onboard_Step3Desc.Text" xml:space="preserve">
+    <value>粘贴您的订阅链接或单个节点分享链接，起步即飞（可跳过）。</value>
+  </data>
+  <data name="Onboard_SubInput.PlaceholderText" xml:space="preserve">
+    <value>https://... 或 vmess://...</value>
+  </data>
+  <data name="Onboard_PrevBtn.Content" xml:space="preserve">
+    <value>上一步</value>
+  </data>
+  <data name="Onboard_NextBtn.Content" xml:space="preserve">
+    <value>下一步</value>
+  </data>
+  <data name="Privacy_LockedTitle.Text" xml:space="preserve">
+    <value>隐私保护模式已开启</value>
+  </data>
+  <data name="Privacy_LockedDesc.Text" xml:space="preserve">
+    <value>操作界面已锁定，请输入解锁密码以继续</value>
+  </data>
+  <data name="Privacy_PwdInput.PlaceholderText" xml:space="preserve">
+    <value>请输入解锁密码</value>
+  </data>
+  <data name="Privacy_ErrorText.Text" xml:space="preserve">
+    <value>密码错误，请重试</value>
+  </data>
+  <data name="Privacy_UnlockBtn.Content" xml:space="preserve">
+    <value>解锁</value>
+  </data>
+  <data name="ClipToast_Title.Text" xml:space="preserve">
+    <value>检测到代理节点</value>
+  </data>
+  <data name="ClipToast_CloseBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="ClipToast_ImportBtn.Content" xml:space="preserve">
+    <value>一键导入并测速 (Enter)</value>
+  </data>
+  <data name="Plugins_TypeNetwork" xml:space="preserve">
+    <value>网络插件</value>
+  </data>
+  <data name="Plugins_TypeLocal" xml:space="preserve">
+    <value>本地插件</value>
+  </data>
+  <data name="Plugins_RunManualTip" xml:space="preserve">
+    <value>手动运行</value>
+  </data>
+  <data name="Plugins_DelTip" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Plugins_ImportLocalRadio" xml:space="preserve">
+    <value>从本地文件导入 (.js)</value>
+  </data>
+  <data name="Plugins_InstallUrlRadio" xml:space="preserve">
+    <value>从 URL 安装</value>
+  </data>
+  <data name="Plugins_AddDialogTitle" xml:space="preserve">
+    <value>添加插件</value>
+  </data>
+  <data name="Plugins_ContinueBtn" xml:space="preserve">
+    <value>继续</value>
+  </data>
+  <data name="Plugins_AddedTitle" xml:space="preserve">
+    <value>插件已添加</value>
+  </data>
+  <data name="Plugins_AddedFmt" xml:space="preserve">
+    <value>已成功加载插件 {0}（触发器: {1}）</value>
+  </data>
+  <data name="Plugins_DownloadingTitle" xml:space="preserve">
+    <value>正在下载...</value>
+  </data>
+  <data name="Plugins_InstallOkTitle" xml:space="preserve">
+    <value>安装成功</value>
+  </data>
+  <data name="Plugins_InstallOkFmt" xml:space="preserve">
+    <value>{0}（触发器: {1}）</value>
+  </data>
+  <data name="Plugins_InstallFailTitle" xml:space="preserve">
+    <value>安装失败</value>
+  </data>
+  <data name="Plugins_ExecOkTitle" xml:space="preserve">
+    <value>执行完成</value>
+  </data>
+  <data name="Plugins_ExecOkMsg" xml:space="preserve">
+    <value>插件已手动触发</value>
+  </data>
+  <data name="Plugins_ExecFailTitle" xml:space="preserve">
+    <value>执行失败</value>
+  </data>
+  <data name="Plugins_DelTitle" xml:space="preserve">
+    <value>删除插件</value>
+  </data>
+  <data name="Plugins_DelConfirmFmt" xml:space="preserve">
+    <value>确定要删除「{0}」吗？</value>
+  </data>
+  <data name="Plugins_DelConfirmBtn" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Plugins_DeletedTitle" xml:space="preserve">
+    <value>已删除</value>
+  </data>
+  <data name="Onboard_DetectingRegion" xml:space="preserve">
+    <value>正在基于网络检测您的物理位置...</value>
+  </data>
+  <data name="Onboard_RegionCn" xml:space="preserve">
+    <value>自动检测：识别到您位于 中国大陆，已自动为您预设直连绕过规则。</value>
+  </data>
+  <data name="Onboard_RegionOverseas" xml:space="preserve">
+    <value>自动检测：识别到您位于 海外地区，可按需配置直连规则。</value>
+  </data>
+  <data name="Onboard_RegionFallback" xml:space="preserve">
+    <value>自动检测已就绪，可按需配置规则。</value>
+  </data>
+  <data name="Onboard_StartBtn" xml:space="preserve">
+    <value>立即开启</value>
+  </data>
+  <data name="Onboard_NextBtnText" xml:space="preserve">
+    <value>下一步</value>
+  </data>
+  <data name="Onboard_ImportingSub" xml:space="preserve">
+    <value>正在下载并导入订阅...</value>
+  </data>
+  <data name="Onboard_ImportOkFmt" xml:space="preserve">
+    <value>成功导入 {0} 个节点！</value>
+  </data>
+  <data name="Onboard_ImportFailFmt" xml:space="preserve">
+    <value>导入失败: {0}</value>
+  </data>
+  <data name="ClipToast_NodeInfoFmt" xml:space="preserve">
+    <value>类型: {0} | 名称: {1}</value>
+  </data>
+</root>

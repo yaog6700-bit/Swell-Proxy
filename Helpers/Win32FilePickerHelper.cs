@@ -90,7 +90,7 @@ namespace AnywhereWinUI.Helpers
                 }
                 else
                 {
-                    sb.Append("所有文件").Append('\0').Append("*.*").Append('\0');
+                    sb.Append(L.FilePicker_AllFiles).Append('\0').Append("*.*").Append('\0');
                 }
                 sb.Append('\0'); // final double-null terminator
 

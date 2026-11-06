@@ -1,3 +1,4 @@
+using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Services;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml;
@@ -83,15 +84,15 @@ namespace AnywhereWinUI.Views
                 StartPulseAnimation();
                 UpdateStatusDot(running: true);
                 ShowStatusInfoBar(
-                    "已连接",
-                    $"成功连接到 {ViewModel.CurrentNodeName}",
+                    L.Common_Connected,
+                    Loc.Format("Dashboard_InfoConnectedMsg", ViewModel.CurrentNodeName),
                     InfoBarSeverity.Success);
             }
             else
             {
                 StopPulseAnimation();
                 UpdateStatusDot(running: false);
-                ShowStatusInfoBar("已断开", "代理引擎已停止", InfoBarSeverity.Informational);
+                ShowStatusInfoBar(L.Dashboard_InfoStoppedTitle, L.Dashboard_InfoStoppedMsg, InfoBarSeverity.Informational);
             }
         }
 
