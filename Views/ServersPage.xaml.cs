@@ -1776,6 +1776,12 @@ namespace AnywhereWinUI.Views
 
         private void UpdateIpAddressDisplay()
         {
+            IpMaskIcon.Glyph = _isIpMasked ? "\uED1A" : "\uE890";
+            if (ToggleIpMaskButton != null)
+            {
+                ToolTipService.SetToolTip(ToggleIpMaskButton, _isIpMasked ? "显示完整 IP" : "隐藏出口 IP");
+            }
+
             if (_activeIpAddress == "-" || string.IsNullOrEmpty(_activeIpAddress))
             {
                 IpAddressText.Text = "-";
@@ -1785,7 +1791,6 @@ namespace AnywhereWinUI.Views
             if (!_isIpMasked)
             {
                 IpAddressText.Text = _activeIpAddress;
-                IpMaskIcon.Glyph = "\uED1A"; // Eye open
             }
             else
             {
@@ -1794,11 +1799,17 @@ namespace AnywhereWinUI.Views
                 {
                     IpAddressText.Text = $"{parts[0]}.{parts[1]}.*.*";
                 }
+                else if (_activeIpAddress.Contains(':'))
+                {
+                    var v6Parts = _activeIpAddress.Split(':', StringSplitOptions.RemoveEmptyEntries);
+                    IpAddressText.Text = v6Parts.Length >= 2
+                        ? $"{v6Parts[0]}:{v6Parts[1]}:*:*"
+                        : "*:*";
+                }
                 else
                 {
                     IpAddressText.Text = _activeIpAddress;
                 }
-                IpMaskIcon.Glyph = "\uE890"; // Eye closed
             }
         }
 

@@ -220,9 +220,17 @@ namespace AnywhereWinUI.Controls
 
             if (rawMax < 1) rawMax = 1;
 
-            // Smooth the scale so sudden spikes don't cause harsh jumps
-            _smoothMax = _smoothMax * 0.85 + rawMax * 0.15;
-            double maxValue = Math.Max(_smoothMax, 1);
+            // Expand immediately on spikes so peaks are never clipped; decay smoothly when traffic drops
+            double targetMax = Math.Max(rawMax * 1.12, 1.0);
+            if (targetMax >= _smoothMax)
+            {
+                _smoothMax = targetMax;
+            }
+            else
+            {
+                _smoothMax = _smoothMax * 0.85 + targetMax * 0.15;
+            }
+            double maxValue = Math.Max(_smoothMax, 1.0);
 
             // ── Grid reference lines at 25 / 50 / 75 % ────────────────────
             var gridColor = Color.FromArgb(22, 128, 128, 128);
@@ -253,13 +261,20 @@ namespace AnywhereWinUI.Controls
             float offsetX,
             Color color)
         {
-            // Add padding so 2px strokes at the very top/bottom are not clipped by Canvas edge
-            float padding = 2f;
-            float drawHeight = (float)height - padding * 2;
+            // Reserve top/bottom padding so strokes and spline curves never clip against Canvas edges
+            float topPadding = 6f;
+            float bottomPadding = 3f;
+            float minY = topPadding;
+            float maxY = Math.Max(topPadding + 1f, (float)height - bottomPadding);
+            float drawHeight = maxY - minY;
 
             // Helper: convert data index to screen X (index -1 = one step left of origin)
             float X(int i) => (i * stepX) + offsetX;
-            float Y(int i) => padding + drawHeight - (float)(data[Math.Clamp(i, 0, data.Length - 1)] / maxValue * drawHeight);
+            float Y(int i)
+            {
+                double ratio = Math.Clamp(data[Math.Clamp(i, 0, data.Length - 1)] / maxValue, 0.0, 1.0);
+                return minY + drawHeight - (float)(ratio * drawHeight);
+            }
 
             // ---------- build a single path for both fill and stroke ----------
             using var builder = new CanvasPathBuilder(resourceCreator);
@@ -280,6 +295,8 @@ namespace AnywhereWinUI.Controls
                 float tension = 0.2f;
                 Vector2 cp1 = p1 + (p2 - p0) * tension;
                 Vector2 cp2 = p2 - (p3 - p1) * tension;
+                cp1.Y = Math.Clamp(cp1.Y, minY, maxY);
+                cp2.Y = Math.Clamp(cp2.Y, minY, maxY);
 
                 builder.AddCubicBezier(cp1, cp2, p2);
             }
@@ -317,6 +334,8 @@ namespace AnywhereWinUI.Controls
                 float tension = 0.2f;
                 Vector2 cp1 = p1 + (p2 - p0) * tension;
                 Vector2 cp2 = p2 - (p3 - p1) * tension;
+                cp1.Y = Math.Clamp(cp1.Y, minY, maxY);
+                cp2.Y = Math.Clamp(cp2.Y, minY, maxY);
 
                 strokeBuilder.AddCubicBezier(cp1, cp2, p2);
             }

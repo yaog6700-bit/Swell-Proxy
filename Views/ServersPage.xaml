@@ -457,10 +457,10 @@
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="出口 IP" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                     <TextBlock x:Name="IpAddressText" Text="-" FontWeight="Medium" VerticalAlignment="Center" />
-                                    <Button Click="ToggleIpMask_Click" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4">
-                                        <FontIcon x:Name="IpMaskIcon" Glyph="&#xE890;" FontSize="14" />
+                                    <Button x:Name="ToggleIpMaskButton" Click="ToggleIpMask_Click" ToolTipService.ToolTip="显示完整 IP" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4">
+                                        <FontIcon x:Name="IpMaskIcon" Glyph="&#xED1A;" FontSize="14" />
                                     </Button>
-                                    <Button Click="CopyIpStatus_Click" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4">
+                                    <Button Click="CopyIpStatus_Click" ToolTipService.ToolTip="复制 IP 网络状态" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4">
                                         <FontIcon Glyph="&#xE8C8;" FontSize="14" />
                                     </Button>
                                 </StackPanel>
@@ -817,8 +817,7 @@
                         <Button.ScaleTransition>
                             <Vector3Transition Duration="0:0:0.15" />
                         </Button.ScaleTransition>
-                        <!-- 使用 ED1A 并且显式指定 FontFamily 防止变成黑块 -->
-                        <FontIcon Glyph="&#xED1A;" FontSize="16" FontFamily="{ThemeResource SymbolThemeFontFamily}"/>
+                        <FontIcon Glyph="&#xE890;" FontSize="16" FontFamily="{ThemeResource SymbolThemeFontFamily}"/>
                     </Button>
 
                     <!-- Proxy Mode -->
