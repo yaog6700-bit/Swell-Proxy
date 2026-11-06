@@ -23,12 +23,12 @@
         </Grid.RowDefinitions>
 
         <!-- ── Header ── -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20" Spacing="4">
+        <StackPanel Grid.Row="0" Margin="0,0,0,16" Spacing="4">
             <TextBlock Text="控制台"
-                       FontSize="24" FontWeight="SemiBold"
+                       FontSize="20" FontWeight="SemiBold"
                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
             <TextBlock Text="简洁现代的网络代理管理器"
-                       FontSize="14"
+                       FontSize="12"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 

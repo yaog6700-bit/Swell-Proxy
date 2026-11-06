@@ -53,12 +53,12 @@
 
                                 <!-- Level Badge -->
                                 <Border Grid.Column="1"
-                                        Background="{x:Bind LevelBgBrush}"
+                                        Background="{x:Bind LevelBgBrush, Mode=OneWay}"
                                         CornerRadius="6"
                                         Padding="8,3"
                                         VerticalAlignment="Top">
                                     <TextBlock Text="{x:Bind Level}" 
-                                               Foreground="{x:Bind LevelTextBrush}" 
+                                               Foreground="{x:Bind LevelTextBrush, Mode=OneWay}" 
                                                FontSize="11" 
                                                FontWeight="Bold" 
                                                HorizontalAlignment="Center"/>
@@ -87,8 +87,8 @@
             <!-- Left status info -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                 <Ellipse x:Name="StatusDot" Width="8" Height="8" VerticalAlignment="Center" Fill="{x:Bind ViewModel.StatusDotFill, Mode=OneWay}"/>
-                <TextBlock x:Name="StatusText" Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource SystemControlPageTextBaseMediumBrush}"/>
-                <TextBlock x:Name="LineCountText" Text="{x:Bind ViewModel.LineCountText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource SystemControlPageTextBaseMediumBrush}"/>
+                <TextBlock x:Name="StatusText" Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="LineCountText" Text="{x:Bind ViewModel.LineCountText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
             <!-- Right controls -->

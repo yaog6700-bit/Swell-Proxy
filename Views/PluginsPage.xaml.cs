@@ -282,12 +282,11 @@ namespace AnywhereWinUI.Views
 
         private async Task AddFromFileAsync()
         {
-            var picker = new FileOpenPicker
+            var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(MainWindow.Instance!.AppWindow.Id)
             {
-                SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
-                FileTypeFilter = { ".js" }
+                SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary
             };
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, (Application.Current as App)!.MainWindowHandle);
+            picker.FileTypeFilter.Add(".js");
 
             var file = await picker.PickSingleFileAsync();
             if (file == null) return;
@@ -297,7 +296,7 @@ namespace AnywhereWinUI.Views
                 "SwellProxy", "plugins");
             Directory.CreateDirectory(pluginsDir);
 
-            var destName = file.Name;
+            var destName = Path.GetFileName(file.Path);
             var destPath = Path.Combine(pluginsDir, destName);
             File.Copy(file.Path, destPath, overwrite: true);
 

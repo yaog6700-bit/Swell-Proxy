@@ -234,13 +234,12 @@ namespace AnywhereWinUI.Views
 
         private async void ExportBackupButton_Click(object sender, RoutedEventArgs e)
         {
-            var picker = new FileSavePicker();
-            picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-            picker.FileTypeChoices.Add("Swell Proxy Backup", new List<string>() { ".zip" });
-            picker.SuggestedFileName = $"SwellProxy_Backup_{DateTime.Now:yyyyMMdd_HHmm}";
-
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+            var picker = new Microsoft.Windows.Storage.Pickers.FileSavePicker(MainWindow.Instance!.AppWindow.Id)
+            {
+                SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary,
+                SuggestedFileName = $"SwellProxy_Backup_{DateTime.Now:yyyyMMdd_HHmm}"
+            };
+            picker.FileTypeChoices.Add("Swell Proxy Backup", new List<string> { ".zip" });
 
             var file = await picker.PickSaveFileAsync();
             if (file != null)
@@ -1308,12 +1307,10 @@ namespace AnywhereWinUI.Views
 
         private async void TailscaleStateDirBrowse_Click(object sender, RoutedEventArgs e)
         {
-            var picker = new Windows.Storage.Pickers.FolderPicker();
-            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
-            picker.FileTypeFilter.Add("*");
-
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+            var picker = new Microsoft.Windows.Storage.Pickers.FolderPicker(MainWindow.Instance!.AppWindow.Id)
+            {
+                SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary
+            };
 
             var folder = await picker.PickSingleFolderAsync();
             if (folder != null)

@@ -54,8 +54,8 @@
                 <!-- 顶部进度指示器 (Progress Dots) -->
                 <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8" Margin="0,0,0,24">
                     <Ellipse x:Name="Dot0" Width="24" Height="6" Fill="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                    <Ellipse x:Name="Dot1" Width="8" Height="6" Fill="{ThemeResource SystemControlForegroundBaseMediumLowBrush}"/>
-                    <Ellipse x:Name="Dot2" Width="8" Height="6" Fill="{ThemeResource SystemControlForegroundBaseMediumLowBrush}"/>
+                    <Ellipse x:Name="Dot1" Width="8" Height="6" Fill="{ThemeResource ControlStrongFillColorDisabledBrush}"/>
+                    <Ellipse x:Name="Dot2" Width="8" Height="6" Fill="{ThemeResource ControlStrongFillColorDisabledBrush}"/>
                 </StackPanel>
                 <!-- 中间内容区 (多页容器) -->
                 <Grid Grid.Row="1">
@@ -76,28 +76,28 @@
                                    LineHeight="22" />
                         <!-- 中国大陆地区自动检测 Banner -->
                         <Border x:Name="RegionBanner" 
-                                Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}" 
+                                Background="{ThemeResource SubtleFillColorSecondaryBrush}" 
                                 CornerRadius="8" 
                                 Padding="12,8" 
                                 HorizontalAlignment="Center" 
                                 Margin="0,16,0,0">
-                            <TextBlock x:Name="RegionBannerText" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+                            <TextBlock x:Name="RegionBannerText" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </Border>
                     </StackPanel>
                     <!-- 第二页：智能分流选项 -->
                     <StackPanel x:Name="Page1" Visibility="Collapsed" Spacing="16" VerticalAlignment="Center">
                         <TextBlock Text="智能分流与过滤" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
                         <TextBlock Text="我们已为您预设好最佳的分流策略，让您的网络更加清爽、飞速。" 
-                                   Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
                                    HorizontalAlignment="Center" Margin="0,0,0,12"/>
                         <!-- Bypass CN 卡片 -->
                         <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="12" Padding="16">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" Spacing="4">
                                     <TextBlock Text="绕过局域网与中国大陆 (Bypass CN)" FontWeight="SemiBold"/>
-                                    <TextBlock Text="大陆流量直接连接不走代理，极大节省您的资源包。" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
+                                    <TextBlock Text="大陆流量直接连接不走代理，极大节省您的资源包。" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
-                                <ToggleSwitch Grid.Column="1" x:Name="BypassChinaToggle" IsOn="True" MinWidth="0"/>
+                                <ToggleSwitch Grid.Column="1" x:Name="BypassChinaToggle" IsOn="True" OnContent="" OffContent="" MinWidth="0"/>
                             </Grid>
                         </Border>
                         <!-- Ad Block 卡片 -->
@@ -105,9 +105,9 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" Spacing="4">
                                     <TextBlock Text="开启全局垃圾广告过滤 (Ad-Blocking)" FontWeight="SemiBold"/>
-                                    <TextBlock Text="在网络底层过滤隐私广告追踪器，提供清爽浏览环境。" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
+                                    <TextBlock Text="在网络底层过滤隐私广告追踪器，提供清爽浏览环境。" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
-                                <ToggleSwitch Grid.Column="1" x:Name="BlockAdsToggle" IsOn="True" MinWidth="0"/>
+                                <ToggleSwitch Grid.Column="1" x:Name="BlockAdsToggle" IsOn="True" OnContent="" OffContent="" MinWidth="0"/>
                             </Grid>
                         </Border>
                         <!-- Advanced Routing 卡片 -->
@@ -115,9 +115,9 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" Spacing="4">
                                     <TextBlock Text="启用高级分流模块 (Enable advanced routing module)" FontWeight="SemiBold"/>
-                                    <TextBlock Text="开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则。" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则。" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <ToggleSwitch Grid.Column="1" x:Name="AdvancedRoutingToggle" IsOn="False" MinWidth="0"/>
+                                <ToggleSwitch Grid.Column="1" x:Name="AdvancedRoutingToggle" IsOn="False" OnContent="" OffContent="" MinWidth="0"/>
                             </Grid>
                         </Border>
                     </StackPanel>
@@ -125,7 +125,7 @@
                     <StackPanel x:Name="Page2" Visibility="Collapsed" Spacing="12" VerticalAlignment="Center">
                         <TextBlock Text="一键订阅初始化" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
                         <TextBlock Text="粘贴您的订阅链接或单个节点分享链接，起步即飞（可跳过）。" 
-                                   Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
                                    HorizontalAlignment="Center"/>
                         <TextBox x:Name="SubscriptionInput" 
                                  Height="100" 

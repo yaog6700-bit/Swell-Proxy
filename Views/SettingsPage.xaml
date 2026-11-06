@@ -306,7 +306,7 @@
 
                                 <!-- 总开关 -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,4,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE703;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE703;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="启用 Tailscale Endpoint" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="将 sing-box 作为 Tailscale 节点加入私有网络（tailnet），需要 sing-box 核心支持 Tailscale" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
@@ -316,7 +316,7 @@
 
                                 <!-- Auth Key -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE8D7;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE8D7;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="授权 Key (Auth Key)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="Tailscale 预授权 Key（tskey-auth-...），留空则启动时在日志中显示登录 URL" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
@@ -326,7 +326,7 @@
 
                                 <!-- Hostname -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE8F4;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE8F4;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="节点主机名 (Hostname)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="此节点在 tailnet 中显示的名称，留空则使用系统主机名" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -336,7 +336,7 @@
 
                                 <!-- State Directory -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE8DA;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE8DA;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="状态目录 (State Directory)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="保存 Tailscale 认证状态的文件夹，重启后保持登录。留空则使用默认位置" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
@@ -351,7 +351,7 @@
 
                                 <!-- Control URL -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE774;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE774;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="协调服务器 (Control URL)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="留空使用官方 Tailscale，或填入 Headscale 自建服务器地址" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -367,7 +367,7 @@
 
                                 <!-- Ephemeral -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE81B;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE81B;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="临时节点模式 (Ephemeral)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="断开后节点自动从 tailnet 中移除，适合临时或自动化部署场景" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
@@ -377,7 +377,7 @@
 
                                 <!-- Accept Routes -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE909;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE909;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="接受其他节点路由 (Accept Routes)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="允许接收 tailnet 中其他节点通告的子网路由" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -387,7 +387,7 @@
 
                                 <!-- Advertise Routes -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xECAA;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xECAA;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="通告本地网段 (Advertise Routes)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="向 tailnet 共享本机所在网段，多个 CIDR 用逗号分隔，如 192.168.1.0/24" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
@@ -397,7 +397,7 @@
 
                                 <!-- Exit Node -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xF0AF;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xF0AF;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="指定出口节点 (Exit Node)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="将全部出站流量通过指定的 tailnet 节点转发，填入对端节点 IP 或名称" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
@@ -407,7 +407,7 @@
 
                                 <!-- Advertise Exit Node -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,4">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE72A;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE72A;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="通告为出口节点 (Advertise Exit Node)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="将本机对外通告为 Exit Node，允许其他 tailnet 节点将流量经由本机出站" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
@@ -446,7 +446,7 @@
                             <StackPanel>
                                 <!-- Rule 1: Bypass CN -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE909;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE909;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="绕过中国大陆 (Bypass mainland China)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="对所有目标属于中国的 IP 或国内常见域名自动采用直连直达，不经过代理" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -461,7 +461,7 @@
 
                                 <!-- Rule 2: Adblock -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE727;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE727;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="全局广告与隐私追踪拦截 (Block ads &amp; trackers)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="过滤并拦截来自内置规则源中的广告分发网站，保护隐私并节省带宽" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -471,7 +471,7 @@
 
                                 <!-- Rule 3: Advanced Routing -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,4">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE8B1;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE8B1;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="启用高级分流模块 (Enable advanced routing module)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -496,7 +496,7 @@
                             <StackPanel>
                                 <!-- Direct DNS -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,4,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE753;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE753;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="直连 DNS (Direct)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="用于国内域名及直连出站的解析" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -514,7 +514,7 @@
 
                                 <!-- Proxy DNS -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE72C;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE72C;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="代理 DNS (Proxy)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="用于境外的域名解析，需通过代理出站以防止 DNS 污染" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -532,7 +532,7 @@
 
                                 <!-- Query Strategy -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE7B3;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE7B3;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="查询策略" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="决定 DNS 解析时 IP 版本的偏好" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -547,7 +547,7 @@
 
                                 <!-- Enable Cache -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xEC4A;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xEC4A;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="启用 DNS 缓存" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="大幅提升二次解析速度，降低延迟" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -557,7 +557,7 @@
 
                                 <!-- FakeDNS -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xF3B1;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xF3B1;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <TextBlock Text="FakeDNS" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
@@ -572,7 +572,7 @@
 
                                 <!-- IPv6 Route -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE73E;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE73E;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="拦截 IPv6 DNS 泄露 (Prevent IPv6 leak)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="在开启 TUN 模式时屏蔽 AAAA 查询，防止代理环境下的 IPV6 地理信息泄露" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -582,7 +582,7 @@
 
                                 <!-- Allow IPv6 DNS -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE968;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE968;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="允许 IPv6 DNS 解析 (Allow IPv6 DNS)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="开启后 TUN 模式不再拦截 AAAA 查询，可解决纯 IPv6 域名解析返回空结果的问题（默认关闭）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -591,7 +591,7 @@
                                 </Grid>
                                 <!-- TUN Stack -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE839;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE839;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="TUN Stack" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock x:Name="TunStackDescText" Text="选择 TUN 入站使用的网络栈，mixed 为推荐默认值（sing-box 1.15+ 自动启用全新内置协议栈）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -605,7 +605,7 @@
 
                                 <!-- Flush DNS -->
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,4">
-                                    <FontIcon Grid.Column="0" Glyph="&#xE81E;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                    <FontIcon Grid.Column="0" Glyph="&#xE81E;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock Text="静默刷新系统 DNS (Flush DNS cache)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock Text="切换节点或开启代理时，调用 Windows 原生 API 瞬间清除本地 DNS 缓存，防止网络不通" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>

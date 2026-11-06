@@ -162,7 +162,7 @@ namespace AnywhereWinUI.Views
             if (!string.IsNullOrEmpty(inputText))
             {
                 ImportProgressRing.IsActive = true;
-                ImportStatusText.Foreground = (Brush)Application.Current.Resources["SystemControlForegroundBaseMediumBrush"];
+                ImportStatusText.Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
                 ImportStatusText.Text = "正在下载并导入订阅...";
                 NextButton.IsEnabled = false;
                 PrevButton.IsEnabled = false;

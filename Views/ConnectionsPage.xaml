@@ -118,13 +118,13 @@
 
                                 <!-- Type Badge -->
                                 <Border Grid.Column="0" 
-                                        Background="{x:Bind BadgeBackground}"
+                                        Background="{x:Bind BadgeBackground, Mode=OneWay}"
                                         CornerRadius="4" 
                                         HorizontalAlignment="Left" 
                                         VerticalAlignment="Center" 
                                         Padding="6,2">
                                     <TextBlock Text="{x:Bind Type}" 
-                                               Foreground="{x:Bind BadgeForeground}" 
+                                               Foreground="{x:Bind BadgeForeground, Mode=OneWay}" 
                                                FontSize="11" 
                                                FontWeight="SemiBold" 
                                                FontFamily="Consolas" />
@@ -134,7 +134,7 @@
                                 <TextBlock Grid.Column="1" Text="{x:Bind Host}" TextTrimming="CharacterEllipsis" FontSize="12" VerticalAlignment="Center" Margin="0,0,16,0"/>
 
                                 <!-- Status -->
-                                <TextBlock Grid.Column="2" Text="{x:Bind Status}" Foreground="{x:Bind StatusForeground}" FontSize="12" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{x:Bind Status}" Foreground="{x:Bind StatusForeground, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
 
                                 <!-- Node -->
                                 <TextBlock Grid.Column="3" Text="{x:Bind Node}" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,16,0"/>

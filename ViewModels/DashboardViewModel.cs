@@ -254,7 +254,7 @@ namespace AnywhereWinUI.ViewModels
                             XamlRoot = xamlRoot
                         };
 
-                        var result = await dialog.ShowAsync();
+                        var result = await dialog.WithAppTheme().ShowAsync();
                         if (result != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
                         {
                             ProxyModeIndex = AppSession.Instance.ProxyModeIndex;
@@ -351,7 +351,7 @@ namespace AnywhereWinUI.ViewModels
                         CloseButtonText = "确定",
                         XamlRoot = MainWindow.Instance?.Content.XamlRoot
                     };
-                    _ = dialog.ShowAsync();
+                    _ = dialog.WithAppTheme().ShowAsync();
                 }
             }
         }

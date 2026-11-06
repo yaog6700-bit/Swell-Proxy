@@ -428,7 +428,19 @@
                         <StackPanel Spacing="12">
                             <Grid>
                                 <TextBlock Text="IP 网络状态" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <ProgressRing x:Name="IpLoadingRing" IsActive="False" Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <ProgressRing x:Name="IpLoadingRing" IsActive="False" Width="16" Height="16" VerticalAlignment="Center" />
+                                    <Button x:Name="RefreshAiIpButton"
+                                            Click="RefreshAiIpChecks_Click"
+                                            ToolTipService.ToolTip="重新检测 AI 解锁与出口 IP"
+                                            Padding="4"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            CornerRadius="4"
+                                            VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE72C;" FontSize="12" />
+                                    </Button>
+                                </StackPanel>
                             </Grid>
                             <Grid ColumnSpacing="16" RowSpacing="8">
                                 <Grid.ColumnDefinitions>

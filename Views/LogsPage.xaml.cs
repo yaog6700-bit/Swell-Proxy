@@ -19,6 +19,13 @@ namespace AnywhereWinUI.Views
             // unsubscribe on Unloaded (visual detach is not final destroy).
             if (ViewModel != null)
                 ViewModel.LogFlushed += OnLogFlushed;
+
+            // Re-tint level badges when app Light/Dark theme switches
+            this.ActualThemeChanged += (_, _) =>
+            {
+                if (ViewModel == null) return;
+                foreach (var entry in ViewModel.LogEntries) entry.RefreshTheme();
+            };
         }
 
         private void OnLogFlushed(object? sender, (int Received, int PrevCount, int NewCount) args)

@@ -8,53 +8,57 @@
              d:DesignWidth="500"
              d:DesignHeight="600">
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid Background="Transparent">
         <Grid.ChildrenTransitions>
             <TransitionCollection>
                 <EntranceThemeTransition FromVerticalOffset="20" />
             </TransitionCollection>
         </Grid.ChildrenTransitions>
 
-        <StackPanel VerticalAlignment="Center"
-                    HorizontalAlignment="Center"
-                    Spacing="24"
-                    MaxWidth="360"
-                    Padding="20">
+        <Border VerticalAlignment="Center"
+                HorizontalAlignment="Center"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                MaxWidth="380"
+                Padding="32,28">
+            <StackPanel Spacing="24">
+                <Viewbox Width="56" Height="56" HorizontalAlignment="Center">
+                    <FontIcon Glyph="&#xE72E;" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                </Viewbox>
 
-            <Viewbox Width="64" Height="64" HorizontalAlignment="Center">
-                <FontIcon Glyph="&#xE72E;" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
-            </Viewbox>
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="隐私保护模式已开启"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="操作界面已锁定，请输入解锁密码以继续"
+                               FontSize="13"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center" />
+                </StackPanel>
 
-            <StackPanel Spacing="8" HorizontalAlignment="Center">
-                <TextBlock Text="隐私保护模式已开启"
-                           FontSize="24"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Center" />
-                <TextBlock Text="操作界面已锁定，请输入解锁密码以继续"
-                           FontSize="14"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           TextAlignment="Center" />
+                <StackPanel Spacing="12">
+                    <PasswordBox x:Name="PasswordInput"
+                                 PlaceholderText="请输入解锁密码"
+                                 KeyUp="PasswordInput_KeyUp"
+                                 HorizontalAlignment="Stretch" />
+                    <TextBlock x:Name="ErrorText"
+                               Text="密码错误，请重试"
+                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                               FontSize="12"
+                               HorizontalAlignment="Center"
+                               Visibility="Collapsed" />
+                    <Button x:Name="UnlockButton"
+                            Content="解锁"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            Padding="0,8"
+                            Click="UnlockButton_Click" />
+                </StackPanel>
             </StackPanel>
-
-            <StackPanel Spacing="12">
-                <PasswordBox x:Name="PasswordInput"
-                             PlaceholderText="请输入解锁密码"
-                             KeyUp="PasswordInput_KeyUp"
-                             HorizontalAlignment="Stretch" />
-                <TextBlock x:Name="ErrorText"
-                           Text="密码错误，请重试"
-                           Foreground="{StaticResource SystemFillColorCriticalBrush}"
-                           FontSize="12"
-                           HorizontalAlignment="Center"
-                           Visibility="Collapsed" />
-                <Button x:Name="UnlockButton"
-                        Content="解锁"
-                        Style="{StaticResource AccentButtonStyle}"
-                        HorizontalAlignment="Stretch"
-                        Padding="0,8"
-                        Click="UnlockButton_Click" />
-            </StackPanel>
-        </StackPanel>
+        </Border>
     </Grid>
 </UserControl>

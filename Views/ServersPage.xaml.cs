@@ -208,6 +208,14 @@ namespace AnywhereWinUI.Views
             UpdateGroupFilterButtonToolTip();
             UpdateSortMenuCheckedState();
 
+            // Auto-select persisted active node so detail panel & AI/IP checks match on launch
+            var initialNode = ViewModel.FilteredServers.FirstOrDefault(s => s.Id == NodesManager.Instance.SelectedNodeId)
+                           ?? ViewModel.FilteredServers.FirstOrDefault();
+            if (initialNode != null)
+            {
+                ServersListView.SelectedItem = initialNode;
+            }
+
             // Keep subscriptions for page lifetime (NavigationCache reuses this instance;
             // Unloaded can fire when detaching from the visual tree and must not tear them down).
             CoreManager.Instance.RunningChanged += CoreManager_RunningChanged;
@@ -1364,6 +1372,13 @@ namespace AnywhereWinUI.Views
                     return;
                 }
 
+                bool wasRunning = CoreManager.Instance.IsRunning;
+                if (wasRunning)
+                {
+                    CoreManager.Instance.AppendLog("[系统] 检测到代理模式更新，正在自动重启代理引擎以重新加载配置...");
+                    await CoreManager.Instance.StopAsync();
+                }
+
                 AppSession.Instance.ProxyModeIndex = index;
                 Helpers.LocalSettingsHelper.SetValue("proxyModeIndex", index);
                 Helpers.LocalSettingsHelper.SetValue("enableTunMode", index == 1 || index == 3);
@@ -1371,14 +1386,12 @@ namespace AnywhereWinUI.Views
                 UpdateProxyModeUI();
                 UpdateRoutingModeUI();
 
-                if (CoreManager.Instance.IsRunning)
+                if (wasRunning)
                 {
-                    CoreManager.Instance.AppendLog("[系统] 检测到代理模式更新，正在自动重启代理引擎以重新加载配置...");
                     var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
                     if (node != null)
                     {
                         string realConfig = await ConfigBuilder.BuildAsync(node);
-                        await CoreManager.Instance.StopAsync();
                         await CoreManager.Instance.StartAsync(realConfig);
                     }
                 }
@@ -1544,6 +1557,7 @@ namespace AnywhereWinUI.Views
         private AiUnlockStatus? _openAiStatus;
         private AiUnlockStatus? _claudeStatus;
         private AiUnlockStatus? _geminiStatus;
+        private bool _isIpCheckLoading;
         private string _ipOrgCache = "-";
         private string _ipAsnCache = "-";
         private string _ipLocationCache = "-";
@@ -1553,16 +1567,20 @@ namespace AnywhereWinUI.Views
             return AllServers.FirstOrDefault(s => s.Id == NodesManager.Instance.SelectedNodeId);
         }
 
+        private Microsoft.UI.Xaml.Media.Brush ResolveStateBrush(string resourceKey, Windows.UI.Color fallback)
+        {
+            if (this.Resources.TryGetValue(resourceKey, out var pageRes) && pageRes is Microsoft.UI.Xaml.Media.Brush pageBrush)
+                return pageBrush;
+            if (Application.Current.Resources.TryGetValue(resourceKey, out var appRes) && appRes is Microsoft.UI.Xaml.Media.Brush appBrush)
+                return appBrush;
+            return new Microsoft.UI.Xaml.Media.SolidColorBrush(fallback);
+        }
+
         private void ResetAiLights()
         {
             try
             {
-                Microsoft.UI.Xaml.Media.Brush neutral = null;
-                if (Application.Current.Resources.TryGetValue("StateNeutralBrush", out var res) && res is Microsoft.UI.Xaml.Media.Brush b)
-                    neutral = b;
-                else
-                    neutral = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
-
+                var neutral = ResolveStateBrush("StateNeutralBrush", Microsoft.UI.Colors.Gray);
                 if (OpenAiLight != null) OpenAiLight.Fill = neutral;
                 if (ClaudeLight != null) ClaudeLight.Fill = neutral;
                 if (GeminiLight != null) GeminiLight.Fill = neutral;
@@ -1601,32 +1619,37 @@ namespace AnywhereWinUI.Views
                     return;
                 }
 
-                Microsoft.UI.Xaml.Media.Brush successBrush = null;
-                if (Application.Current.Resources.TryGetValue("StateSuccessBrush", out var sucRes) && sucRes is Microsoft.UI.Xaml.Media.Brush sucB)
-                    successBrush = sucB;
-                else
-                    successBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Green);
+                var neutralBrush = ResolveStateBrush("StateNeutralBrush", Microsoft.UI.Colors.Gray);
+                var successBrush = ResolveStateBrush("StateSuccessBrush", Microsoft.UI.Colors.Green);
+                var errorBrush   = ResolveStateBrush("StateErrorBrush", Microsoft.UI.Colors.Red);
 
-                Microsoft.UI.Xaml.Media.Brush errorBrush = null;
-                if (Application.Current.Resources.TryGetValue("StateErrorBrush", out var errRes) && errRes is Microsoft.UI.Xaml.Media.Brush errB)
-                    errorBrush = errB;
-                else
-                    errorBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Red);
+                Microsoft.UI.Xaml.Media.Brush MapAiBrush(AiUnlockStatus? status) => status switch
+                {
+                    null => neutralBrush,
+                    AiUnlockStatus.Unlocked => successBrush,
+                    _ => errorBrush
+                };
 
-                if (OpenAiLight != null) OpenAiLight.Fill = _openAiStatus == AiUnlockStatus.Unlocked ? successBrush : errorBrush;
-                if (ClaudeLight != null) ClaudeLight.Fill = _claudeStatus == AiUnlockStatus.Unlocked ? successBrush : errorBrush;
-                if (GeminiLight != null) GeminiLight.Fill = _geminiStatus == AiUnlockStatus.Unlocked ? successBrush : errorBrush;
+                if (OpenAiLight != null) OpenAiLight.Fill = MapAiBrush(_openAiStatus);
+                if (ClaudeLight != null) ClaudeLight.Fill = MapAiBrush(_claudeStatus);
+                if (GeminiLight != null) GeminiLight.Fill = MapAiBrush(_geminiStatus);
 
                 UpdateIpAddressDisplay();
                 if (IpOrgText != null) IpOrgText.Text = _ipOrgCache;
                 if (IpAsnText != null) IpAsnText.Text = _ipAsnCache;
                 if (IpLocationText != null) IpLocationText.Text = _ipLocationCache;
-                if (IpLoadingRing != null) IpLoadingRing.IsActive = false;
+                if (IpLoadingRing != null) IpLoadingRing.IsActive = _isIpCheckLoading;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"UpdateAiAndIpDisplay failed: {ex}");
             }
+        }
+
+        private void RefreshAiIpChecks_Click(object sender, RoutedEventArgs e)
+        {
+            if (!CoreManager.Instance.IsRunning) return;
+            _ = TriggerAiAndIpChecksAsync();
         }
 
         private static bool IsDatacenter(string org)
@@ -1658,16 +1681,13 @@ namespace AnywhereWinUI.Views
             _openAiStatus = null;
             _claudeStatus = null;
             _geminiStatus = null;
+            _isIpCheckLoading = true;
             _activeIpAddress = "-";
             _ipOrgCache = "-";
             _ipAsnCache = "-";
             _ipLocationCache = "-";
 
-            var activeItem = GetActiveServerItem();
-            if (ServersListView.SelectedItem as ServerEntryItem == activeItem && IpLoadingRing != null)
-            {
-                IpLoadingRing.IsActive = true;
-            }
+            UpdateAiAndIpDisplay();
 
             try
             {
@@ -1692,7 +1712,8 @@ namespace AnywhereWinUI.Views
                 {
                     var ipInfo = await ipInfoTask;
                     if (token.IsCancellationRequested) return;
-                    
+
+                    _isIpCheckLoading = false;
                     if (ipInfo != null)
                     {
                         _activeIpAddress = ipInfo.ip ?? "-";
@@ -1706,7 +1727,11 @@ namespace AnywhereWinUI.Views
                             _ipOrgCache = org;
                         }
                         _ipAsnCache = ipInfo.asn?.ToString() ?? "-";
-                        _ipLocationCache = $"{ipInfo.city}, {ipInfo.region}, {ipInfo.country}";
+
+                        var locParts = new[] { ipInfo.city, ipInfo.region, ipInfo.country }
+                            .Where(p => !string.IsNullOrWhiteSpace(p))
+                            .ToArray();
+                        _ipLocationCache = locParts.Length > 0 ? string.Join(", ", locParts) : "-";
                     }
                     else
                     {
@@ -1731,17 +1756,21 @@ namespace AnywhereWinUI.Views
             }
             finally
             {
-                DispatcherQueue.TryEnqueue(() =>
+                if (!token.IsCancellationRequested)
                 {
-                    try
+                    _isIpCheckLoading = false;
+                    DispatcherQueue.TryEnqueue(() =>
                     {
-                        UpdateAiAndIpDisplay();
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Error updating UI in TriggerAiAndIpChecksAsync finally: {ex}");
-                    }
-                });
+                        try
+                        {
+                            UpdateAiAndIpDisplay();
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error updating UI in TriggerAiAndIpChecksAsync finally: {ex}");
+                        }
+                    });
+                }
             }
         }
 
@@ -1821,11 +1850,10 @@ namespace AnywhereWinUI.Views
                             XamlRoot = this.XamlRoot
                         };
 
-                        // ── X close button ──
+                        // ── X close button (use FontIcon so Win10/11 automatically pick SymbolThemeFontFamily) ──
                         var closeBtn = new Button
                         {
-                            Content = "\uE711",
-                            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
+                            Content = new FontIcon { Glyph = "\uE711", FontSize = 12 },
                             Width = 32,
                             Height = 32,
                             Padding = new Thickness(0),
@@ -1860,14 +1888,13 @@ namespace AnywhereWinUI.Views
                             AcceptsReturn = false,
                         };
                         // ── Name row (server name + copy icon button) ──
+                        var copyIcon = new FontIcon { Glyph = "\uE8C8", FontSize = 14 };
                         var nameCopyBtn = new Button
                         {
-                            Content = "\uE8C8",
-                            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
+                            Content = copyIcon,
                             Width = 28,
                             Height = 28,
                             Padding = new Thickness(0),
-                            FontSize = 14,
                             VerticalAlignment = VerticalAlignment.Center,
                         };
                         if (Application.Current.Resources.TryGetValue("SubtleButtonStyle", out var subtleStyle2))
@@ -1881,9 +1908,9 @@ namespace AnywhereWinUI.Views
                                 var pkg = new DataPackage();
                                 pkg.SetText(link);
                                 Clipboard.SetContent(pkg);
-                                nameCopyBtn.Content = "\uE73E"; // Checkmark icon
+                                copyIcon.Glyph = "\uE73E"; // Checkmark icon
                                 await Task.Delay(1500);
-                                nameCopyBtn.Content = "\uE8C8"; // Back to copy icon
+                                copyIcon.Glyph = "\uE8C8"; // Back to copy icon
                             }
                             catch { }
                         };

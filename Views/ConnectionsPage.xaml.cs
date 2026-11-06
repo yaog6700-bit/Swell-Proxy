@@ -13,6 +13,12 @@ namespace AnywhereWinUI.Views
             NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
             this.InitializeComponent();
             ViewModel = App.Current.Services.GetRequiredService<ConnectionsViewModel>();
+
+            // Re-tint connection badges when app Light/Dark theme switches
+            this.ActualThemeChanged += (_, _) =>
+            {
+                foreach (var item in ViewModel.Connections) item.RefreshThemeColors();
+            };
         }
 
         protected override async void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)

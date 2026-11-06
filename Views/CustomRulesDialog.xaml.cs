@@ -590,15 +590,12 @@ namespace AnywhereWinUI.Views
         {
             try
             {
-                var picker = new FileOpenPicker
+                var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(MainWindow.Instance!.AppWindow.Id)
                 {
-                    SuggestedStartLocation = PickerLocationId.ComputerFolder
+                    SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.ComputerFolder
                 };
                 picker.FileTypeFilter.Add(".exe");
                 picker.FileTypeFilter.Add("*");
-
-                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
-                WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
 
                 var file = await picker.PickSingleFileAsync();
                 if (file == null) return;

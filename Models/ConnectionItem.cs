@@ -1,8 +1,7 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI;
+using AnywhereWinUI.Helpers;
 
 namespace AnywhereWinUI.Models
 {
@@ -33,13 +32,44 @@ namespace AnywhereWinUI.Models
         private string size; // e.g. "1.2KB"
 
         [ObservableProperty]
-        private SolidColorBrush badgeBackground;
+        private SolidColorBrush badgeBackground = _lightNeutralBg;
 
         [ObservableProperty]
-        private SolidColorBrush badgeForeground;
+        private SolidColorBrush badgeForeground = _lightNeutralFg;
 
         [ObservableProperty]
-        private SolidColorBrush statusForeground;
+        private SolidColorBrush statusForeground = _lightNeutralFg;
+
+        // Pre-allocated theme-aware semantic brushes (zero per-tick GC allocation)
+        private static readonly SolidColorBrush _lightSuccessFg  = new(Windows.UI.Color.FromArgb(255,  15, 123,  15));
+        private static readonly SolidColorBrush _lightSuccessBg  = new(Windows.UI.Color.FromArgb( 28,  15, 123,  15));
+        private static readonly SolidColorBrush _darkSuccessFg   = new(Windows.UI.Color.FromArgb(255, 108, 203,  95));
+        private static readonly SolidColorBrush _darkSuccessBg   = new(Windows.UI.Color.FromArgb( 38, 108, 203,  95));
+
+        private static readonly SolidColorBrush _lightAccentFg   = new(Windows.UI.Color.FromArgb(255,   0,  95, 184));
+        private static readonly SolidColorBrush _lightAccentBg   = new(Windows.UI.Color.FromArgb( 28,   0,  95, 184));
+        private static readonly SolidColorBrush _darkAccentFg    = new(Windows.UI.Color.FromArgb(255,  96, 205, 255));
+        private static readonly SolidColorBrush _darkAccentBg    = new(Windows.UI.Color.FromArgb( 38,  96, 205, 255));
+
+        private static readonly SolidColorBrush _lightCautionFg  = new(Windows.UI.Color.FromArgb(255, 157,  93,   0));
+        private static readonly SolidColorBrush _lightCautionBg  = new(Windows.UI.Color.FromArgb( 30, 157,  93,   0));
+        private static readonly SolidColorBrush _darkCautionFg   = new(Windows.UI.Color.FromArgb(255, 252, 225,   0));
+        private static readonly SolidColorBrush _darkCautionBg   = new(Windows.UI.Color.FromArgb( 36, 252, 225,   0));
+
+        private static readonly SolidColorBrush _lightCriticalFg = new(Windows.UI.Color.FromArgb(255, 196,  43,  28));
+        private static readonly SolidColorBrush _lightCriticalBg = new(Windows.UI.Color.FromArgb( 28, 196,  43,  28));
+        private static readonly SolidColorBrush _darkCriticalFg  = new(Windows.UI.Color.FromArgb(255, 255, 153, 164));
+        private static readonly SolidColorBrush _darkCriticalBg  = new(Windows.UI.Color.FromArgb( 38, 255, 153, 164));
+
+        private static readonly SolidColorBrush _lightPurpleFg   = new(Windows.UI.Color.FromArgb(255, 109,  40, 217));
+        private static readonly SolidColorBrush _lightPurpleBg   = new(Windows.UI.Color.FromArgb( 28, 109,  40, 217));
+        private static readonly SolidColorBrush _darkPurpleFg    = new(Windows.UI.Color.FromArgb(255, 196, 181, 253));
+        private static readonly SolidColorBrush _darkPurpleBg    = new(Windows.UI.Color.FromArgb( 38, 139,  92, 246));
+
+        private static readonly SolidColorBrush _lightNeutralFg  = new(Windows.UI.Color.FromArgb(255,  96, 103, 112));
+        private static readonly SolidColorBrush _lightNeutralBg  = new(Windows.UI.Color.FromArgb( 28,  96, 103, 112));
+        private static readonly SolidColorBrush _darkNeutralFg   = new(Windows.UI.Color.FromArgb(255, 161, 168, 179));
+        private static readonly SolidColorBrush _darkNeutralBg   = new(Windows.UI.Color.FromArgb( 38, 161, 168, 179));
 
         public ConnectionItem(string id, string type, string host, string status, string rule, string node, string duration, string size)
         {
@@ -52,23 +82,23 @@ namespace AnywhereWinUI.Models
             Duration = duration;
             Size = size;
 
-            // Set badge colors based on type
-            UpdateBadgeColors(type);
+            RefreshThemeColors();
+        }
 
-            // Set status colors based on status
-            UpdateStatusColors(status);
+        public void RefreshThemeColors()
+        {
+            bool isDark = ContentDialogExtensions.IsDarkThemeActive();
+            UpdateBadgeColors(Type ?? string.Empty, isDark);
+            UpdateStatusColors(Status ?? string.Empty, isDark);
         }
 
         public void UpdateFrom(Services.ClashConnectionNode nodeData)
         {
             long totalBytes = nodeData.Download + nodeData.Upload;
             Size = FormatBytes(totalBytes);
-            
+
             var durationSpan = DateTime.Now - nodeData.Start.ToLocalTime();
             Duration = $"{(int)durationSpan.TotalSeconds}s";
-
-            // If you want to update other fields you can do it here
-            // Note: Since we use [ObservableProperty], setting these automatically fires PropertyChanged.
         }
 
         private static string FormatBytes(long bytes)
@@ -85,69 +115,52 @@ namespace AnywhereWinUI.Models
             return $"{number:n1} {suffixes[counter]}";
         }
 
-        private void UpdateBadgeColors(string type)
+        private void UpdateBadgeColors(string type, bool isDark)
         {
-            // BUG-11/DESIGN-8 fix: 使用语义颜色 token，跟随深浅主题自动变化
-            // 底色使用半透明 accent 语义色；前景使用对应强调色
-            string fgKey;
-            switch (type.ToUpper())
+            switch (type.ToUpperInvariant())
             {
                 case "HTTP":
                 case "GET":
-                    fgKey = "SystemFillColorSuccessBrush"; // 绿色
+                    BadgeForeground = isDark ? _darkSuccessFg : _lightSuccessFg;
+                    BadgeBackground = isDark ? _darkSuccessBg : _lightSuccessBg;
                     break;
                 case "HTTPS":
                 case "POST":
-                    fgKey = "AccentTextFillColorPrimaryBrush"; // 蓝色 accent
+                    BadgeForeground = isDark ? _darkAccentFg : _lightAccentFg;
+                    BadgeBackground = isDark ? _darkAccentBg : _lightAccentBg;
                     break;
                 case "TCP":
                 case "PUT":
-                    fgKey = "SystemFillColorCautionBrush"; // 琥珀色
+                    BadgeForeground = isDark ? _darkCautionFg : _lightCautionFg;
+                    BadgeBackground = isDark ? _darkCautionBg : _lightCautionBg;
                     break;
                 case "UDP":
                 case "DELETE":
-                    fgKey = "SystemFillColorCriticalBrush"; // 红色
+                    BadgeForeground = isDark ? _darkCriticalFg : _lightCriticalFg;
+                    BadgeBackground = isDark ? _darkCriticalBg : _lightCriticalBg;
                     break;
                 case "WS":
                 case "WSS":
-                    fgKey = "SystemFillColorAttentionBrush"; // 紫色/关注色
+                    BadgeForeground = isDark ? _darkPurpleFg : _lightPurpleFg;
+                    BadgeBackground = isDark ? _darkPurpleBg : _lightPurpleBg;
                     break;
                 default:
-                    fgKey = "SystemFillColorNeutralBrush"; // 灰色
+                    BadgeForeground = isDark ? _darkNeutralFg : _lightNeutralFg;
+                    BadgeBackground = isDark ? _darkNeutralBg : _lightNeutralBg;
                     break;
             }
-
-            var resources = Application.Current?.Resources;
-            SolidColorBrush fgBrush;
-            if (resources != null && resources.TryGetValue(fgKey, out var res) && res is SolidColorBrush sb)
-                fgBrush = sb;
-            else
-                fgBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 156, 163, 175));
-
-            // 徽章背景：前景色 + 低透明度
-            BadgeBackground = new SolidColorBrush(Windows.UI.Color.FromArgb(30, fgBrush.Color.R, fgBrush.Color.G, fgBrush.Color.B));
-            BadgeForeground = fgBrush;
         }
 
-        private void UpdateStatusColors(string status)
+        private void UpdateStatusColors(string status, bool isDark)
         {
-            // BUG-11/DESIGN-8 fix: 使用 Fluent 语义颜色，适配深浅主题
-            var resources = Application.Current?.Resources;
-
-            string key;
             if (status.Contains("进行中") || status.Contains("200") || status.Contains("201") || status.Contains("204"))
-                key = "SystemFillColorSuccessBrush";
+                StatusForeground = isDark ? _darkSuccessFg : _lightSuccessFg;
             else if (status.Contains("404") || status.Contains("Timeout"))
-                key = "SystemFillColorCautionBrush";
+                StatusForeground = isDark ? _darkCautionFg : _lightCautionFg;
             else if (status.Contains("Error") || status.Contains("Reject") || status.Contains("500") || status.Contains("Block"))
-                key = "SystemFillColorCriticalBrush";
+                StatusForeground = isDark ? _darkCriticalFg : _lightCriticalFg;
             else
-                key = "SystemFillColorNeutralBrush";
-
-            if (resources != null && resources.TryGetValue(key, out var res) && res is SolidColorBrush sb)
-                StatusForeground = sb;
-            else
-                StatusForeground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 156, 163, 175));
+                StatusForeground = isDark ? _darkNeutralFg : _lightNeutralFg;
         }
     }
 }

@@ -7,7 +7,7 @@
     mc:Ignorable="d"
     Background="Transparent">
 
-    <Grid Margin="24,16,24,24" RowSpacing="16">
+    <Grid Margin="24" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -22,9 +22,9 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel>
-                <TextBlock Text="插件" Style="{StaticResource TitleTextBlockStyle}"/>
+                <TextBlock Text="插件" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                 <TextBlock Text="使用 JavaScript 插件扩展 Swell Proxy 的功能"
-                           Style="{StaticResource CaptionTextBlockStyle}"
+                           FontSize="12"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            Margin="0,4,0,0"/>
             </StackPanel>

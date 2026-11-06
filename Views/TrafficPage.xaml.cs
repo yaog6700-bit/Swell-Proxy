@@ -14,6 +14,9 @@ namespace AnywhereWinUI.Views
             NavigationCacheMode = NavigationCacheMode.Enabled;
             ViewModel = ((App)Application.Current).Services.GetService(typeof(TrafficViewModel)) as TrafficViewModel;
             this.InitializeComponent();
+
+            // Re-render heatmap palette when app Light/Dark theme switches
+            this.ActualThemeChanged += (_, _) => ViewModel?.OnPageActivated();
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -28,13 +31,16 @@ namespace AnywhereWinUI.Views
             ViewModel?.OnPageDeactivated();
         }
 
-        private void HeatmapDailyBtn_Checked(object sender, RoutedEventArgs e)
-            => ViewModel?.SetHeatmapMode(HeatmapViewMode.Daily);
-
-        private void HeatmapWeeklyBtn_Checked(object sender, RoutedEventArgs e)
-            => ViewModel?.SetHeatmapMode(HeatmapViewMode.Weekly);
-
-        private void HeatmapCumulativeBtn_Checked(object sender, RoutedEventArgs e)
-            => ViewModel?.SetHeatmapMode(HeatmapViewMode.Cumulative);
+        private void HeatmapModeSegmented_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is not CommunityToolkit.WinUI.Controls.Segmented seg) return;
+            var mode = seg.SelectedIndex switch
+            {
+                1 => HeatmapViewMode.Weekly,
+                2 => HeatmapViewMode.Cumulative,
+                _ => HeatmapViewMode.Daily
+            };
+            ViewModel?.SetHeatmapMode(mode);
+        }
     }
 }

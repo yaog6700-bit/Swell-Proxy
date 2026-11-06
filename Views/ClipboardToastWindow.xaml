@@ -11,20 +11,53 @@
         <DesktopAcrylicBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid Background="Transparent" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" Padding="16">
+    <Grid x:Name="RootGrid"
+          Background="Transparent"
+          Padding="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal" Spacing="8">
-            <FontIcon Glyph="&#xE128;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-            <TextBlock Text="检测到代理节点" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
-        </StackPanel>
-        
-        <TextBlock x:Name="NodeInfoText" Grid.Row="1" Text="类型: ... | 名称: ..." Margin="24,12,0,16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-        
-        <Button x:Name="ImportButton" Content="一键导入并测速 (Enter)" Grid.Row="2" HorizontalAlignment="Stretch" Style="{ThemeResource AccentButtonStyle}" Click="ImportButton_Click" CornerRadius="4" />
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE128;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="检测到代理节点" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Click="CloseButton_Click"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Width="28"
+                    Height="28"
+                    Padding="0"
+                    ToolTipService.ToolTip="关闭"
+                    VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE711;" FontSize="11" />
+            </Button>
+        </Grid>
+
+        <TextBlock x:Name="NodeInfoText"
+                   Grid.Row="1"
+                   Text="类型: ... | 名称: ..."
+                   Margin="24,8,0,12"
+                   FontSize="13"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   MaxLines="2"
+                   TextTrimming="CharacterEllipsis" />
+
+        <Button x:Name="ImportButton"
+                Content="一键导入并测速 (Enter)"
+                Grid.Row="2"
+                HorizontalAlignment="Stretch"
+                Style="{ThemeResource AccentButtonStyle}"
+                Click="ImportButton_Click"
+                CornerRadius="6" />
     </Grid>
 </Window>

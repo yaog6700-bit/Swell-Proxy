@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Models;
 using AnywhereWinUI.Services;
 using AnywhereWinUI.ViewModels;
@@ -257,7 +258,7 @@ namespace AnywhereWinUI.Views
                 XamlRoot = XamlRoot
             };
 
-            var result = await dialog.ShowAsync();
+            var result = await dialog.WithAppTheme().ShowAsync();
             if (result != ContentDialogResult.Primary) return;
 
             LoadRules();
@@ -281,7 +282,7 @@ namespace AnywhereWinUI.Views
                 IsEnabled = rule.IsEnabled
             });
 
-            var result = await dialog.ShowAsync();
+            var result = await dialog.WithAppTheme().ShowAsync();
             if (result != ContentDialogResult.Primary || dialog.ResultRule == null) return;
 
             rule.Type = dialog.ResultRule.Type;
@@ -318,7 +319,7 @@ namespace AnywhereWinUI.Views
                 DefaultButton = ContentDialogButton.Close
             };
 
-            var result = await dialog.ShowAsync();
+            var result = await dialog.WithAppTheme().ShowAsync();
             if (result != ContentDialogResult.Primary) return;
 
             _rules.Clear();

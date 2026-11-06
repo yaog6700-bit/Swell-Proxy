@@ -198,7 +198,7 @@
 
         <ToggleSwitch x:Name="TemplateEnabledSwitch"
                       Header="添加后立即启用"
-                      IsOn="True"
+                      IsOn="True" OnContent="" OffContent=""
                       MinWidth="0"/>
 
         <TextBlock x:Name="TemplateErrorText"

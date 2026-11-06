@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.NetworkInformation;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -131,6 +132,9 @@ namespace AnywhereWinUI.Services
                     }
                 }
 
+                // Sync ClashApiSecret from configJson after StopInternalAsync() may have cleared it
+                SyncClashApiSecretFromConfig(configJson);
+
                 // Write configuration
                 await File.WriteAllTextAsync(ConfigPath, configJson);
 
@@ -160,24 +164,28 @@ namespace AnywhereWinUI.Services
                         StandardErrorEncoding = Encoding.UTF8
                     };
 
-                    _process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+                    var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
+                    _process = proc;
 
-                    _process.OutputDataReceived += (_, e) =>
+                    proc.OutputDataReceived += (_, e) =>
                     {
                         if (e.Data is null) return;
                         lock (_startupLogLock) { _startupLog.AppendLine(e.Data); }
                         AppendLog("[sing-box] " + e.Data);
                     };
 
-                    _process.ErrorDataReceived += (_, e) =>
+                    proc.ErrorDataReceived += (_, e) =>
                     {
                         if (e.Data is null) return;
                         lock (_startupLogLock) { _startupLog.AppendLine(e.Data); }
                         AppendLog("[sing-box] " + e.Data);
                     };
 
-                    _process.Exited += (_, _) =>
+                    proc.Exited += (_, _) =>
                     {
+                        // Ignore stale exit callbacks from a previous process replaced during restart
+                        if (!ReferenceEquals(_process, proc)) return;
+
                         AppendLog("[sing-box 进程已退出]");
                         StopStatsPolling();
                         AppSession.Instance.ClashApiSecret = string.Empty;
@@ -235,10 +243,8 @@ namespace AnywhereWinUI.Services
                         ? "[启动] sing-box 就绪信号已收到"
                         : "[启动] 等待超时，假设 sing-box 已就绪");
 
-                    RunningChanged?.Invoke(this, true);
-                    _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStarted);
-                    // Traffic from Clash downloadTotal/uploadTotal (proxy session), not whole-NIC counters.
-                    StartStatsPolling();
+                    // Configure Windows System Proxy (and DNS cache flush) BEFORE firing RunningChanged,
+                    // so OS proxy/DNS state is settled before UI triggers AI unlock & exit IP checks.
                     if (AppSession.Instance.EnableSystemProxy)
                     {
                         SystemProxyManager.EnableProxy("127.0.0.1", AppSession.Instance.MixedPort);
@@ -257,6 +263,10 @@ namespace AnywhereWinUI.Services
                     {
                         AppendLog("[Local] 仅本地代理运行");
                     }
+
+                    StartStatsPolling();
+                    RunningChanged?.Invoke(this, true);
+                    _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStarted);
                     return true;
                 }
                 catch (Exception ex)
@@ -285,8 +295,27 @@ namespace AnywhereWinUI.Services
             }
         }
 
+        private static void SyncClashApiSecretFromConfig(string configJson)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(configJson);
+                if (doc.RootElement.TryGetProperty("experimental", out var exp) &&
+                    exp.TryGetProperty("clash_api", out var clashApi) &&
+                    clashApi.TryGetProperty("secret", out var secretProp) &&
+                    secretProp.ValueKind == JsonValueKind.String)
+                {
+                    AppSession.Instance.ClashApiSecret = secretProp.GetString() ?? string.Empty;
+                }
+            }
+            catch { }
+        }
+
         private Task StopInternalAsync()
         {
+            var proc = _process;
+            _process = null;
+
             StopStatsPolling();
             AppSession.Instance.ClashApiSecret = string.Empty;
             if (AppSession.Instance.EnableTunMode)
@@ -299,7 +328,7 @@ namespace AnywhereWinUI.Services
                 SystemProxyManager.DisableProxy();
             }
 
-            if (_process is null)
+            if (proc is null)
             {
                 // Fallback simulation state
                 AppendLog("[系统] 仿真引擎已停止...");
@@ -309,16 +338,16 @@ namespace AnywhereWinUI.Services
 
             try
             {
-                if (!_process.HasExited)
+                if (!proc.HasExited)
                 {
                     // Give plugins a chance to react before the core is killed
                     _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnBeforeCoreStop);
-                    _process.Kill(entireProcessTree: true);
+                    proc.Kill(entireProcessTree: true);
                 }
 
                 // Wait up to 3 s; if the process still hasn't exited, abandon it and move on
                 // so we never block the caller indefinitely.
-                if (!_process.WaitForExit(3000))
+                if (!proc.WaitForExit(3000))
                 {
                     AppendLog("[警告] sing-box 进程未在 3 秒内退出，强制放弃等待。");
                 }
@@ -326,8 +355,7 @@ namespace AnywhereWinUI.Services
             catch { }
             finally
             {
-                _process.Dispose();
-                _process = null;
+                proc.Dispose();
             }
 
             AppendLog("[已停止]");
