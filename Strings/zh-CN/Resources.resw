@@ -2273,4 +2273,187 @@ URL: {1}
   <data name="ClipToast_NodeInfoFmt" xml:space="preserve">
     <value>类型: {0} | 名称: {1}</value>
   </data>
+  <data name="Servers_AddCustomCfgBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>新建/导入原生配置 (.json)</value>
+  </data>
+  <data name="CustomCfg_DetailEditBtnText.Text" xml:space="preserve">
+    <value>编辑 JSON</value>
+  </data>
+  <data name="Servers_FormProtocolCustom.Content" xml:space="preserve">
+    <value>原生配置 (sing-box JSON)</value>
+  </data>
+  <data name="CustomCfg_PanelTitle.Text" xml:space="preserve">
+    <value>原生 sing-box 配置</value>
+  </data>
+  <data name="CustomCfg_PanelSubtitle.Text" xml:space="preserve">
+    <value>导入或直接编辑完整的 sing-box JSON 配置文件，保存后像普通节点一样一键启动。</value>
+  </data>
+  <data name="CustomCfg_NameInput.Header" xml:space="preserve">
+    <value>配置名称</value>
+  </data>
+  <data name="CustomCfg_NameInput.PlaceholderText" xml:space="preserve">
+    <value>例如: 自定义 TUN 分流配置</value>
+  </data>
+  <data name="CustomCfg_BridgeToggle.Header" xml:space="preserve">
+    <value>接入客户端监控与系统代理</value>
+  </data>
+  <data name="CustomCfg_BridgeToggle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>开启后自动注入本地 Clash API (9090) 与 Dashboard (9091) 以支持速率图、连接管理及自动识别本地端口接管系统代理；关闭则 100% 原样直跑。</value>
+  </data>
+  <data name="CustomCfg_ImportFileBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>从本地选择 .json 配置文件导入</value>
+  </data>
+  <data name="CustomCfg_ImportFileText.Text" xml:space="preserve">
+    <value>导入 .json</value>
+  </data>
+  <data name="CustomCfg_TemplateBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>插入精简的 sing-box 标准示例配置</value>
+  </data>
+  <data name="CustomCfg_TemplateText.Text" xml:space="preserve">
+    <value>示例模板</value>
+  </data>
+  <data name="CustomCfg_FormatBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>使用标准缩进美化 JSON 文本</value>
+  </data>
+  <data name="CustomCfg_FormatText.Text" xml:space="preserve">
+    <value>格式化</value>
+  </data>
+  <data name="CustomCfg_ValidateBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>调用 sing-box check 预检配置文件合法性</value>
+  </data>
+  <data name="CustomCfg_ValidateText.Text" xml:space="preserve">
+    <value>内核校验</value>
+  </data>
+  <data name="CustomCfg_OpenExtBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>使用系统外部编辑器打开该 JSON 文件</value>
+  </data>
+  <data name="CustomCfg_ReloadDiskBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>从磁盘重新读取外部修改后的文件内容</value>
+  </data>
+  <data name="CustomCfg_SaveBtn.Content" xml:space="preserve">
+    <value>保存配置</value>
+  </data>
+  <data name="CustomCfg_CancelBtn.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Servers_DetailAddrLabelText" xml:space="preserve">
+    <value>地址</value>
+  </data>
+  <data name="Servers_DetailPortLabelText" xml:space="preserve">
+    <value>端口</value>
+  </data>
+  <data name="Servers_DetailTransportLabelText" xml:space="preserve">
+    <value>传输</value>
+  </data>
+  <data name="Servers_DetailLatencyLabelText" xml:space="preserve">
+    <value>延迟</value>
+  </data>
+  <data name="CustomCfg_ListBadge" xml:space="preserve">
+    <value>原生配置</value>
+  </data>
+  <data name="CustomCfg_DetailSubtitle" xml:space="preserve">
+    <value>CUSTOM · 原生 sing-box 配置</value>
+  </data>
+  <data name="CustomCfg_DetailFileLabel" xml:space="preserve">
+    <value>配置文件</value>
+  </data>
+  <data name="CustomCfg_DetailSummaryLabel" xml:space="preserve">
+    <value>入站/出站</value>
+  </data>
+  <data name="CustomCfg_DetailBridgeLabel" xml:space="preserve">
+    <value>客户端桥接</value>
+  </data>
+  <data name="CustomCfg_DetailModeLabel" xml:space="preserve">
+    <value>分流控制</value>
+  </data>
+  <data name="CustomCfg_BridgeEnabled" xml:space="preserve">
+    <value>已接入速率监控与系统代理</value>
+  </data>
+  <data name="CustomCfg_BridgeRawOnly" xml:space="preserve">
+    <value>纯原生直跑（不修改配置）</value>
+  </data>
+  <data name="CustomCfg_RouteSelfManaged" xml:space="preserve">
+    <value>由原生配置文件内部规则控制</value>
+  </data>
+  <data name="CustomCfg_AddTitle" xml:space="preserve">
+    <value>新建原生 sing-box 配置</value>
+  </data>
+  <data name="CustomCfg_EditTitle" xml:space="preserve">
+    <value>编辑原生 sing-box 配置</value>
+  </data>
+  <data name="CustomCfg_DefaultName" xml:space="preserve">
+    <value>自定义配置</value>
+  </data>
+  <data name="CustomCfg_PickFileTitle" xml:space="preserve">
+    <value>选择 sing-box JSON 配置文件</value>
+  </data>
+  <data name="CustomCfg_ImportedTitle" xml:space="preserve">
+    <value>已成功载入配置文件</value>
+  </data>
+  <data name="CustomCfg_SummaryBannerFmt" xml:space="preserve">
+    <value>共 {0} 个入站 · {1} 个出站 · {2} 条路由规则（{3}）</value>
+  </data>
+  <data name="CustomCfg_ImportedWithWarnTitle" xml:space="preserve">
+    <value>文件已读取，但 JSON 语法存在问题</value>
+  </data>
+  <data name="CustomCfg_OverwriteTemplateTitle" xml:space="preserve">
+    <value>替换为示例模板？</value>
+  </data>
+  <data name="CustomCfg_OverwriteTemplateMsg" xml:space="preserve">
+    <value>当前编辑器中已有内容，插入示例模板将覆盖现有文本，是否继续？</value>
+  </data>
+  <data name="CustomCfg_TemplateInsertedTitle" xml:space="preserve">
+    <value>已插入最小可运行示例模板</value>
+  </data>
+  <data name="CustomCfg_FormattedOkTitle" xml:space="preserve">
+    <value>JSON 格式化完成</value>
+  </data>
+  <data name="CustomCfg_FormatFailTitle" xml:space="preserve">
+    <value>JSON 格式化失败</value>
+  </data>
+  <data name="CustomCfg_ValidateOkTitle" xml:space="preserve">
+    <value>sing-box 内核校验通过</value>
+  </data>
+  <data name="CustomCfg_ValidateFailTitle" xml:space="preserve">
+    <value>sing-box 内核校验未通过</value>
+  </data>
+  <data name="CustomCfg_OpenExtFailTitle" xml:space="preserve">
+    <value>无法打开外部编辑器</value>
+  </data>
+  <data name="CustomCfg_ReloadedTitle" xml:space="preserve">
+    <value>已从磁盘重新加载配置内容</value>
+  </data>
+  <data name="CustomCfg_SaveBlockedInvalidTitle" xml:space="preserve">
+    <value>无法保存：JSON 语法无效</value>
+  </data>
+  <data name="CustomCfg_CopiedJsonTitle" xml:space="preserve">
+    <value>已复制配置 JSON</value>
+  </data>
+  <data name="CustomCfg_CopiedJsonMsg" xml:space="preserve">
+    <value>原生配置不支持单节点分享链接/二维码，已将完整 JSON 配置文本复制到剪贴板。</value>
+  </data>
+  <data name="CustomCfg_ErrEmptyJson" xml:space="preserve">
+    <value>JSON 配置内容不能为空。</value>
+  </data>
+  <data name="CustomCfg_ErrRootNotObject" xml:space="preserve">
+    <value>根节点必须是一个合法的 JSON 对象 { ... }。</value>
+  </data>
+  <data name="CustomCfg_ErrInvalidJson" xml:space="preserve">
+    <value>JSON 语法不合法。</value>
+  </data>
+  <data name="CustomCfg_ErrJsonSyntaxFmt" xml:space="preserve">
+    <value>第 {0} 行，第 {1} 列语法错误：{2}</value>
+  </data>
+  <data name="CustomCfg_ErrFileMissingOrEmpty" xml:space="preserve">
+    <value>找不到对应的本地自定义配置文件，或文件内容为空。</value>
+  </data>
+  <data name="CustomCfg_CoreMissingError" xml:space="preserve">
+    <value>未在 Assets 目录中找到 sing-box.exe，无法执行内核校验。</value>
+  </data>
+  <data name="CustomCfg_CheckPassedFmt" xml:space="preserve">
+    <value>配置合法（{0} 个入站，{1} 个出站，{2} 条路由规则）。</value>
+  </data>
+  <data name="CustomCfg_CheckTimeout" xml:space="preserve">
+    <value>sing-box check 执行超时（8 秒）。</value>
+  </data>
 </root>

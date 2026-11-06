@@ -47,6 +47,27 @@ namespace AnywhereWinUI.Services
         /// </summary>
         public string ClashApiSecret { get; set; } = string.Empty;
 
+        // Runtime state for active Custom Config profile (not persisted)
+        public bool IsActiveNodeCustom { get; set; } = false;
+        public bool ActiveCustomHasTun { get; set; } = false;
+        public int? ActiveCustomHttpProxyPort { get; set; }
+        public int? ActiveCustomReadyPort { get; set; }
+        public bool ActiveCustomSkipSystemProxy { get; set; } = false;
+
+        /// <summary>
+        /// Effective local HTTP/Mixed proxy port for health checks (null when active custom config has no HTTP/Mixed inbound).
+        /// </summary>
+        public int? EffectiveHttpProxyPort => IsActiveNodeCustom ? ActiveCustomHttpProxyPort : MixedPort;
+
+        public void ResetActiveCustomState()
+        {
+            IsActiveNodeCustom = false;
+            ActiveCustomHasTun = false;
+            ActiveCustomHttpProxyPort = null;
+            ActiveCustomReadyPort = null;
+            ActiveCustomSkipSystemProxy = false;
+        }
+
         // Application Rule Sets
         public string RuleNetflixAction { get; set; } = "proxy";
         public string RuleChatGPTAction { get; set; } = "proxy";

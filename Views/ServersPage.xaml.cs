@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -47,7 +48,11 @@ namespace AnywhereWinUI.Views
         public int Port { get; set; } = 443;
         public string Network { get; set; } = string.Empty;
 
-        public string HostPortDisplay => $"{Host}:{Port}";
+        public bool IsCustom => CustomConfigService.IsCustomProtocol(Protocol);
+
+        public string HostPortDisplay => IsCustom
+            ? (string.IsNullOrWhiteSpace(Host) ? "sing-box JSON" : Host)
+            : $"{Host}:{Port}";
 
         public override string ToString()
         {
@@ -157,6 +162,7 @@ namespace AnywhereWinUI.Views
                 ["SOCKS"]       = new SolidColorBrush(ColorHelper.FromArgb(255, 100, 116, 139)),
                 ["ANYTLS"]      = new SolidColorBrush(ColorHelper.FromArgb(255, 234, 179,   8)),
                 ["SNELL"]       = new SolidColorBrush(ColorHelper.FromArgb(255, 192, 132, 252)),
+                ["CUSTOM"]      = new SolidColorBrush(ColorHelper.FromArgb(255,  34, 211, 238)),
             };
         private static readonly SolidColorBrush _protocolBrushFallback =
             new SolidColorBrush(ColorHelper.FromArgb(255, 148, 168, 160));
@@ -248,9 +254,20 @@ namespace AnywhereWinUI.Views
         {
             var mode = AppSession.Instance.RoutingMode;
             bool isTun = AppSession.Instance.EnableTunMode;
-            
-            string modeName = mode == "direct" ? L.RouteMode_Direct : mode == "global" ? L.RouteMode_Global : L.RouteMode_Smart;
-            ToolTipService.SetToolTip(RoutingModeButton, isTun ? $"TUN ({modeName})" : modeName);
+
+            var currentNode = ServersListView?.SelectedItem is ServerEntryItem selItem
+                ? NodesManager.Instance.Nodes.Find(n => n.Id == selItem.Id)
+                : NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+
+            if (CustomConfigService.IsCustomNode(currentNode))
+            {
+                ToolTipService.SetToolTip(RoutingModeButton, L.CustomCfg_RouteSelfManaged);
+            }
+            else
+            {
+                string modeName = mode == "direct" ? L.RouteMode_Direct : mode == "global" ? L.RouteMode_Global : L.RouteMode_Smart;
+                ToolTipService.SetToolTip(RoutingModeButton, isTun ? $"TUN ({modeName})" : modeName);
+            }
 
             switch (mode)
             {
@@ -381,7 +398,12 @@ namespace AnywhereWinUI.Views
                         NodesManager.Instance.Save();
                     }
 
-                    if (AppSession.Instance.EnableTunMode && !Helpers.AdminHelper.IsAdministrator())
+                    var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                    bool isCustomNode = CustomConfigService.IsCustomNode(node);
+                    bool needsGlobalTunAdmin = AppSession.Instance.EnableTunMode && !isCustomNode && !Helpers.AdminHelper.IsAdministrator();
+                    bool needsCustomTunAdmin = CustomConfigService.RequiresTunAdmin(node);
+
+                    if (needsGlobalTunAdmin || needsCustomTunAdmin)
                     {
                         StartStopButton.IsChecked = false;
                         var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
@@ -407,7 +429,9 @@ namespace AnywhereWinUI.Views
                                     return;
                                 }
 
-                                string arg = AppSession.Instance.ProxyModeIndex == 3 ? "--tun-system-start" : "--tun-start";
+                                string arg = needsCustomTunAdmin
+                                    ? "--auto-start-proxy"
+                                    : (AppSession.Instance.ProxyModeIndex == 3 ? "--tun-system-start" : "--tun-start");
                                 bool restarted = Helpers.AdminHelper.RestartAsAdmin(arg);
                                 tcs.SetResult(restarted);
                             }
@@ -422,7 +446,6 @@ namespace AnywhereWinUI.Views
                         return;
                     }
 
-                    var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
                     string realConfig = await ConfigBuilder.BuildAsync(node);
 
                     bool success = await CoreManager.Instance.StartAsync(realConfig);
@@ -778,6 +801,12 @@ namespace AnywhereWinUI.Views
                 var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
                 if (node == null) { _isLatencyProbing = false; return; }
 
+                if (CustomConfigService.IsCustomNode(node))
+                {
+                    DispatcherQueue.TryEnqueue(() => TopSheetLatencyText.Text = L.CustomCfg_ListBadge);
+                    return;
+                }
+
                 // Host field format is "host:port"
                 string host = node.Host;
                 int port = 443;
@@ -864,6 +893,11 @@ namespace AnywhereWinUI.Views
 
             // Resolve share URL from currently selected node
             var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+            if (CustomConfigService.IsCustomNode(node) && node != null)
+            {
+                await CopyCustomConfigJsonWithDialogAsync(node);
+                return;
+            }
             _currentShareUrl = node != null ? NodesManager.ToShareUrl(node) : string.Empty;
 
             // Reset copy button state
@@ -1464,17 +1498,43 @@ namespace AnywhereWinUI.Views
 
                     // Populate Detailed View
                     DetailTitle.Text = selected.Name;
-                    DetailSubtitle.Text = selected.Protocol;
-                    DetailHostText.Text = selected.Host;
-                    DetailPortText.Text = selected.Port.ToString();
-                    DetailNetworkText.Text = string.IsNullOrEmpty(selected.Network) ? "TCP" : selected.Network.ToUpper();
-
                     DetailFavoriteButton.IsChecked = selected.IsFavorite;
                     DetailFavoriteIcon.Glyph = selected.IsFavorite ? "\uE735" : "\uE734"; // Solid / Outline star
 
-                    // Reset statuses
-                    DetailLatencyText.Text = L.Servers_PingUntested;
-                    
+                    if (selected.IsCustom)
+                    {
+                        var customNode = NodesManager.Instance.Nodes.Find(n => n.Id == selected.Id);
+                        DetailSubtitle.Text = L.CustomCfg_DetailSubtitle;
+                        if (DetailEditCustomJsonButton != null) DetailEditCustomJsonButton.Visibility = Visibility.Visible;
+                        if (TestSingleLatencyButton != null) TestSingleLatencyButton.Visibility = Visibility.Collapsed;
+
+                        if (DetailAddrLabel != null) DetailAddrLabel.Text = L.CustomCfg_DetailFileLabel;
+                        if (DetailPortLabel != null) DetailPortLabel.Text = L.CustomCfg_DetailSummaryLabel;
+                        if (DetailTransportLabel != null) DetailTransportLabel.Text = L.CustomCfg_DetailBridgeLabel;
+                        if (DetailLatencyLabel != null) DetailLatencyLabel.Text = L.CustomCfg_DetailModeLabel;
+
+                        DetailHostText.Text = customNode != null ? CustomConfigService.EnsureFileName(customNode) : "config.json";
+                        DetailPortText.Text = selected.HostPortDisplay;
+                        DetailNetworkText.Text = (customNode?.CustomBridgeGui ?? true) ? L.CustomCfg_BridgeEnabled : L.CustomCfg_BridgeRawOnly;
+                        DetailLatencyText.Text = L.CustomCfg_RouteSelfManaged;
+                    }
+                    else
+                    {
+                        DetailSubtitle.Text = selected.Protocol;
+                        if (DetailEditCustomJsonButton != null) DetailEditCustomJsonButton.Visibility = Visibility.Collapsed;
+                        if (TestSingleLatencyButton != null) TestSingleLatencyButton.Visibility = Visibility.Visible;
+
+                        if (DetailAddrLabel != null) DetailAddrLabel.Text = L.Servers_DetailAddrLabelText;
+                        if (DetailPortLabel != null) DetailPortLabel.Text = L.Servers_DetailPortLabelText;
+                        if (DetailTransportLabel != null) DetailTransportLabel.Text = L.Servers_DetailTransportLabelText;
+                        if (DetailLatencyLabel != null) DetailLatencyLabel.Text = L.Servers_DetailLatencyLabelText;
+
+                        DetailHostText.Text = selected.Host;
+                        DetailPortText.Text = selected.Port.ToString();
+                        DetailNetworkText.Text = string.IsNullOrEmpty(selected.Network) ? "TCP" : selected.Network.ToUpper();
+                        DetailLatencyText.Text = L.Servers_PingUntested;
+                    }
+
                     try
                     {
                         DetailLatencyText.Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
@@ -1488,9 +1548,13 @@ namespace AnywhereWinUI.Views
                     ResetIpInfoText();
 
                     ShowPanel("detail");
+                    UpdateRoutingModeUI();
 
-                    // Start Latency checks in background
-                    _ = ViewModel.TestSingleLatencyCommand.ExecuteAsync(selected);
+                    if (!selected.IsCustom)
+                    {
+                        // Start Latency checks in background
+                        _ = ViewModel.TestSingleLatencyCommand.ExecuteAsync(selected);
+                    }
                     
                     // Show cached AI/IP info if applicable
                     UpdateAiAndIpDisplay();
@@ -1528,11 +1592,30 @@ namespace AnywhereWinUI.Views
             ServerDetailsPanel.Visibility = (name == "detail") ? Visibility.Visible : Visibility.Collapsed;
             EditFormPanel.Visibility = (name == "edit") ? Visibility.Visible : Visibility.Collapsed;
             SubscriptionPanel.Visibility = (name == "subscription") ? Visibility.Visible : Visibility.Collapsed;
+            if (CustomConfigPanel != null)
+            {
+                CustomConfigPanel.Visibility = (name == "custom_edit") ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            // Release raw JSON buffer from XAML TextBox as soon as leaving custom editor to minimize RAM
+            if (name != "custom_edit")
+            {
+                if (CustomJsonEditorBox != null && CustomJsonEditorBox.Text.Length > 0)
+                {
+                    CustomJsonEditorBox.Text = string.Empty;
+                }
+                if (CustomConfigInfoBar != null)
+                {
+                    CustomConfigInfoBar.IsOpen = false;
+                }
+            }
 
             // Hide bottom connection/control bar when adding/editing nodes or managing subscriptions
             if (BottomControlBar != null)
             {
-                BottomControlBar.Visibility = (name == "edit" || name == "subscription") ? Visibility.Collapsed : Visibility.Visible;
+                BottomControlBar.Visibility = (name == "edit" || name == "subscription" || name == "custom_edit")
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
             }
         }
 
@@ -1693,7 +1776,7 @@ namespace AnywhereWinUI.Views
             {
                 var ipInfoService = new IpInfoService();
                 var aiService = new AiUnlockCheckService();
-                int proxyPort = AppSession.Instance.MixedPort;
+                int? proxyPort = AppSession.Instance.EffectiveHttpProxyPort;
 
                 var openAiTask = aiService.CheckOpenAiAsync(proxyPort, token);
                 var claudeTask = aiService.CheckClaudeAsync(proxyPort, token);
@@ -1839,6 +1922,12 @@ namespace AnywhereWinUI.Views
                 var node = NodesManager.Instance.Nodes.Find(n => n.Id == selected.Id);
                 if (node != null)
                 {
+                    if (CustomConfigService.IsCustomNode(node))
+                    {
+                        await CopyCustomConfigJsonWithDialogAsync(node);
+                        return;
+                    }
+
                     string link = NodesManager.ToShareUrl(node);
                     if (!string.IsNullOrEmpty(link))
                     {
@@ -1981,6 +2070,12 @@ namespace AnywhereWinUI.Views
             {
                 var node = NodesManager.Instance.Nodes.Find(n => n.Id == selected.Id);
                 if (node == null) return;
+
+                if (CustomConfigService.IsCustomNode(node))
+                {
+                    _ = OpenCustomConfigEditorAsync(node);
+                    return;
+                }
 
                 _editingNodeId = selected.Id;
                 ServerNameInput.Text = node.Name;
@@ -2512,6 +2607,17 @@ namespace AnywhereWinUI.Views
 
         private void ServerProtocolInput_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (ServerProtocolInput?.SelectedItem is ComboBoxItem cbi &&
+                string.Equals(cbi.Tag as string, "custom", StringComparison.OrdinalIgnoreCase))
+            {
+                string carriedName = ServerNameInput?.Text?.Trim() ?? string.Empty;
+                ServerProtocolInput.SelectedIndex = 0;
+                var existing = string.IsNullOrEmpty(_editingNodeId)
+                    ? null
+                    : NodesManager.Instance.Nodes.Find(n => n.Id == _editingNodeId);
+                _ = OpenCustomConfigEditorAsync(existing, carriedName);
+                return;
+            }
             UpdateFormFieldsVisibility();
         }
 
@@ -2602,6 +2708,8 @@ namespace AnywhereWinUI.Views
             foreach (var node in NodesManager.Instance.Nodes)
             {
                 if (!string.IsNullOrEmpty(excludeId) && node.Id == excludeId)
+                    continue;
+                if (CustomConfigService.IsCustomNode(node))
                     continue;
 
                 var item = new ComboBoxItem
@@ -2803,6 +2911,336 @@ namespace AnywhereWinUI.Views
                     ServerEncryptionInput.SelectedIndex = 0;
                 }
             }
+        }
+
+        // ================= Custom Native sing-box Config Editor =================
+
+        private void AddCustomConfig_Click(object sender, RoutedEventArgs e)
+        {
+            _ = OpenCustomConfigEditorAsync(null);
+        }
+
+        private async Task OpenCustomConfigEditorAsync(PersistedNode? existingNode, string? initialName = null)
+        {
+            _editingNodeId = existingNode?.Id ?? string.Empty;
+
+            if (CustomConfigPanelTitle != null)
+            {
+                CustomConfigPanelTitle.Text = existingNode == null ? L.CustomCfg_AddTitle : L.CustomCfg_EditTitle;
+            }
+
+            if (CustomConfigNameInput != null)
+            {
+                CustomConfigNameInput.Text = existingNode?.Name ?? initialName ?? string.Empty;
+            }
+
+            if (CustomBridgeGuiToggle != null)
+            {
+                CustomBridgeGuiToggle.IsOn = existingNode?.CustomBridgeGui ?? true;
+            }
+
+            if (CustomConfigInfoBar != null)
+            {
+                CustomConfigInfoBar.IsOpen = false;
+            }
+
+            bool hasSavedFile = existingNode != null;
+            if (OpenExternalJsonButton != null) OpenExternalJsonButton.IsEnabled = hasSavedFile;
+            if (ReloadDiskJsonButton != null) ReloadDiskJsonButton.IsEnabled = hasSavedFile;
+
+            string jsonContent = string.Empty;
+            if (existingNode != null)
+            {
+                jsonContent = await CustomConfigService.ReadConfigTextAsync(existingNode);
+            }
+
+            ShowPanel("custom_edit");
+
+            if (CustomJsonEditorBox != null)
+            {
+                CustomJsonEditorBox.Text = jsonContent;
+            }
+        }
+
+        private void ShowCustomInfoBar(InfoBarSeverity severity, string title, string? message = null)
+        {
+            if (CustomConfigInfoBar == null) return;
+            CustomConfigInfoBar.Severity = severity;
+            CustomConfigInfoBar.Title = title;
+            CustomConfigInfoBar.Message = message ?? string.Empty;
+            CustomConfigInfoBar.IsOpen = true;
+        }
+
+        private async void ImportCustomJsonFile_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var filters = new (string Name, string Spec)[]
+                {
+                    ("JSON (*.json)", "*.json"),
+                    (L.FilePicker_AllFiles, "*.*")
+                };
+
+                string? picked = await Win32FilePickerHelper.PickSingleFileAsync(
+                    App.Current.MainWindowHandle,
+                    filters,
+                    L.CustomCfg_PickFileTitle);
+
+                if (string.IsNullOrWhiteSpace(picked) || !File.Exists(picked))
+                    return;
+
+                string rawText = await File.ReadAllTextAsync(picked, Encoding.UTF8);
+                CustomJsonEditorBox.Text = rawText;
+
+                if (string.IsNullOrWhiteSpace(CustomConfigNameInput.Text))
+                {
+                    CustomConfigNameInput.Text = Path.GetFileNameWithoutExtension(picked);
+                }
+
+                var summary = CustomConfigService.InspectConfig(rawText);
+                if (summary.IsValidJson)
+                {
+                    ShowCustomInfoBar(
+                        InfoBarSeverity.Success,
+                        L.CustomCfg_ImportedTitle,
+                        Loc.Format("CustomCfg_SummaryBannerFmt", summary.InboundCount, summary.OutboundCount, summary.RuleCount, summary.ShortSummary));
+                }
+                else
+                {
+                    ShowCustomInfoBar(InfoBarSeverity.Warning, L.CustomCfg_ImportedWithWarnTitle, summary.ParseError);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowCustomInfoBar(InfoBarSeverity.Error, L.Servers_ImportErrorTitle, ex.Message);
+            }
+        }
+
+        private async void InsertCustomTemplate_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrWhiteSpace(CustomJsonEditorBox.Text))
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = L.CustomCfg_OverwriteTemplateTitle,
+                    Content = L.CustomCfg_OverwriteTemplateMsg,
+                    PrimaryButtonText = L.Dialog_OK,
+                    CloseButtonText = L.Dialog_Cancel,
+                    DefaultButton = ContentDialogButton.Close,
+                    XamlRoot = this.XamlRoot
+                };
+                var res = await dialog.WithAppTheme().ShowAsync();
+                if (res != ContentDialogResult.Primary)
+                    return;
+            }
+
+            CustomJsonEditorBox.Text = CustomConfigService.GetMinimalTemplate(AppSession.Instance.MixedPort);
+            if (string.IsNullOrWhiteSpace(CustomConfigNameInput.Text))
+            {
+                CustomConfigNameInput.Text = L.CustomCfg_DefaultName;
+            }
+            ShowCustomInfoBar(InfoBarSeverity.Informational, L.CustomCfg_TemplateInsertedTitle, string.Empty);
+        }
+
+        private void FormatCustomJson_Click(object sender, RoutedEventArgs e)
+        {
+            if (CustomConfigService.TryFormatJson(CustomJsonEditorBox.Text, out var formatted, out var error))
+            {
+                CustomJsonEditorBox.Text = formatted;
+                ShowCustomInfoBar(InfoBarSeverity.Success, L.CustomCfg_FormattedOkTitle, string.Empty);
+            }
+            else
+            {
+                ShowCustomInfoBar(InfoBarSeverity.Error, L.CustomCfg_FormatFailTitle, error);
+            }
+        }
+
+        private async void ValidateCustomJson_Click(object sender, RoutedEventArgs e)
+        {
+            if (ValidateCustomJsonButton != null) ValidateCustomJsonButton.IsEnabled = false;
+            if (ValidateCustomIcon != null) ValidateCustomIcon.Visibility = Visibility.Collapsed;
+            if (ValidateCustomSpinner != null)
+            {
+                ValidateCustomSpinner.Visibility = Visibility.Visible;
+                ValidateCustomSpinner.IsActive = true;
+            }
+
+            try
+            {
+                var (ok, msg) = await CustomConfigService.ValidateWithCoreAsync(CustomJsonEditorBox.Text);
+                ShowCustomInfoBar(
+                    ok ? InfoBarSeverity.Success : InfoBarSeverity.Error,
+                    ok ? L.CustomCfg_ValidateOkTitle : L.CustomCfg_ValidateFailTitle,
+                    msg);
+            }
+            finally
+            {
+                if (ValidateCustomSpinner != null)
+                {
+                    ValidateCustomSpinner.IsActive = false;
+                    ValidateCustomSpinner.Visibility = Visibility.Collapsed;
+                }
+                if (ValidateCustomIcon != null) ValidateCustomIcon.Visibility = Visibility.Visible;
+                if (ValidateCustomJsonButton != null) ValidateCustomJsonButton.IsEnabled = true;
+            }
+        }
+
+        private void OpenExternalCustomJson_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_editingNodeId)) return;
+            var node = NodesManager.Instance.Nodes.Find(n => n.Id == _editingNodeId);
+            if (node == null) return;
+
+            try
+            {
+                string path = CustomConfigService.ResolveConfigFilePath(node);
+                if (!File.Exists(path))
+                {
+                    Directory.CreateDirectory(CustomConfigService.ConfigsDirectory);
+                    File.WriteAllText(path, CustomJsonEditorBox.Text ?? string.Empty, Encoding.UTF8);
+                }
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                ShowCustomInfoBar(InfoBarSeverity.Error, L.CustomCfg_OpenExtFailTitle, ex.Message);
+            }
+        }
+
+        private async void ReloadCustomJsonFromDisk_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_editingNodeId)) return;
+            var node = NodesManager.Instance.Nodes.Find(n => n.Id == _editingNodeId);
+            if (node == null) return;
+
+            string reloaded = await CustomConfigService.ReadConfigTextAsync(node);
+            CustomJsonEditorBox.Text = reloaded;
+            ShowCustomInfoBar(InfoBarSeverity.Informational, L.CustomCfg_ReloadedTitle, string.Empty);
+        }
+
+        private void CustomJsonEditorBox_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key == Windows.System.VirtualKey.Tab && sender is TextBox tb)
+            {
+                int start = tb.SelectionStart;
+                int len = tb.SelectionLength;
+                string current = tb.Text ?? string.Empty;
+                if (start >= 0 && start <= current.Length)
+                {
+                    tb.Text = current.Substring(0, start) + "  " + current.Substring(Math.Min(current.Length, start + len));
+                    tb.SelectionStart = start + 2;
+                    tb.SelectionLength = 0;
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private async void SaveCustomConfig_Click(object sender, RoutedEventArgs e)
+        {
+            string name = CustomConfigNameInput.Text.Trim();
+            if (string.IsNullOrEmpty(name))
+            {
+                name = L.CustomCfg_DefaultName;
+            }
+
+            string jsonText = CustomJsonEditorBox.Text ?? string.Empty;
+            var checkSummary = CustomConfigService.InspectConfig(jsonText);
+            if (!checkSummary.IsValidJson)
+            {
+                ShowCustomInfoBar(InfoBarSeverity.Error, L.CustomCfg_SaveBlockedInvalidTitle, checkSummary.ParseError);
+                return;
+            }
+
+            SaveCustomConfigButton.IsEnabled = false;
+            try
+            {
+                PersistedNode targetNode;
+                if (string.IsNullOrEmpty(_editingNodeId))
+                {
+                    targetNode = new PersistedNode
+                    {
+                        Name = name,
+                        Protocol = CustomConfigService.ProtocolName,
+                        CustomBridgeGui = CustomBridgeGuiToggle.IsOn,
+                        SubscriptionId = string.Empty
+                    };
+                    await CustomConfigService.SaveConfigTextAsync(targetNode, jsonText);
+                    NodesManager.Instance.AddManualNode(targetNode);
+                }
+                else
+                {
+                    var found = NodesManager.Instance.Nodes.Find(n => n.Id == _editingNodeId);
+                    if (found == null)
+                    {
+                        targetNode = new PersistedNode
+                        {
+                            Id = _editingNodeId,
+                            Name = name,
+                            Protocol = CustomConfigService.ProtocolName,
+                            CustomBridgeGui = CustomBridgeGuiToggle.IsOn,
+                            SubscriptionId = string.Empty
+                        };
+                        await CustomConfigService.SaveConfigTextAsync(targetNode, jsonText);
+                        NodesManager.Instance.AddManualNode(targetNode);
+                    }
+                    else
+                    {
+                        targetNode = found;
+                        targetNode.Name = name;
+                        targetNode.Protocol = CustomConfigService.ProtocolName;
+                        targetNode.CustomBridgeGui = CustomBridgeGuiToggle.IsOn;
+                        await CustomConfigService.SaveConfigTextAsync(targetNode, jsonText);
+                        NodesManager.Instance.Save();
+                    }
+                }
+
+                _lastSelectedNodeId = targetNode.Id;
+                LoadServersList();
+
+                // Hot-reload core if currently connected to this exact custom profile
+                if (CoreManager.Instance.IsRunning && NodesManager.Instance.SelectedNodeId == targetNode.Id)
+                {
+                    string runtimeCfg = await ConfigBuilder.BuildAsync(targetNode);
+                    await CoreManager.Instance.StartAsync(runtimeCfg);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowCustomInfoBar(InfoBarSeverity.Error, L.Servers_ImportErrorTitle, ex.Message);
+            }
+            finally
+            {
+                SaveCustomConfigButton.IsEnabled = true;
+            }
+        }
+
+        private async Task CopyCustomConfigJsonWithDialogAsync(PersistedNode node)
+        {
+            try
+            {
+                string json = await CustomConfigService.ReadConfigTextAsync(node);
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var pkg = new DataPackage();
+                    pkg.SetText(json);
+                    Clipboard.SetContent(pkg);
+                }
+
+                var dialog = new ContentDialog
+                {
+                    Title = L.CustomCfg_CopiedJsonTitle,
+                    Content = L.CustomCfg_CopiedJsonMsg,
+                    CloseButtonText = L.Dialog_OK,
+                    XamlRoot = this.XamlRoot
+                };
+                await dialog.WithAppTheme().ShowAsync();
+            }
+            catch { }
         }
     }
 }

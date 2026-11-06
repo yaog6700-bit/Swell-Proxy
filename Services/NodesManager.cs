@@ -161,6 +161,11 @@ namespace AnywhereWinUI.Services
 
         public void DeleteNode(string id)
         {
+            var existing = Nodes.Find(n => n.Id == id);
+            if (existing != null)
+            {
+                CustomConfigService.DeleteConfigFile(existing);
+            }
             Nodes.RemoveAll(n => n.Id == id);
             if (SelectedNodeId == id)
             {
@@ -916,6 +921,13 @@ namespace AnywhereWinUI.Services
                 {
                     zip.CreateEntryFromFile(ConfigPath, "nodes_config.json");
                 }
+                if (Directory.Exists(CustomConfigService.ConfigsDirectory))
+                {
+                    foreach (var cfgFile in Directory.GetFiles(CustomConfigService.ConfigsDirectory, "*.json"))
+                    {
+                        zip.CreateEntryFromFile(cfgFile, $"configs/{Path.GetFileName(cfgFile)}");
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -934,6 +946,16 @@ namespace AnywhereWinUI.Services
                     if (entry.FullName.Equals("nodes_config.json", StringComparison.OrdinalIgnoreCase))
                     {
                         entry.ExtractToFile(ConfigPath, overwrite: true);
+                    }
+                    else if (entry.FullName.StartsWith("configs/", StringComparison.OrdinalIgnoreCase) &&
+                             entry.FullName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var safeFileName = Path.GetFileName(entry.FullName);
+                        if (!string.IsNullOrWhiteSpace(safeFileName))
+                        {
+                            Directory.CreateDirectory(CustomConfigService.ConfigsDirectory);
+                            entry.ExtractToFile(Path.Combine(CustomConfigService.ConfigsDirectory, safeFileName), overwrite: true);
+                        }
                     }
                 }
                 // Reload nodes config into memory

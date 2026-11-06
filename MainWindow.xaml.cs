@@ -1201,7 +1201,11 @@ namespace AnywhereWinUI
             }
             else
             {
-                if (AppSession.Instance.EnableTunMode && !AnywhereWinUI.Helpers.AdminHelper.IsAdministrator())
+                var activeNode = AnywhereWinUI.Services.NodesManager.Instance.Nodes.Find(n => n.Id == AnywhereWinUI.Services.NodesManager.Instance.SelectedNodeId);
+                bool needsAdmin = (AppSession.Instance.EnableTunMode && !AnywhereWinUI.Services.CustomConfigService.IsCustomNode(activeNode) && !AnywhereWinUI.Helpers.AdminHelper.IsAdministrator())
+                               || AnywhereWinUI.Services.CustomConfigService.RequiresTunAdmin(activeNode);
+
+                if (needsAdmin)
                 {
                     MiniStartStopButton.IsChecked = false;
                     SetMiniMode(false); // Expand to full mode
@@ -1222,7 +1226,6 @@ namespace AnywhereWinUI
 
                 try
                 {
-                    var activeNode = AnywhereWinUI.Services.NodesManager.Instance.Nodes.Find(n => n.Id == AnywhereWinUI.Services.NodesManager.Instance.SelectedNodeId);
                     if (activeNode != null)
                     {
                         var config = await AnywhereWinUI.Services.ConfigBuilder.BuildAsync(activeNode);

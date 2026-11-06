@@ -156,11 +156,16 @@ namespace AnywhereWinUI.Services
 
                 try
                 {
+                    bool isCustom = AppSession.Instance.IsActiveNodeCustom;
+                    string workingDir = isCustom && !string.IsNullOrEmpty(localDir)
+                        ? localDir
+                        : Path.GetDirectoryName(ExePath)!;
+
                     var psi = new ProcessStartInfo
                     {
                         FileName = ExePath,
                         Arguments = $"run -c \"{ConfigPath}\"",
-                        WorkingDirectory = Path.GetDirectoryName(ExePath)!,
+                        WorkingDirectory = workingDir,
                         CreateNoWindow = true,
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
@@ -224,7 +229,10 @@ namespace AnywhereWinUI.Services
 
                     // Attach the ready signal BEFORE Start() so no output line is missed.
                     // sing-box prints "sing-box started (Xs)" once every inbound is bound.
-                    var readySignal = CoreReadySignal.Attach(_process, AppSession.Instance.MixedPort);
+                    int readyPort = isCustom
+                        ? (AppSession.Instance.ActiveCustomReadyPort ?? 0)
+                        : AppSession.Instance.MixedPort;
+                    var readySignal = CoreReadySignal.Attach(_process, readyPort);
 
                     _process.Start();
                     ChildProcessTracker.AddProcess(_process);
@@ -275,21 +283,29 @@ namespace AnywhereWinUI.Services
 
                     // Configure Windows System Proxy (and DNS cache flush) BEFORE firing RunningChanged,
                     // so OS proxy/DNS state is settled before UI triggers AI unlock & exit IP checks.
-                    if (AppSession.Instance.EnableSystemProxy)
+                    if (isCustom && AppSession.Instance.ActiveCustomSkipSystemProxy)
                     {
-                        SystemProxyManager.EnableProxy("127.0.0.1", AppSession.Instance.MixedPort);
-                        AppendLog("[SystemProxy] 系统代理已开启");
+                        SystemProxyManager.DisableProxy();
+                        AppendLog("[CustomConfig] 原生配置直连或未声明本地 HTTP/Mixed 入站，已跳过系统代理修改");
+                    }
+                    else if (AppSession.Instance.EnableSystemProxy)
+                    {
+                        int sysProxyPort = isCustom
+                            ? (AppSession.Instance.ActiveCustomHttpProxyPort ?? AppSession.Instance.MixedPort)
+                            : AppSession.Instance.MixedPort;
+                        SystemProxyManager.EnableProxy("127.0.0.1", sysProxyPort);
+                        AppendLog($"[SystemProxy] 系统代理已开启 (127.0.0.1:{sysProxyPort})");
                     }
                     else
                     {
                         SystemProxyManager.DisableProxy();
                     }
 
-                    if (AppSession.Instance.EnableTunMode)
+                    if (AppSession.Instance.EnableTunMode || (isCustom && AppSession.Instance.ActiveCustomHasTun))
                     {
                         AppendLog("[TUN] TUN 模式已激活");
                     }
-                    else if (!AppSession.Instance.EnableSystemProxy)
+                    else if (!AppSession.Instance.EnableSystemProxy || (isCustom && AppSession.Instance.ActiveCustomSkipSystemProxy))
                     {
                         AppendLog("[Local] 仅本地代理运行");
                     }
@@ -329,7 +345,11 @@ namespace AnywhereWinUI.Services
         {
             try
             {
-                using var doc = JsonDocument.Parse(configJson);
+                using var doc = JsonDocument.Parse(configJson, new JsonDocumentOptions
+                {
+                    CommentHandling = JsonCommentHandling.Skip,
+                    AllowTrailingCommas = true
+                });
                 if (doc.RootElement.TryGetProperty("experimental", out var exp) &&
                     exp.TryGetProperty("clash_api", out var clashApi) &&
                     clashApi.TryGetProperty("secret", out var secretProp) &&

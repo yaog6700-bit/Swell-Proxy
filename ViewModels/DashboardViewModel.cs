@@ -332,13 +332,37 @@ namespace AnywhereWinUI.ViewModels
                     NodesManager.Instance.Save();
                 }
 
-                if (AppSession.Instance.EnableTunMode && !AdminHelper.IsAdministrator())
+                var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+
+                if ((AppSession.Instance.EnableTunMode && !CustomConfigService.IsCustomNode(node) && !AdminHelper.IsAdministrator()) ||
+                    CustomConfigService.RequiresTunAdmin(node))
                 {
+                    if (CustomConfigService.RequiresTunAdmin(node))
+                    {
+                        var xamlRoot = MainWindow.Instance?.Content?.XamlRoot;
+                        if (xamlRoot != null)
+                        {
+                            var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                            {
+                                Title = L.Tun_AdminRequiredTitle,
+                                Content = L.Tun_AdminRequiredMsg,
+                                PrimaryButtonText = L.Tun_AdminConfirmBtn,
+                                CloseButtonText = L.Dialog_Cancel,
+                                XamlRoot = xamlRoot
+                            };
+                            var res = await dialog.WithAppTheme().ShowAsync();
+                            if (res == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+                            {
+                                AdminHelper.RestartAsAdmin("--auto-start-proxy");
+                            }
+                        }
+                        return;
+                    }
+
                     _ = HandleTunToggleAsync(AppSession.Instance.ProxyModeIndex);
                     return;
                 }
 
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
                 string config = node != null ? await ConfigBuilder.BuildAsync(node) : await ConfigBuilder.BuildAsync();
                 
                 bool success = await CoreManager.Instance.StartAsync(config);

@@ -81,6 +81,19 @@ namespace AnywhereWinUI.Services
         private async Task PollPortAsync(int port)
         {
             var ct = _cts.Token;
+            if (port <= 0 || port > 65535)
+            {
+                // Pure raw custom config without any local TCP listen port (e.g. TUN-only without Clash API):
+                // give sing-box 600 ms to validate config & initialize interface; if it hasn't exited, treat as Ready.
+                try
+                {
+                    await Task.Delay(600, ct).ConfigureAwait(false);
+                    _outcome.TrySetResult(Outcome.Ready);
+                }
+                catch (OperationCanceledException) { }
+                return;
+            }
+
             await Task.Delay(100, ct).ConfigureAwait(false);
 
             while (!ct.IsCancellationRequested)

@@ -59,6 +59,11 @@ namespace AnywhereWinUI.Services
         // Proxy Chain
         public string? ProxyChainId { get; set; }
 
+        // Native Custom Config (stored externally under %LocalAppData%\SwellProxy\configs\)
+        public string? CustomConfigFile { get; set; }
+        public bool    CustomBridgeGui { get; set; } = true;
+        public bool    CustomHasTun { get; set; }
+
         // Favorite status
         public bool    IsFavorite { get; set; }
     }

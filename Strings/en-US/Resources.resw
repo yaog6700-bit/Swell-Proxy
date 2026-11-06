@@ -2273,4 +2273,187 @@ Fast, reliable, and seamless smart routing.</value>
   <data name="ClipToast_NodeInfoFmt" xml:space="preserve">
     <value>Protocol: {0} | Name: {1}</value>
   </data>
+  <data name="Servers_AddCustomCfgBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>New / Import Native Config (.json)</value>
+  </data>
+  <data name="CustomCfg_DetailEditBtnText.Text" xml:space="preserve">
+    <value>Edit JSON</value>
+  </data>
+  <data name="Servers_FormProtocolCustom.Content" xml:space="preserve">
+    <value>Native Config (sing-box JSON)</value>
+  </data>
+  <data name="CustomCfg_PanelTitle.Text" xml:space="preserve">
+    <value>Native sing-box Config</value>
+  </data>
+  <data name="CustomCfg_PanelSubtitle.Text" xml:space="preserve">
+    <value>Import or edit a complete sing-box JSON configuration file and connect with one click.</value>
+  </data>
+  <data name="CustomCfg_NameInput.Header" xml:space="preserve">
+    <value>Profile Name</value>
+  </data>
+  <data name="CustomCfg_NameInput.PlaceholderText" xml:space="preserve">
+    <value>e.g. Custom TUN Routing Profile</value>
+  </data>
+  <data name="CustomCfg_BridgeToggle.Header" xml:space="preserve">
+    <value>Bridge GUI Monitoring &amp; System Proxy</value>
+  </data>
+  <data name="CustomCfg_BridgeToggle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Injects local Clash API (9090) and Dashboard (9091) for live speed/connections and binds Windows System Proxy to your local HTTP/Mixed inbound. Turn off for 100% untouched raw execution.</value>
+  </data>
+  <data name="CustomCfg_ImportFileBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Import a local .json configuration file</value>
+  </data>
+  <data name="CustomCfg_ImportFileText.Text" xml:space="preserve">
+    <value>Import .json</value>
+  </data>
+  <data name="CustomCfg_TemplateBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Insert a minimal sing-box starter template</value>
+  </data>
+  <data name="CustomCfg_TemplateText.Text" xml:space="preserve">
+    <value>Template</value>
+  </data>
+  <data name="CustomCfg_FormatBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Pretty-print and indent JSON</value>
+  </data>
+  <data name="CustomCfg_FormatText.Text" xml:space="preserve">
+    <value>Format</value>
+  </data>
+  <data name="CustomCfg_ValidateBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Validate configuration with sing-box check</value>
+  </data>
+  <data name="CustomCfg_ValidateText.Text" xml:space="preserve">
+    <value>Validate</value>
+  </data>
+  <data name="CustomCfg_OpenExtBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Open this JSON file in external editor</value>
+  </data>
+  <data name="CustomCfg_ReloadDiskBtn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Reload modified file from disk</value>
+  </data>
+  <data name="CustomCfg_SaveBtn.Content" xml:space="preserve">
+    <value>Save Config</value>
+  </data>
+  <data name="CustomCfg_CancelBtn.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Servers_DetailAddrLabelText" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="Servers_DetailPortLabelText" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="Servers_DetailTransportLabelText" xml:space="preserve">
+    <value>Transport</value>
+  </data>
+  <data name="Servers_DetailLatencyLabelText" xml:space="preserve">
+    <value>Latency</value>
+  </data>
+  <data name="CustomCfg_ListBadge" xml:space="preserve">
+    <value>Config</value>
+  </data>
+  <data name="CustomCfg_DetailSubtitle" xml:space="preserve">
+    <value>CUSTOM · Native sing-box Config</value>
+  </data>
+  <data name="CustomCfg_DetailFileLabel" xml:space="preserve">
+    <value>Config File</value>
+  </data>
+  <data name="CustomCfg_DetailSummaryLabel" xml:space="preserve">
+    <value>In / Out</value>
+  </data>
+  <data name="CustomCfg_DetailBridgeLabel" xml:space="preserve">
+    <value>GUI Bridge</value>
+  </data>
+  <data name="CustomCfg_DetailModeLabel" xml:space="preserve">
+    <value>Routing</value>
+  </data>
+  <data name="CustomCfg_BridgeEnabled" xml:space="preserve">
+    <value>Monitoring &amp; System Proxy Bridged</value>
+  </data>
+  <data name="CustomCfg_BridgeRawOnly" xml:space="preserve">
+    <value>Pure Raw Execution (Untouched)</value>
+  </data>
+  <data name="CustomCfg_RouteSelfManaged" xml:space="preserve">
+    <value>Managed by native JSON configuration</value>
+  </data>
+  <data name="CustomCfg_AddTitle" xml:space="preserve">
+    <value>New Native sing-box Config</value>
+  </data>
+  <data name="CustomCfg_EditTitle" xml:space="preserve">
+    <value>Edit Native sing-box Config</value>
+  </data>
+  <data name="CustomCfg_DefaultName" xml:space="preserve">
+    <value>Custom Config</value>
+  </data>
+  <data name="CustomCfg_PickFileTitle" xml:space="preserve">
+    <value>Select sing-box JSON Config File</value>
+  </data>
+  <data name="CustomCfg_ImportedTitle" xml:space="preserve">
+    <value>Config File Loaded</value>
+  </data>
+  <data name="CustomCfg_SummaryBannerFmt" xml:space="preserve">
+    <value>{0} inbound(s) · {1} outbound(s) · {2} route rule(s) ({3})</value>
+  </data>
+  <data name="CustomCfg_ImportedWithWarnTitle" xml:space="preserve">
+    <value>File loaded, but JSON syntax has issues</value>
+  </data>
+  <data name="CustomCfg_OverwriteTemplateTitle" xml:space="preserve">
+    <value>Replace with Template?</value>
+  </data>
+  <data name="CustomCfg_OverwriteTemplateMsg" xml:space="preserve">
+    <value>The editor is not empty. Inserting the template will overwrite current text. Continue?</value>
+  </data>
+  <data name="CustomCfg_TemplateInsertedTitle" xml:space="preserve">
+    <value>Inserted minimal sing-box template</value>
+  </data>
+  <data name="CustomCfg_FormattedOkTitle" xml:space="preserve">
+    <value>JSON Formatted</value>
+  </data>
+  <data name="CustomCfg_FormatFailTitle" xml:space="preserve">
+    <value>JSON Format Failed</value>
+  </data>
+  <data name="CustomCfg_ValidateOkTitle" xml:space="preserve">
+    <value>sing-box Core Validation Passed</value>
+  </data>
+  <data name="CustomCfg_ValidateFailTitle" xml:space="preserve">
+    <value>sing-box Core Validation Failed</value>
+  </data>
+  <data name="CustomCfg_OpenExtFailTitle" xml:space="preserve">
+    <value>Failed to Open External Editor</value>
+  </data>
+  <data name="CustomCfg_ReloadedTitle" xml:space="preserve">
+    <value>Reloaded configuration from disk</value>
+  </data>
+  <data name="CustomCfg_SaveBlockedInvalidTitle" xml:space="preserve">
+    <value>Cannot Save: Invalid JSON Syntax</value>
+  </data>
+  <data name="CustomCfg_CopiedJsonTitle" xml:space="preserve">
+    <value>Copied Config JSON</value>
+  </data>
+  <data name="CustomCfg_CopiedJsonMsg" xml:space="preserve">
+    <value>Native configs cannot be encoded as single-node share links; the full JSON text has been copied to your clipboard.</value>
+  </data>
+  <data name="CustomCfg_ErrEmptyJson" xml:space="preserve">
+    <value>JSON configuration cannot be empty.</value>
+  </data>
+  <data name="CustomCfg_ErrRootNotObject" xml:space="preserve">
+    <value>Root element must be a valid JSON object { ... }.</value>
+  </data>
+  <data name="CustomCfg_ErrInvalidJson" xml:space="preserve">
+    <value>Invalid JSON syntax.</value>
+  </data>
+  <data name="CustomCfg_ErrJsonSyntaxFmt" xml:space="preserve">
+    <value>Syntax error at line {0}, col {1}: {2}</value>
+  </data>
+  <data name="CustomCfg_ErrFileMissingOrEmpty" xml:space="preserve">
+    <value>Custom configuration file is missing or empty on disk.</value>
+  </data>
+  <data name="CustomCfg_CoreMissingError" xml:space="preserve">
+    <value>sing-box.exe not found in Assets directory; cannot run core check.</value>
+  </data>
+  <data name="CustomCfg_CheckPassedFmt" xml:space="preserve">
+    <value>Configuration is valid ({0} inbound(s), {1} outbound(s), {2} route rule(s)).</value>
+  </data>
+  <data name="CustomCfg_CheckTimeout" xml:space="preserve">
+    <value>sing-box check timed out (8s).</value>
+  </data>
 </root>

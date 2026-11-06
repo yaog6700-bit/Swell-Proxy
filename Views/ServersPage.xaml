@@ -241,11 +241,7 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                        <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" MaxWidth="180">
-                                            <Run Text="{x:Bind Host, Mode=OneWay}" />
-                                            <Run Text=":" />
-                                            <Run Text="{x:Bind Port, Mode=OneWay}" />
-                                        </TextBlock>
+                                        <TextBlock Text="{x:Bind HostPortDisplay, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" MaxWidth="180" />
                                         <TextBlock Text="·" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                                         <TextBlock Text="{x:Bind DisplayProtocol, Mode=OneWay}" FontSize="11" FontWeight="Bold" Foreground="{x:Bind ProtocolBrush, Mode=OneWay}" />
                                     </StackPanel>
@@ -275,6 +271,16 @@
                             <Vector3Transition Duration="0:0:0.15" />
                         </Button.ScaleTransition>
                         <FontIcon Glyph="&#xE710;" FontSize="16" />
+                    </Button>
+                    <Button x:Uid="Servers_AddCustomCfgBtn" Click="AddCustomConfig_Click"
+                            ToolTipService.ToolTip="新建/导入原生配置 (.json)"
+                            PointerEntered="Button_PointerEntered"
+                            PointerExited="Button_PointerExited"
+                            Padding="8" CornerRadius="6">
+                        <Button.ScaleTransition>
+                            <Vector3Transition Duration="0:0:0.15" />
+                        </Button.ScaleTransition>
+                        <FontIcon Glyph="&#xE943;" FontSize="16" />
                     </Button>
                     <Button x:Uid="Servers_ImportClipboardBtn" Click="ImportFromClipboard_Click"
                             ToolTipService.ToolTip="从剪贴板导入节点/订阅"
@@ -355,13 +361,24 @@
                                 <TextBlock x:Name="DetailTitle" Text="香港 VLESS-XTLS (Premium)" FontSize="20" FontWeight="Bold" />
                                 <TextBlock x:Name="DetailSubtitle" Text="VLESS" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <ToggleButton x:Name="DetailFavoriteButton"
-                                          Grid.Column="1"
-                                          Click="DetailFavoriteButton_Click"
-                                          Padding="8" CornerRadius="18"
-                                          VerticalAlignment="Center">
-                                <FontIcon Glyph="&#xE734;" FontSize="14" x:Name="DetailFavoriteIcon"/>
-                            </ToggleButton>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Button x:Name="DetailEditCustomJsonButton"
+                                        Visibility="Collapsed"
+                                        Click="EditManualServerDetail_Click"
+                                        Padding="12,6"
+                                        CornerRadius="6">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE943;" FontSize="13" />
+                                        <TextBlock x:Uid="CustomCfg_DetailEditBtnText" Text="编辑 JSON" FontSize="12" FontWeight="Medium" />
+                                    </StackPanel>
+                                </Button>
+                                <ToggleButton x:Name="DetailFavoriteButton"
+                                              Click="DetailFavoriteButton_Click"
+                                              Padding="8" CornerRadius="18"
+                                              VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE734;" FontSize="14" x:Name="DetailFavoriteIcon"/>
+                                </ToggleButton>
+                            </StackPanel>
                         </Grid>
 
                         <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
@@ -380,19 +397,19 @@
                             </Grid.RowDefinitions>
 
                             <!-- Address -->
-                            <TextBlock x:Uid="Servers_DetailAddrLabel" Grid.Row="0" Grid.Column="0" Text="地址" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="DetailHostText" Text="hk-vip.anywhere-server.com" FontWeight="Medium" VerticalAlignment="Center" />
+                            <TextBlock x:Name="DetailAddrLabel" x:Uid="Servers_DetailAddrLabel" Grid.Row="0" Grid.Column="0" Text="地址" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="DetailHostText" Text="hk-vip.anywhere-server.com" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
 
                             <!-- Port -->
-                            <TextBlock x:Uid="Servers_DetailPortLabel" Grid.Row="1" Grid.Column="0" Text="端口" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Name="DetailPortLabel" x:Uid="Servers_DetailPortLabel" Grid.Row="1" Grid.Column="0" Text="端口" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock Grid.Row="1" Grid.Column="1" x:Name="DetailPortText" Text="443" FontWeight="Medium" VerticalAlignment="Center" />
 
                             <!-- Transport / Network -->
-                            <TextBlock x:Uid="Servers_DetailTransportLabel" Grid.Row="2" Grid.Column="0" Text="传输" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Name="DetailTransportLabel" x:Uid="Servers_DetailTransportLabel" Grid.Row="2" Grid.Column="0" Text="传输" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock Grid.Row="2" Grid.Column="1" x:Name="DetailNetworkText" Text="TCP" FontWeight="Medium" VerticalAlignment="Center" />
 
                             <!-- Latency -->
-                            <TextBlock x:Uid="Servers_DetailLatencyLabel" Grid.Row="3" Grid.Column="0" Text="延迟" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Name="DetailLatencyLabel" x:Uid="Servers_DetailLatencyLabel" Grid.Row="3" Grid.Column="0" Text="延迟" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <TextBlock x:Name="DetailLatencyText" Text="--- ms" FontWeight="Bold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                                 <Button x:Name="TestSingleLatencyButton" Click="TestSingleLatency_Click" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4">
@@ -501,6 +518,7 @@
                         <ComboBoxItem Content="WireGuard"/>
                         <ComboBoxItem Content="Snell"/>
                         <ComboBoxItem Content="Nowhere"/>
+                        <ComboBoxItem x:Uid="Servers_FormProtocolCustom" Content="原生配置 (sing-box JSON)" Tag="custom"/>
                     </ComboBox>
 
                     <!-- 前置代理 (Proxy Chain) -->
@@ -762,6 +780,126 @@
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
+
+            <!-- Panel 4: Custom Native sing-box Config Editor (XrayUI-dev style) -->
+            <Grid x:Name="CustomConfigPanel" Grid.Row="0" Visibility="Collapsed" RowSpacing="12" Padding="4,0,8,8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Row 0: Header -->
+                <StackPanel Grid.Row="0" Spacing="2">
+                    <TextBlock x:Name="CustomConfigPanelTitle" x:Uid="CustomCfg_PanelTitle" Text="原生 sing-box 配置" Style="{ThemeResource TitleTextBlockStyle}" FontWeight="Bold" />
+                    <TextBlock x:Uid="CustomCfg_PanelSubtitle" Text="导入或直接编辑完整的 sing-box JSON 配置文件，保存后像普通节点一样一键启动。" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <!-- Row 1: Name & GUI Bridge Switch -->
+                <Grid Grid.Row="1" ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Grid.Column="0"
+                             x:Name="CustomConfigNameInput"
+                             x:Uid="CustomCfg_NameInput"
+                             Header="配置名称"
+                             PlaceholderText="例如: 自定义 TUN 分流配置" />
+
+                    <ToggleSwitch Grid.Column="1"
+                                  x:Name="CustomBridgeGuiToggle"
+                                  x:Uid="CustomCfg_BridgeToggle"
+                                  Header="接入客户端监控与系统代理"
+                                  IsOn="True"
+                                  MinWidth="0"
+                                  VerticalAlignment="Top"
+                                  ToolTipService.ToolTip="开启后自动注入本地 Clash API (9090) 与 Dashboard (9091) 以支持速率图、连接管理及自动识别本地端口接管系统代理；关闭则 100% 原样直跑。" />
+                </Grid>
+
+                <!-- Row 2: Compact Toolbar -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                        <Button x:Uid="CustomCfg_ImportFileBtn" Click="ImportCustomJsonFile_Click" Padding="10,6" CornerRadius="6" ToolTipService.ToolTip="从本地选择 .json 配置文件导入">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE8E5;" FontSize="13" />
+                                <TextBlock x:Uid="CustomCfg_ImportFileText" Text="导入 .json" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Uid="CustomCfg_TemplateBtn" Click="InsertCustomTemplate_Click" Padding="10,6" CornerRadius="6" ToolTipService.ToolTip="插入精简的 sing-box 标准示例配置">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE8A5;" FontSize="13" />
+                                <TextBlock x:Uid="CustomCfg_TemplateText" Text="示例模板" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Uid="CustomCfg_FormatBtn" Click="FormatCustomJson_Click" Padding="10,6" CornerRadius="6" ToolTipService.ToolTip="使用标准缩进美化 JSON 文本">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE943;" FontSize="13" />
+                                <TextBlock x:Uid="CustomCfg_FormatText" Text="格式化" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="ValidateCustomJsonButton" x:Uid="CustomCfg_ValidateBtn" Click="ValidateCustomJson_Click" Padding="10,6" CornerRadius="6" ToolTipService.ToolTip="调用 sing-box check 预检配置文件合法性">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <ProgressRing x:Name="ValidateCustomSpinner" IsActive="False" Visibility="Collapsed" Width="13" Height="13" />
+                                <FontIcon x:Name="ValidateCustomIcon" Glyph="&#xE73E;" FontSize="13" />
+                                <TextBlock x:Uid="CustomCfg_ValidateText" Text="内核校验" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <Button x:Name="OpenExternalJsonButton" x:Uid="CustomCfg_OpenExtBtn" Click="OpenExternalCustomJson_Click" Padding="8,6" CornerRadius="6" ToolTipService.ToolTip="使用系统外部编辑器打开该 JSON 文件">
+                            <FontIcon Glyph="&#xE8A7;" FontSize="13" />
+                        </Button>
+                        <Button x:Name="ReloadDiskJsonButton" x:Uid="CustomCfg_ReloadDiskBtn" Click="ReloadCustomJsonFromDisk_Click" Padding="8,6" CornerRadius="6" ToolTipService.ToolTip="从磁盘重新读取外部修改后的文件内容">
+                            <FontIcon Glyph="&#xE72C;" FontSize="13" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Row 3: Validation / Summary InfoBar -->
+                <InfoBar Grid.Row="3"
+                         x:Name="CustomConfigInfoBar"
+                         IsOpen="False"
+                         IsClosable="True"
+                         Margin="0" />
+
+                <!-- Row 4: Native Monospace JSON Editor -->
+                <TextBox Grid.Row="4"
+                         x:Name="CustomJsonEditorBox"
+                         AcceptsReturn="True"
+                         TextWrapping="NoWrap"
+                         FontFamily="Cascadia Code, Consolas, Courier New"
+                         FontSize="12.5"
+                         IsSpellCheckEnabled="False"
+                         IsTextPredictionEnabled="False"
+                         PlaceholderText="// sing-box config.json"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollMode="Enabled"
+                         ScrollViewer.VerticalScrollMode="Enabled"
+                         VerticalAlignment="Stretch"
+                         HorizontalAlignment="Stretch"
+                         VerticalContentAlignment="Top"
+                         Padding="12,10"
+                         CornerRadius="8"
+                         KeyDown="CustomJsonEditorBox_KeyDown" />
+
+                <!-- Row 5: Save / Cancel -->
+                <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+                    <Button x:Name="SaveCustomConfigButton" x:Uid="CustomCfg_SaveBtn" Content="保存配置" Click="SaveCustomConfig_Click" Style="{ThemeResource AccentButtonStyle}" Padding="20,10" CornerRadius="6" />
+                    <Button x:Uid="CustomCfg_CancelBtn" Content="取消" Click="CancelEdit_Click" Padding="20,10" CornerRadius="6" />
+                </StackPanel>
+            </Grid>
 
             <!-- Bottom Control Bar -->
             <Grid x:Name="BottomControlBar" Grid.Row="2" Margin="-24,12,0,0" Padding="24,0,0,0">

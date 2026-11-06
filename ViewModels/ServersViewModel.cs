@@ -123,13 +123,25 @@ namespace AnywhereWinUI.ViewModels
 
             foreach (var node in nodes)
             {
-                if (!NodeLinkParser.TrySplitHostPort(node.Host, out var hostPart, out var portPart))
-                {
-                    Debug.WriteLine($"[ServersViewModel] Skipping node with invalid host: {node.Name} ({node.Host})");
-                    continue;
-                }
+                bool isCustom = CustomConfigService.IsCustomNode(node);
+                string hostPart;
+                int portPart;
 
-                if (portPart == 0) portPart = 443;
+                if (isCustom)
+                {
+                    hostPart = string.IsNullOrWhiteSpace(node.Host) ? "sing-box JSON" : node.Host;
+                    portPart = 0;
+                }
+                else
+                {
+                    if (!NodeLinkParser.TrySplitHostPort(node.Host, out hostPart, out portPart))
+                    {
+                        Debug.WriteLine($"[ServersViewModel] Skipping node with invalid host: {node.Name} ({node.Host})");
+                        continue;
+                    }
+
+                    if (portPart == 0) portPart = 443;
+                }
 
                 var item = new ServerEntryItem
                 {
@@ -141,7 +153,7 @@ namespace AnywhereWinUI.ViewModels
                     SubscriptionId = node.SubscriptionId ?? string.Empty,
                     Network = node.Network ?? string.Empty,
                     IsFavorite = node.IsFavorite,
-                    PingText = L.Servers_PingUntested,
+                    PingText = isCustom ? L.CustomCfg_ListBadge : L.Servers_PingUntested,
                     ActiveIndicatorVisibility = (node.Id == currentSelectedId && isRunning) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed
                 };
                 AllServers.Add(item);
@@ -293,7 +305,7 @@ namespace AnywhereWinUI.ViewModels
         [RelayCommand]
         private async Task TestSingleLatencyAsync(ServerEntryItem item)
         {
-            if (item == null) return;
+            if (item == null || item.IsCustom) return;
 
             _dispatcherQueue.TryEnqueue(() =>
             {
@@ -384,6 +396,29 @@ namespace AnywhereWinUI.ViewModels
             var node = NodesManager.Instance.Nodes.Find(n => n.Id == server.Id);
             if (node != null && isRunning)
             {
+                if (CustomConfigService.RequiresTunAdmin(node))
+                {
+                    var xamlRoot = MainWindow.Instance?.Content?.XamlRoot;
+                    if (xamlRoot != null)
+                    {
+                        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                        {
+                            Title = L.Tun_AdminRequiredTitle,
+                            Content = L.Tun_AdminRequiredMsg,
+                            PrimaryButtonText = L.Tun_AdminConfirmBtn,
+                            CloseButtonText = L.Dialog_Cancel,
+                            XamlRoot = xamlRoot
+                        };
+                        var res = await dialog.WithAppTheme().ShowAsync();
+                        if (res == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+                        {
+                            await CoreManager.Instance.StopAsync();
+                            Helpers.AdminHelper.RestartAsAdmin("--auto-start-proxy");
+                        }
+                    }
+                    return;
+                }
+
                 try
                 {
                     string realConfig = await ConfigBuilder.BuildAsync(node);

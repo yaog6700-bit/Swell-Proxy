@@ -62,6 +62,13 @@ namespace AnywhereWinUI.Services
                 }
             }
 
+            if (CustomConfigService.IsCustomNode(selectedNode))
+            {
+                return await CustomConfigService.BuildRuntimeConfigAsync(selectedNode);
+            }
+
+            session.ResetActiveCustomState();
+
             var enableTun = session.EnableTunMode;
 
             // TUN 模式下探测物理出站网卡，用于 direct outbound 绑定，防止直连流量被 TUN 重新截获

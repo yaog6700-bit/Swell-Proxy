@@ -363,5 +363,45 @@ namespace AnywhereWinUI.Helpers
         public static string Onboard_ImportFailFmt          => Loc.GetString("Onboard_ImportFailFmt");
 
         public static string ClipToast_NodeInfoFmt          => Loc.GetString("ClipToast_NodeInfoFmt");
+
+        // ── Custom Native sing-box Config ──────────────────────────────────────
+        public static string Servers_DetailAddrLabelText    => Loc.GetString("Servers_DetailAddrLabelText");
+        public static string Servers_DetailPortLabelText    => Loc.GetString("Servers_DetailPortLabelText");
+        public static string Servers_DetailTransportLabelText => Loc.GetString("Servers_DetailTransportLabelText");
+        public static string Servers_DetailLatencyLabelText => Loc.GetString("Servers_DetailLatencyLabelText");
+
+        public static string CustomCfg_ListBadge            => Loc.GetString("CustomCfg_ListBadge");
+        public static string CustomCfg_DetailSubtitle       => Loc.GetString("CustomCfg_DetailSubtitle");
+        public static string CustomCfg_DetailFileLabel      => Loc.GetString("CustomCfg_DetailFileLabel");
+        public static string CustomCfg_DetailSummaryLabel   => Loc.GetString("CustomCfg_DetailSummaryLabel");
+        public static string CustomCfg_DetailBridgeLabel    => Loc.GetString("CustomCfg_DetailBridgeLabel");
+        public static string CustomCfg_DetailModeLabel      => Loc.GetString("CustomCfg_DetailModeLabel");
+        public static string CustomCfg_BridgeEnabled        => Loc.GetString("CustomCfg_BridgeEnabled");
+        public static string CustomCfg_BridgeRawOnly        => Loc.GetString("CustomCfg_BridgeRawOnly");
+        public static string CustomCfg_RouteSelfManaged     => Loc.GetString("CustomCfg_RouteSelfManaged");
+        public static string CustomCfg_AddTitle             => Loc.GetString("CustomCfg_AddTitle");
+        public static string CustomCfg_EditTitle            => Loc.GetString("CustomCfg_EditTitle");
+        public static string CustomCfg_DefaultName          => Loc.GetString("CustomCfg_DefaultName");
+        public static string CustomCfg_PickFileTitle        => Loc.GetString("CustomCfg_PickFileTitle");
+        public static string CustomCfg_ImportedTitle        => Loc.GetString("CustomCfg_ImportedTitle");
+        public static string CustomCfg_ImportedWithWarnTitle => Loc.GetString("CustomCfg_ImportedWithWarnTitle");
+        public static string CustomCfg_OverwriteTemplateTitle => Loc.GetString("CustomCfg_OverwriteTemplateTitle");
+        public static string CustomCfg_OverwriteTemplateMsg => Loc.GetString("CustomCfg_OverwriteTemplateMsg");
+        public static string CustomCfg_TemplateInsertedTitle => Loc.GetString("CustomCfg_TemplateInsertedTitle");
+        public static string CustomCfg_FormattedOkTitle     => Loc.GetString("CustomCfg_FormattedOkTitle");
+        public static string CustomCfg_FormatFailTitle      => Loc.GetString("CustomCfg_FormatFailTitle");
+        public static string CustomCfg_ValidateOkTitle      => Loc.GetString("CustomCfg_ValidateOkTitle");
+        public static string CustomCfg_ValidateFailTitle    => Loc.GetString("CustomCfg_ValidateFailTitle");
+        public static string CustomCfg_OpenExtFailTitle     => Loc.GetString("CustomCfg_OpenExtFailTitle");
+        public static string CustomCfg_ReloadedTitle        => Loc.GetString("CustomCfg_ReloadedTitle");
+        public static string CustomCfg_SaveBlockedInvalidTitle => Loc.GetString("CustomCfg_SaveBlockedInvalidTitle");
+        public static string CustomCfg_CopiedJsonTitle      => Loc.GetString("CustomCfg_CopiedJsonTitle");
+        public static string CustomCfg_CopiedJsonMsg        => Loc.GetString("CustomCfg_CopiedJsonMsg");
+        public static string CustomCfg_ErrEmptyJson         => Loc.GetString("CustomCfg_ErrEmptyJson");
+        public static string CustomCfg_ErrRootNotObject     => Loc.GetString("CustomCfg_ErrRootNotObject");
+        public static string CustomCfg_ErrInvalidJson       => Loc.GetString("CustomCfg_ErrInvalidJson");
+        public static string CustomCfg_ErrFileMissingOrEmpty => Loc.GetString("CustomCfg_ErrFileMissingOrEmpty");
+        public static string CustomCfg_CoreMissingError     => Loc.GetString("CustomCfg_CoreMissingError");
+        public static string CustomCfg_CheckTimeout         => Loc.GetString("CustomCfg_CheckTimeout");
     }
 }

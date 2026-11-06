@@ -17,6 +17,7 @@ namespace AnywhereWinUI.Helpers
         public static Color Vmess     { get; set; } = Color.FromArgb(255, 167, 139, 250);
         public static Color Hysteria2 { get; set; } = Color.FromArgb(255, 251, 146,  60);
         public static Color Trojan    { get; set; } = Color.FromArgb(255, 248, 113, 113);
+        public static Color Custom    { get; set; } = Color.FromArgb(255,  34, 211, 238);
         public static Color Fallback  { get; set; } = Color.FromArgb(255, 148, 163, 184);
 
         public static event EventHandler? ColorsChanged;
@@ -28,6 +29,7 @@ namespace AnywhereWinUI.Helpers
             "vmess"               => Vmess,
             "hysteria2" or "hysteria 2" => Hysteria2,
             "trojan"              => Trojan,
+            "custom"              => Custom,
             _                     => Fallback
         };
 
