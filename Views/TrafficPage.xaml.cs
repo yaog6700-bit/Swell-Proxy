@@ -9,30 +9,46 @@ namespace AnywhereWinUI.Views
     {
         public TrafficViewModel ViewModel { get; }
 
+        private bool _isSyncingMode;
+
         public TrafficPage()
         {
-            NavigationCacheMode = NavigationCacheMode.Enabled;
+            NavigationCacheMode = NavigationCacheMode.Disabled;
             ViewModel = ((App)Application.Current).Services.GetService(typeof(TrafficViewModel)) as TrafficViewModel;
             this.InitializeComponent();
+        }
 
-            // Re-render heatmap palette when app Light/Dark theme switches
-            this.ActualThemeChanged += (_, _) => ViewModel?.OnPageActivated();
+        private void OnActualThemeChanged(FrameworkElement sender, object args)
+        {
+            ViewModel?.OnPageActivated();
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+            this.ActualThemeChanged += OnActualThemeChanged;
+
+            if (ViewModel != null && HeatmapModeSegmented != null)
+            {
+                _isSyncingMode = true;
+                HeatmapModeSegmented.SelectedIndex = (int)ViewModel.CurrentHeatmapMode;
+                _isSyncingMode = false;
+            }
+
             ViewModel?.OnPageActivated();
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
+            this.ActualThemeChanged -= OnActualThemeChanged;
             ViewModel?.OnPageDeactivated();
+            this.Bindings.StopTracking();
         }
 
         private void HeatmapModeSegmented_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_isSyncingMode) return;
             if (sender is not CommunityToolkit.WinUI.Controls.Segmented seg) return;
             var mode = seg.SelectedIndex switch
             {

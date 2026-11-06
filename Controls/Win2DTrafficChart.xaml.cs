@@ -97,19 +97,18 @@ namespace AnywhereWinUI.Controls
             if (MainWindow.IsVisibleToUser)
             {
                 StartTimer();
+                ChartCanvas?.Invalidate();
             }
         }
 
         private void UserControl_Unloaded(object sender, RoutedEventArgs e)
         {
+            // Keep ChartCanvas alive across Frame page-cache transitions (NavigationCacheMode.Enabled);
+            // only pause the redraw timer and detach collection/window listeners while off-tree.
             StopTimer();
             UnsubscribeFromTraffic(UploadTraffic);
             UnsubscribeFromTraffic(DownloadTraffic);
             UnsubscribeFromWindowVisibility();
-
-            if (ChartCanvas == null) return;
-            ChartCanvas.RemoveFromVisualTree();
-            ChartCanvas = null;
         }
 
         private void StartTimer()

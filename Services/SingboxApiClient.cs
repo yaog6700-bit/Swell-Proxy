@@ -90,27 +90,36 @@ namespace AnywhereWinUI.Services
         };
 
         private CancellationTokenSource? _cts;
-        private bool _isRunning;
+        private bool _isRunning = true;
 
         public event EventHandler<ClashConnectionsMessage>? ConnectionsUpdated;
         public event EventHandler<Exception>? OnError;
 
         private SingboxApiClient() { }
 
-        public Task StartAsync()
+        public async Task StartAsync()
         {
-            if (_isRunning) return Task.CompletedTask;
-
-            // 仅在核心运行时才启动轮询
-            if (!CoreManager.Instance.IsRunning)
-                return Task.CompletedTask;
-
-            _cts?.Cancel();
-            _cts = new CancellationTokenSource();
             _isRunning = true;
 
-            _ = Task.Run(() => PollLoopAsync(_cts.Token));
-            return Task.CompletedTask;
+            // 仅在核心运行时才可拉取初始快照
+            if (!CoreManager.Instance.IsRunning)
+                return;
+
+            // CoreManager.StartStatsPolling() already polls /connections every 1s and calls
+            // PublishConnectionsSnapshot(). Trigger one immediate snapshot here so ConnectionsPage
+            // renders immediately upon navigation without starting a duplicate 1s poll loop.
+            try
+            {
+                var snapshot = await FetchConnectionsAsync().ConfigureAwait(false);
+                if (snapshot != null && _isRunning)
+                {
+                    ConnectionsUpdated?.Invoke(this, snapshot);
+                }
+            }
+            catch
+            {
+                // Ignore transient startup error; CoreManager's 1s loop will deliver subsequent ticks
+            }
         }
 
         public Task StopAsync()
@@ -121,21 +130,33 @@ namespace AnywhereWinUI.Services
             return Task.CompletedTask;
         }
 
+        internal void PublishConnectionsSnapshot(ClashConnectionsMessage message)
+        {
+            if (!_isRunning || !MainWindow.IsVisibleToUser || ConnectionsUpdated == null) return;
+            ConnectionsUpdated.Invoke(this, message);
+        }
+
         /// <summary>
         /// One-shot fetch of /connections (includes downloadTotal/uploadTotal).
-        /// Used by CoreManager traffic stats and the connections poll loop.
+        /// Streams UTF-8 JSON directly without allocating intermediate full-payload strings (0 LOH).
         /// </summary>
         public async Task<ClashConnectionsMessage?> FetchConnectionsAsync(CancellationToken token = default)
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, ConnectionsUrl);
             ApplyAuth(request);
 
-            using var response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
+            using var response = await _httpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                token).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return null;
 
-            var json = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
-            var message = JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.ClashConnectionsMessage);
+            await using var stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+            var message = await JsonSerializer.DeserializeAsync(
+                stream,
+                AnywhereWinUI.Models.AppJsonContext.Default.ClashConnectionsMessage,
+                token).ConfigureAwait(false);
             if (message != null)
                 message.Connections ??= new List<ClashConnectionNode>();
             return message;
@@ -167,48 +188,6 @@ namespace AnywhereWinUI.Services
             var secret = AppSession.Instance.ClashApiSecret;
             if (string.IsNullOrEmpty(secret)) return;
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
-        }
-
-        private async Task PollLoopAsync(CancellationToken token)
-        {
-            // 等待 sing-box 完全启动后再开始轮询
-            await Task.Delay(500, token).ConfigureAwait(false);
-
-            while (!token.IsCancellationRequested && _isRunning)
-            {
-                try
-                {
-                    var message = await FetchConnectionsAsync(token).ConfigureAwait(false);
-                    if (message != null)
-                        ConnectionsUpdated?.Invoke(this, message);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (HttpRequestException ex)
-                {
-                    // sing-box 尚未就绪或已停止，静默等待，不触发 OnError
-                    Debug.WriteLine($"[SingboxApiClient] HTTP poll error (core may not be ready): {ex.Message}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[SingboxApiClient] Poll error: {ex.Message}");
-                    OnError?.Invoke(this, ex);
-                }
-
-                // 每秒轮询一次
-                try
-                {
-                    await Task.Delay(1000, token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-            }
-
-            _isRunning = false;
         }
 
         public void Dispose()

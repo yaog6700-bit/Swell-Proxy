@@ -125,7 +125,12 @@ namespace AnywhereWinUI.Services
                             var destFile = Path.Combine(localDir, Path.GetFileName(file));
                             try
                             {
-                                File.Copy(file, destFile, overwrite: true);
+                                var srcInfo = new FileInfo(file);
+                                var dstInfo = new FileInfo(destFile);
+                                if (!dstInfo.Exists || dstInfo.Length != srcInfo.Length)
+                                {
+                                    File.Copy(file, destFile, overwrite: true);
+                                }
                             }
                             catch { }
                         }
@@ -166,18 +171,33 @@ namespace AnywhereWinUI.Services
 
                     var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
                     _process = proc;
+                    bool captureStartupLog = true;
 
                     proc.OutputDataReceived += (_, e) =>
                     {
                         if (e.Data is null) return;
-                        lock (_startupLogLock) { _startupLog.AppendLine(e.Data); }
+                        if (captureStartupLog)
+                        {
+                            lock (_startupLogLock)
+                            {
+                                if (_startupLog.Length < 16384)
+                                    _startupLog.AppendLine(e.Data);
+                            }
+                        }
                         AppendLog("[sing-box] " + e.Data);
                     };
 
                     proc.ErrorDataReceived += (_, e) =>
                     {
                         if (e.Data is null) return;
-                        lock (_startupLogLock) { _startupLog.AppendLine(e.Data); }
+                        if (captureStartupLog)
+                        {
+                            lock (_startupLogLock)
+                            {
+                                if (_startupLog.Length < 16384)
+                                    _startupLog.AppendLine(e.Data);
+                            }
+                        }
                         AppendLog("[sing-box] " + e.Data);
                     };
 
@@ -218,6 +238,7 @@ namespace AnywhereWinUI.Services
                     // Typical cold-start is ~200–400 ms → user sees the proxy active noticeably faster.
                     // TimedOut (cap = 10 s) degrades gracefully to the old fixed-delay behaviour.
                     var signalOutcome = await readySignal.WaitAsync(TimeSpan.FromSeconds(3));
+                    captureStartupLog = false;
 
                     if (signalOutcome == CoreReadySignal.Outcome.Exited || _process.HasExited)
                     {
@@ -226,6 +247,8 @@ namespace AnywhereWinUI.Services
                             var rawErr = _startupLog.Length > 0
                                 ? _startupLog.ToString().Trim()
                                 : $"sing-box 立即退出（退出码 {_process.ExitCode}）";
+                            _startupLog.Clear();
+                            _startupLog.Capacity = 0;
 
                             if (rawErr.Contains("nowhere", StringComparison.OrdinalIgnoreCase) &&
                                 rawErr.Contains("unknown", StringComparison.OrdinalIgnoreCase))
@@ -237,6 +260,13 @@ namespace AnywhereWinUI.Services
                         }
                         AppendLog("[错误] 启动失败：" + LastError);
                         return false;
+                    }
+
+                    // Release startup error buffer immediately once sing-box is up
+                    lock (_startupLogLock)
+                    {
+                        _startupLog.Clear();
+                        _startupLog.Capacity = 0;
                     }
 
                     AppendLog(signalOutcome == CoreReadySignal.Outcome.Ready
@@ -405,6 +435,10 @@ namespace AnywhereWinUI.Services
                                 var (down, up, downSpeed, upSpeed) = _proxyTraffic.Apply(message, elapsed);
                                 TrafficUpdated?.Invoke(this, (down, up, downSpeed, upSpeed));
                             }
+
+                            // Reuse the same 1s snapshot for ConnectionsPage / TopologyGraphControl
+                            // so SingboxApiClient does not need a duplicate HTTP polling loop.
+                            SingboxApiClient.Instance.PublishConnectionsSnapshot(message);
                         }
 
                         await Task.Delay(1000, token);

@@ -21,65 +21,75 @@
             <TextBlock Text="查看本地代理核心的实时流转日志与系统状态" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 
-        <!-- Log Content Board -->
+        <!-- Log Content Board (Virtualized ListView keeps only ~20 visible rows in XAML memory instead of 500) -->
         <Border Grid.Row="1" 
                 Background="Transparent" 
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1" 
                 CornerRadius="12">
-            <ScrollViewer x:Name="LogScrollViewer"
-                          Padding="0"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{x:Bind ViewModel.LogEntries, Mode=OneWay}" Margin="0,16,0,16">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="models:LogEntry">
-                            <Grid Padding="16,4,16,4" ColumnSpacing="16" Background="Transparent">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" MinWidth="70"/>
-                                    <ColumnDefinition Width="Auto" MinWidth="54"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+            <ListView x:Name="LogListView"
+                      ItemsSource="{x:Bind ViewModel.LogEntries, Mode=OneWay}"
+                      SelectionMode="None"
+                      ShowsScrollingPlaceholders="False"
+                      Padding="0,12">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Padding" Value="16,3"/>
+                        <Setter Property="MinHeight" Value="26"/>
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="models:LogEntry">
+                        <Grid ColumnSpacing="16" Background="Transparent">
+                            <Grid.ContextFlyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="复制此行" Icon="Copy" Click="CopySingleLogLine_Click"/>
+                                </MenuFlyout>
+                            </Grid.ContextFlyout>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" MinWidth="70"/>
+                                <ColumnDefinition Width="Auto" MinWidth="54"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                                <!-- Time -->
-                                <TextBlock Grid.Column="0" 
-                                           Text="{x:Bind Time}" 
-                                           Visibility="{x:Bind TimeVisibility}"
-                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}" 
-                                           FontFamily="Cascadia Code, Consolas, Courier New" 
-                                           FontSize="12" 
-                                           VerticalAlignment="Top"
-                                           Margin="0,2,0,0"/>
+                            <!-- Time -->
+                            <TextBlock Grid.Column="0" 
+                                       Text="{x:Bind Time}" 
+                                       Visibility="{x:Bind TimeVisibility}"
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" 
+                                       FontFamily="Cascadia Code, Consolas, Courier New" 
+                                       FontSize="12" 
+                                       VerticalAlignment="Top"
+                                       Margin="0,2,0,0"/>
 
-                                <!-- Level Badge -->
-                                <Border Grid.Column="1"
-                                        Background="{x:Bind LevelBgBrush, Mode=OneWay}"
-                                        CornerRadius="6"
-                                        Padding="8,3"
-                                        VerticalAlignment="Top">
-                                    <TextBlock Text="{x:Bind Level}" 
-                                               Foreground="{x:Bind LevelTextBrush, Mode=OneWay}" 
-                                               FontSize="11" 
-                                               FontWeight="Bold" 
-                                               HorizontalAlignment="Center"/>
-                                </Border>
+                            <!-- Level Badge -->
+                            <Border Grid.Column="1"
+                                    Background="{x:Bind LevelBgBrush, Mode=OneWay}"
+                                    CornerRadius="6"
+                                    Padding="8,3"
+                                    VerticalAlignment="Top">
+                                <TextBlock Text="{x:Bind Level}" 
+                                           Foreground="{x:Bind LevelTextBrush, Mode=OneWay}" 
+                                           FontSize="11" 
+                                           FontWeight="Bold" 
+                                           HorizontalAlignment="Center"/>
+                            </Border>
 
-                                <!-- Message -->
-                                <TextBlock Grid.Column="2" 
-                                           Text="{x:Bind Message}" 
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
-                                           FontFamily="Cascadia Code, Consolas, Courier New" 
-                                           FontSize="12" 
-                                           TextWrapping="Wrap"
-                                           IsTextSelectionEnabled="True"
-                                           LineHeight="20"
-                                           VerticalAlignment="Top"
-                                           Margin="0,1,0,0"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                            <!-- Message -->
+                            <TextBlock Grid.Column="2" 
+                                       Text="{x:Bind Message}" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                       FontFamily="Cascadia Code, Consolas, Courier New" 
+                                       FontSize="12" 
+                                       TextWrapping="Wrap"
+                                       LineHeight="20"
+                                       VerticalAlignment="Top"
+                                       Margin="0,1,0,0"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
         </Border>
 
         <!-- Toolbar bottom -->

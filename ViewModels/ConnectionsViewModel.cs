@@ -50,15 +50,15 @@ namespace AnywhereWinUI.ViewModels
 
         public Task OnNavigatedFromAsync()
         {
-            // BUG-6 fix: 不停止全局单例 WebSocket，仅标记页面已离开，让事件回调短路
-            // （用户手动点击“停止捕获”时才真正停止 WebSocket）
+            // Mark page inactive and release row models while away; next navigation re-populates immediately.
             _isActivePage = false;
+            Connections.Clear();
             return Task.CompletedTask;
         }
 
         private void OnConnectionsUpdated(object? sender, ClashConnectionsMessage message)
         {
-            if (!_isActivePage || !IsCapturing) return;
+            if (!_isActivePage || !IsCapturing || !MainWindow.IsVisibleToUser) return;
 
             _dispatcherQueue?.TryEnqueue(() =>
             {

@@ -23,7 +23,7 @@ namespace AnywhereWinUI.Views
 
         public RoutingPage()
         {
-            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
+            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Disabled;
 
             ViewModel = ((App)Application.Current).Services.GetService(typeof(RoutingViewModel)) as RoutingViewModel
                 ?? new RoutingViewModel();
@@ -31,6 +31,12 @@ namespace AnywhereWinUI.Views
             InitializeComponent();
             RulesListView.ItemsSource = _rules;
             LoadRules();
+        }
+
+        protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            _rules.Clear();
         }
 
         private void LoadRules()

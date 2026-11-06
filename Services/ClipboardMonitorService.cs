@@ -1,7 +1,5 @@
 using System;
-using System.Threading.Tasks;
 using Windows.ApplicationModel.DataTransfer;
-using AnywhereWinUI.Helpers;
 
 namespace AnywhereWinUI.Services
 {
@@ -10,13 +8,17 @@ namespace AnywhereWinUI.Services
         private static ClipboardMonitorService? _instance;
         public static ClipboardMonitorService Instance => _instance ??= new ClipboardMonitorService();
 
-        private string _lastCopiedText = string.Empty;
+        // Store only length + hash so copied text is never retained in managed heap
+        private int _lastCopiedLength;
+        private int _lastCopiedHash;
         private DateTime _lastTriggerTime = DateTime.MinValue;
+        private const int MaxCandidateLength = 8192;
 
         public void Start()
         {
             try
             {
+                Clipboard.ContentChanged -= OnClipboardContentChanged;
                 Clipboard.ContentChanged += OnClipboardContentChanged;
             }
             catch
@@ -44,35 +46,49 @@ namespace AnywhereWinUI.Services
             try
             {
                 var dataPackageView = Clipboard.GetContent();
-                if (dataPackageView.Contains(StandardDataFormats.Text))
+                if (!dataPackageView.Contains(StandardDataFormats.Text))
+                    return;
+
+                string text = await dataPackageView.GetTextAsync();
+                if (string.IsNullOrWhiteSpace(text) || text.Length > MaxCandidateLength)
+                    return;
+
+                ReadOnlySpan<char> span = text.AsSpan().Trim();
+                if (span.IsEmpty)
+                    return;
+
+                // Fast prefix check on ReadOnlySpan<char> BEFORE allocating any trimmed string
+                if (!span.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase) &&
+                    !span.StartsWith("ss://", StringComparison.OrdinalIgnoreCase) &&
+                    !span.StartsWith("vless://", StringComparison.OrdinalIgnoreCase) &&
+                    !span.StartsWith("trojan://", StringComparison.OrdinalIgnoreCase) &&
+                    !span.StartsWith("hysteria2://", StringComparison.OrdinalIgnoreCase) &&
+                    !span.StartsWith("hy2://", StringComparison.OrdinalIgnoreCase) &&
+                    !span.StartsWith("tuic://", StringComparison.OrdinalIgnoreCase) &&
+                    !span.StartsWith("anytls://", StringComparison.OrdinalIgnoreCase) &&
+                    !span.StartsWith("snell://", StringComparison.OrdinalIgnoreCase))
                 {
-                    string text = await dataPackageView.GetTextAsync();
-                    if (string.IsNullOrWhiteSpace(text)) return;
-                    text = text.Trim();
+                    return;
+                }
 
-                    // Prevent reacting to our own imports or duplicates
-                    if (text == _lastCopiedText) return;
+                int hash = string.GetHashCode(span, StringComparison.Ordinal);
+                if (span.Length == _lastCopiedLength && hash == _lastCopiedHash)
+                    return;
 
-                    // Fast check for likely proxy links
-                    if (text.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase) ||
-                        text.StartsWith("ss://", StringComparison.OrdinalIgnoreCase) ||
-                        text.StartsWith("vless://", StringComparison.OrdinalIgnoreCase) ||
-                        text.StartsWith("trojan://", StringComparison.OrdinalIgnoreCase) ||
-                        text.StartsWith("hysteria2://", StringComparison.OrdinalIgnoreCase) ||
-                        text.StartsWith("hy2://", StringComparison.OrdinalIgnoreCase) ||
-                        text.StartsWith("tuic://", StringComparison.OrdinalIgnoreCase))
+                string candidate = span.Length == text.Length ? text : span.ToString();
+                var node = NodeLinkParser.Parse(candidate);
+                if (node != null)
+                {
+                    _lastCopiedLength = span.Length;
+                    _lastCopiedHash = hash;
+
+                    var queue = MainWindow.Instance?.DispatcherQueue
+                                ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+                    queue?.TryEnqueue(() =>
                     {
-                        var node = NodeLinkParser.Parse(text);
-                        if (node != null)
-                        {
-                            _lastCopiedText = text;
-                            Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread()?.TryEnqueue(() =>
-                            {
-                                var toast = new Views.ClipboardToastWindow(node);
-                                toast.Activate();
-                            });
-                        }
-                    }
+                        var toast = new Views.ClipboardToastWindow(node);
+                        toast.Activate();
+                    });
                 }
             }
             catch

@@ -10,7 +10,6 @@ using Windows.UI;
 using AnywhereWinUI.Helpers;
 using AnywhereWinUI.Services;
 using AnywhereWinUI.ViewModels;
-using Windows.Storage.Pickers;
 using System.Collections.Generic;
 
 namespace AnywhereWinUI.Views
@@ -61,12 +60,18 @@ namespace AnywhereWinUI.Views
 
         public SettingsPage()
         {
-            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
+            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Disabled;
             ViewModel = ((App)Application.Current).Services.GetService(typeof(ViewModels.SettingsViewModel)) as ViewModels.SettingsViewModel;
             MainViewModel = ((App)Application.Current).Services.GetService(typeof(ViewModels.MainViewModel)) as ViewModels.MainViewModel;
             this.InitializeComponent();
             InitializeSettings();
             _isLoaded = true;
+        }
+
+        protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            this.Bindings.StopTracking();
         }
 
         private void InitializeSettings()

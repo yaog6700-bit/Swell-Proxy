@@ -60,12 +60,19 @@ namespace AnywhereWinUI.ViewModels
             // 导致后续 TryEnqueue 时抛出 NullReferenceException 闪退。
             _dispatcherQueue = DispatcherQueue.GetForCurrentThread()
                                ?? MainWindow.Instance?.DispatcherQueue;
+            Subscribe();
+        }
+
+        public void Subscribe()
+        {
+            SingboxApiClient.Instance.ConnectionsUpdated -= OnConnectionsUpdated;
             SingboxApiClient.Instance.ConnectionsUpdated += OnConnectionsUpdated;
         }
 
         public void Unsubscribe()
         {
             SingboxApiClient.Instance.ConnectionsUpdated -= OnConnectionsUpdated;
+            _lastConnections = new();
         }
 
         private void OnConnectionsUpdated(object sender, ClashConnectionsMessage e)

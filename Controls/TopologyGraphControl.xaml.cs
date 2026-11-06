@@ -17,6 +17,7 @@ namespace AnywhereWinUI.Controls
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
+            ViewModel.Subscribe();
             ViewModel.IsActive = true;
         }
 
@@ -24,6 +25,8 @@ namespace AnywhereWinUI.Controls
         {
             ViewModel.IsActive = false;
             ViewModel.Unsubscribe(); // 取消事件订阅，防止页面卸载后仍收到回调
+            ViewModel.Nodes.Clear();
+            ViewModel.Links.Clear();
         }
 
         private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)

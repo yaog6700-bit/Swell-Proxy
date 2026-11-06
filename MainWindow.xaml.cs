@@ -742,6 +742,16 @@ namespace AnywhereWinUI
             VisibilityToUserChanged?.Invoke(this, false);
             SetShownInSwitchersSafe(false);
             AppWindow.Hide();
+
+            // Evict inactive cached pages from ContentFrame before trimming working set
+            try
+            {
+                int cacheSize = ContentFrame.CacheSize;
+                ContentFrame.CacheSize = 0;
+                ContentFrame.CacheSize = cacheSize;
+            }
+            catch { }
+
             // BUG-12 fix: 不再 collapse 根视觉树，避免触发全局 Unloaded 和动画关闭异常
             // OS 在 Hide() 后会自动释放 GPU 资源，无需手动干预。
             ReleaseUiResources();
@@ -776,17 +786,23 @@ namespace AnywhereWinUI
 
         private static void ReleaseUiResources()
         {
-            Task.Run(() =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
-                    // Compact LOH in this single GC pass — subscription/JSON paths
+                    // Allow queued UI cleanup callbacks (Logs/Traffic/Connections/Frame cache eviction)
+                    // to finish releasing WinRT XAML RCWs before running two-pass GC + working-set trim.
+                    await Task.Delay(150);
+
+                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: true, compacting: false);
+                    GC.WaitForPendingFinalizers();
+
+                    // Compact LOH in the second pass — subscription/JSON paths
                     // routinely allocate >85KB buffers that pin into LOH and never
                     // compact under default settings.
                     System.Runtime.GCSettings.LargeObjectHeapCompactionMode =
                         System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
-                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: true, compacting: true);
-                    GC.WaitForPendingFinalizers();
+                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
 
                     using var process = Process.GetCurrentProcess();
                     NativeMethods.SetProcessWorkingSetSize(process.Handle, (IntPtr)(-1), (IntPtr)(-1));

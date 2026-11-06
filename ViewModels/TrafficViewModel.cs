@@ -23,13 +23,22 @@ namespace AnywhereWinUI.ViewModels
     }
 
     // 柱状图 UI 绑定
-    public class TrafficChartViewModel
+    public partial class TrafficChartViewModel : ObservableObject
     {
-        public string DayLabel { get; set; } = string.Empty;
-        public double UploadHeight { get; set; }
-        public double DownloadHeight { get; set; }
-        public string UploadTooltip { get; set; } = string.Empty;
-        public string DownloadTooltip { get; set; } = string.Empty;
+        [ObservableProperty]
+        private string _dayLabel = string.Empty;
+
+        [ObservableProperty]
+        private double _uploadHeight;
+
+        [ObservableProperty]
+        private double _downloadHeight;
+
+        [ObservableProperty]
+        private string _uploadTooltip = string.Empty;
+
+        [ObservableProperty]
+        private string _downloadTooltip = string.Empty;
     }
 
     // 热力图视图模式
@@ -127,6 +136,7 @@ namespace AnywhereWinUI.ViewModels
         public ObservableCollection<string> MonthLabels { get; } = new();
 
         private HeatmapViewMode _heatmapViewMode = HeatmapViewMode.Daily;
+        public HeatmapViewMode CurrentHeatmapMode => _heatmapViewMode;
 
         public TrafficViewModel()
         {
@@ -139,11 +149,40 @@ namespace AnywhereWinUI.ViewModels
 
             CoreManager.Instance.TrafficUpdated += OnTrafficUpdated;
             CoreManager.Instance.RunningChanged += OnRunningChanged;
+            MainWindow.VisibilityToUserChanged += OnWindowVisibilityChanged;
 
             ResetSessionState();
             UpdateStatusUI(CoreManager.Instance.IsRunning);
-            UpdateMonthAndChartUI();
-            UpdateHeatmapUI();
+        }
+
+        private void OnWindowVisibilityChanged(object? sender, bool isVisible)
+        {
+            _dispatcherQueue?.TryEnqueue(() =>
+            {
+                if (!isVisible)
+                {
+                    ChartItems.Clear();
+                    HeatmapCells.Clear();
+                    MonthLabels.Clear();
+                }
+                else if (_isPageActive)
+                {
+                    RefreshSessionStrings(0, 0, includeSpeed: false);
+                    UpdateMonthAndChartUI();
+                    UpdateHeatmapUI();
+                }
+            });
+        }
+
+        private void RefreshSessionStrings(long downSpeed, long upSpeed, bool includeSpeed)
+        {
+            SessionUploadText = FormatBytes(_sessionUpload);
+            SessionDownloadText = FormatBytes(_sessionDownload);
+            SessionTotalText = FormatBytes(_sessionUpload + _sessionDownload);
+            if (includeSpeed)
+            {
+                ActiveConnectionsText = $"↓ {FormatBytes(downSpeed)}/s   ↑ {FormatBytes(upSpeed)}/s";
+            }
         }
 
         private void ResetSessionState()
@@ -187,10 +226,10 @@ namespace AnywhereWinUI.ViewModels
                     _sessionUpload   += deltaUp;
                     _sessionDownload += deltaDown;
 
-                    SessionUploadText   = FormatBytes(_sessionUpload);
-                    SessionDownloadText = FormatBytes(_sessionDownload);
-                    SessionTotalText    = FormatBytes(_sessionUpload + _sessionDownload);
-                    ActiveConnectionsText = $"↓ {FormatBytes(e.DownSpeed)}/s   ↑ {FormatBytes(e.UpSpeed)}/s";
+                    if (_isPageActive && MainWindow.IsVisibleToUser)
+                    {
+                        RefreshSessionStrings(e.DownSpeed, e.UpSpeed, includeSpeed: true);
+                    }
 
                     ProcessDailyTraffic(_sessionUpload, _sessionDownload);
                 }
@@ -235,8 +274,21 @@ namespace AnywhereWinUI.ViewModels
         }
 
         // Called by TrafficPage when it navigates to/from this ViewModel
-        public void OnPageActivated()  { _isPageActive = true;  UpdateMonthAndChartUI(); UpdateHeatmapUI(); }
-        public void OnPageDeactivated() { _isPageActive = false; }
+        public void OnPageActivated()
+        {
+            _isPageActive = true;
+            RefreshSessionStrings(0, 0, includeSpeed: false);
+            UpdateMonthAndChartUI();
+            UpdateHeatmapUI();
+        }
+
+        public void OnPageDeactivated()
+        {
+            _isPageActive = false;
+            ChartItems.Clear();
+            HeatmapCells.Clear();
+            MonthLabels.Clear();
+        }
 
         private void ProcessDailyTraffic(long sessionUpload, long sessionDownload)
         {
@@ -264,10 +316,10 @@ namespace AnywhereWinUI.ViewModels
                 SaveRecords();
             }
 
-            // Only push chart/heatmap updates while the Traffic page is open.
-            // When hidden, skip the O(N) collection rebuilds — the page will
-            // call OnPageActivated() to force a refresh when it becomes visible.
-            if (!_isPageActive) return;
+            // Only push chart/heatmap updates while the Traffic page is open and visible.
+            // When hidden, skip the O(N) collection updates — the page/window will
+            // force a refresh when it becomes visible.
+            if (!_isPageActive || !MainWindow.IsVisibleToUser) return;
 
             UpdateMonthAndChartUI();
 
@@ -338,23 +390,43 @@ namespace AnywhereWinUI.ViewModels
         private void UpdateMonthAndChartUI()
         {
             string monthPrefix = DateTime.Now.ToString("yyyy-MM");
-            var monthRecords = _dailyRecords.Where(r => r.Date.StartsWith(monthPrefix)).ToList();
-
-            long monthUp = monthRecords.Sum(r => r.ProxyUpload);
-            long monthDown = monthRecords.Sum(r => r.ProxyDownload);
+            long monthUp = 0;
+            long monthDown = 0;
+            for (int i = 0; i < _dailyRecords.Count; i++)
+            {
+                var r = _dailyRecords[i];
+                if (r.Date.StartsWith(monthPrefix, StringComparison.Ordinal))
+                {
+                    monthUp += r.ProxyUpload;
+                    monthDown += r.ProxyDownload;
+                }
+            }
 
             MonthUploadText = FormatBytes(monthUp);
             MonthDownloadText = FormatBytes(monthDown);
             MonthTotalText = FormatBytes(monthUp + monthDown);
 
-            if (!_dailyRecords.Any()) return;
+            if (_dailyRecords.Count == 0)
+            {
+                ChartItems.Clear();
+                return;
+            }
 
-            long maxVal = _dailyRecords.Max(r => Math.Max(r.ProxyUpload, r.ProxyDownload));
+            // Bug #3 fix: show only the most recent 30 days matching the card header ("近 30 天")
+            var recentRecords = _dailyRecords.OrderBy(r => r.Date).TakeLast(30).ToList();
+
+            long maxVal = recentRecords.Max(r => Math.Max(r.ProxyUpload, r.ProxyDownload));
             if (maxVal == 0) maxVal = 1;
 
-            ChartItems.Clear();
-            foreach (var record in _dailyRecords.OrderBy(r => r.Date))
+            bool updateInPlace = ChartItems.Count == recentRecords.Count;
+            if (!updateInPlace)
             {
+                ChartItems.Clear();
+            }
+
+            for (int i = 0; i < recentRecords.Count; i++)
+            {
+                var record = recentRecords[i];
                 string dayLabel = record.Date.Length > 5
                     ? record.Date.Substring(record.Date.Length - 5)
                     : record.Date;
@@ -366,14 +438,31 @@ namespace AnywhereWinUI.ViewModels
                     dayLabel = dt.ToString("M/d");
                 }
 
-                ChartItems.Add(new TrafficChartViewModel
+                double upHeight = Math.Max((double)record.ProxyUpload / maxVal * 130, 2);
+                double downHeight = Math.Max((double)record.ProxyDownload / maxVal * 130, 2);
+                string upTip = $"上传: {FormatBytes(record.ProxyUpload)}";
+                string downTip = $"下载: {FormatBytes(record.ProxyDownload)}";
+
+                if (updateInPlace)
                 {
-                    DayLabel = dayLabel,
-                    UploadHeight = Math.Max((double)record.ProxyUpload / maxVal * 130, 2),
-                    DownloadHeight = Math.Max((double)record.ProxyDownload / maxVal * 130, 2),
-                    UploadTooltip = $"上传: {FormatBytes(record.ProxyUpload)}",
-                    DownloadTooltip = $"下载: {FormatBytes(record.ProxyDownload)}"
-                });
+                    var item = ChartItems[i];
+                    item.DayLabel = dayLabel;
+                    item.UploadHeight = upHeight;
+                    item.DownloadHeight = downHeight;
+                    item.UploadTooltip = upTip;
+                    item.DownloadTooltip = downTip;
+                }
+                else
+                {
+                    ChartItems.Add(new TrafficChartViewModel
+                    {
+                        DayLabel = dayLabel,
+                        UploadHeight = upHeight,
+                        DownloadHeight = downHeight,
+                        UploadTooltip = upTip,
+                        DownloadTooltip = downTip
+                    });
+                }
             }
         }
 
@@ -616,6 +705,7 @@ namespace AnywhereWinUI.ViewModels
         {
             CoreManager.Instance.TrafficUpdated -= OnTrafficUpdated;
             CoreManager.Instance.RunningChanged -= OnRunningChanged;
+            MainWindow.VisibilityToUserChanged -= OnWindowVisibilityChanged;
         }
     }
 }

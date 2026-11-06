@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using Windows.Storage.Pickers;
 using AnywhereWinUI.Plugins;
 
 namespace AnywhereWinUI.Views
@@ -14,9 +13,21 @@ namespace AnywhereWinUI.Views
     {
         public PluginsPage()
         {
-            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
+            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Disabled;
             InitializeComponent();
             Loaded += PluginsPage_Loaded;
+        }
+
+        protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            Loaded -= PluginsPage_Loaded;
+
+            for (int i = PluginListPanel.Children.Count - 1; i >= 0; i--)
+            {
+                if (PluginListPanel.Children[i] is not StackPanel { Name: "EmptyState" })
+                    PluginListPanel.Children.RemoveAt(i);
+            }
         }
 
         private void PluginsPage_Loaded(object sender, RoutedEventArgs e)

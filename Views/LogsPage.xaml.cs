@@ -1,6 +1,9 @@
 using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
+using Windows.ApplicationModel.DataTransfer;
+using AnywhereWinUI.Models;
 using AnywhereWinUI.ViewModels;
 
 namespace AnywhereWinUI.Views
@@ -11,44 +14,60 @@ namespace AnywhereWinUI.Views
 
         public LogsPage()
         {
-            NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
+            NavigationCacheMode = NavigationCacheMode.Disabled;
             ViewModel = ((App)Application.Current).Services.GetService(typeof(LogsViewModel)) as LogsViewModel;
             this.InitializeComponent();
 
-            // Subscribe for page instance lifetime; NavigationCache reuses this page so do not
-            // unsubscribe on Unloaded (visual detach is not final destroy).
-            if (ViewModel != null)
-                ViewModel.LogFlushed += OnLogFlushed;
-
             // Re-tint level badges when app Light/Dark theme switches
-            this.ActualThemeChanged += (_, _) =>
+            this.ActualThemeChanged += OnActualThemeChanged;
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            if (ViewModel != null)
             {
-                if (ViewModel == null) return;
-                foreach (var entry in ViewModel.LogEntries) entry.RefreshTheme();
-            };
+                ViewModel.LogFlushed -= OnLogFlushed;
+                ViewModel.LogFlushed += OnLogFlushed;
+                ViewModel.SetPageActive(true);
+            }
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            this.ActualThemeChanged -= OnActualThemeChanged;
+            if (ViewModel != null)
+            {
+                ViewModel.LogFlushed -= OnLogFlushed;
+                ViewModel.SetPageActive(false);
+            }
+            this.Bindings.StopTracking();
+        }
+
+        private void OnActualThemeChanged(FrameworkElement sender, object args)
+        {
+            if (ViewModel == null) return;
+            foreach (var entry in ViewModel.LogEntries) entry.RefreshTheme();
         }
 
         private void OnLogFlushed(object? sender, (int Received, int PrevCount, int NewCount) args)
         {
-            if (ViewModel == null) return;
+            if (ViewModel == null || !ViewModel.AutoScroll || ViewModel.LogEntries.Count == 0)
+                return;
 
-            if (ViewModel.AutoScroll)
-            {
-                LogScrollViewer.ChangeView(null, double.MaxValue, null, disableAnimation: true);
-            }
-            else
-            {
-                // Scroll anchoring: Shift the scroll offset down by the height of evicted lines so visible content stays anchored.
-                var prevOffset = LogScrollViewer.VerticalOffset;
-                var prevExtent = LogScrollViewer.ExtentHeight;
-                var evicted = Math.Max(0, args.Received - (args.NewCount - args.PrevCount));
+            LogListView.ScrollIntoView(ViewModel.LogEntries[^1]);
+        }
 
-                if (evicted > 0 && args.PrevCount > 0 && prevExtent > 0)
-                {
-                    var lineHeight = prevExtent / args.PrevCount;
-                    var target = Math.Max(0, prevOffset - evicted * lineHeight);
-                    LogScrollViewer.ChangeView(null, target, null, disableAnimation: true);
-                }
+        private void CopySingleLogLine_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement el && el.DataContext is LogEntry entry)
+            {
+                var dp = new DataPackage();
+                dp.SetText(string.IsNullOrEmpty(entry.Time)
+                    ? $"[{entry.Level}] {entry.Message}"
+                    : $"{entry.Time} [{entry.Level}] {entry.Message}");
+                Clipboard.SetContent(dp);
             }
         }
     }
