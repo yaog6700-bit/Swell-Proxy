@@ -447,7 +447,7 @@ namespace AnywhereWinUI.Services
 
                 var stdoutTask = proc.StandardOutput.ReadToEndAsync();
                 var stderrTask = proc.StandardError.ReadToEndAsync();
-                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(3));
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(8));
                 try
                 {
                     await proc.WaitForExitAsync(cts.Token).ConfigureAwait(false);

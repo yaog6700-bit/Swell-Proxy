@@ -147,6 +147,35 @@ namespace AnywhereWinUI.Parsers.Tests
         }
 
         [Fact]
+        public void Shadowsocks_ManualUiSavedNodeWithObfsNone_TranslatesCleanly()
+        {
+            var node = new PersistedNode
+            {
+                Name = "SS-2022 Manual",
+                Protocol = "Shadowsocks",
+                Host = "1.2.3.4:8388",
+                Encryption = "2022-BLAKE3-AES-256-GCM",
+                Password = " AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= ",
+                Network = "tcp",
+                ObfsType = "none",
+                HeaderType = "none",
+                Security = "none"
+            };
+
+            bool ok = ShoesYamlSerializer.TryBuildClientProxyYaml(
+                node, node.Name, indent: 0, out string yaml, out var kind, out _);
+
+            Assert.True(ok);
+            Assert.Equal(ShoesYamlSerializer.RejectKind.None, kind);
+
+            var root = ParseFirstSequenceItem(yaml);
+            var proto = Assert.IsType<YamlMappingNode>(root.Children["protocol"]);
+            Assert.Equal("shadowsocks", proto.Children["type"].ToString());
+            Assert.Equal("2022-blake3-aes-256-gcm", proto.Children["cipher"].ToString());
+            Assert.Equal("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", proto.Children["password"].ToString());
+        }
+
+        [Fact]
         public void TryExtractClashSecret_RoundTripsQuotedSecret()
         {
             string yaml = "- clash_api_address: \"127.0.0.1:9090\"\n  secret: \"f0e1d2c3b4a59687\"\n";

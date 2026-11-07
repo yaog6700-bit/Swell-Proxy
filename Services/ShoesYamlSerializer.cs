@@ -32,6 +32,18 @@ namespace AnywhereWinUI.Services
             "plain"
         };
 
+        private static string NormalizeSsCipher(string method)
+        {
+            string lower = method.Trim().ToLowerInvariant();
+            return lower switch
+            {
+                "aead_aes_128_gcm" => "aes-128-gcm",
+                "aead_aes_256_gcm" => "aes-256-gcm",
+                "aead_chacha20_poly1305" => "chacha20-ietf-poly1305",
+                _ => lower
+            };
+        }
+
         public static bool TryBuildClientProxyYaml(
             PersistedNode node,
             string tag,
@@ -201,28 +213,35 @@ namespace AnywhereWinUI.Services
             }
             else if (protoLower == "ss" || protoLower.Contains("shadowsocks"))
             {
-                if (network != "tcp" || !string.IsNullOrWhiteSpace(node.ObfsType))
+                bool hasSsPlugin = !string.IsNullOrWhiteSpace(node.ObfsType) &&
+                                   !string.Equals(node.ObfsType.Trim(), "none", StringComparison.OrdinalIgnoreCase);
+                if (network != "tcp" || hasSsPlugin)
                 {
                     rejectKind = RejectKind.UnsupportedProtocol;
                     rejectDetail = "Shadowsocks Plugin/WS";
                     return false;
                 }
 
-                string method = !string.IsNullOrWhiteSpace(node.Encryption) ? node.Encryption.Trim() : "aes-256-gcm";
+                string rawMethod = !string.IsNullOrWhiteSpace(node.Encryption) ? node.Encryption.Trim() : "aes-256-gcm";
+                string method = NormalizeSsCipher(rawMethod);
                 if (!SupportedSsCiphers.Contains(method))
                 {
                     rejectKind = RejectKind.UnsupportedProtocol;
-                    rejectDetail = $"Shadowsocks ({method})";
+                    rejectDetail = $"Shadowsocks ({rawMethod})";
                     return false;
                 }
 
+                string ssPassword = method.StartsWith("2022-", StringComparison.Ordinal)
+                    ? password.Trim()
+                    : password;
+
                 rootLayer = new ProtoLayer("shadowsocks",
                     ("cipher", Quote(method)),
-                    ("password", Quote(password)));
+                    ("password", Quote(ssPassword)));
             }
             else if (protoLower == "socks" || protoLower == "socks5")
             {
-                if (network != "tcp" || (security != "none" && security != "tls"))
+                if (network != "tcp")
                 {
                     rejectKind = RejectKind.UnsupportedProtocol;
                     rejectDetail = node.Protocol ?? "SOCKS";
