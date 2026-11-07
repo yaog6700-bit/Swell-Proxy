@@ -26,9 +26,11 @@ namespace AnywhereWinUI.Services
         public string DestinationIP { get; set; } = string.Empty;
 
         [JsonPropertyName("sourcePort")]
+        [JsonConverter(typeof(FlexibleStringJsonConverter))]
         public string SourcePort { get; set; } = string.Empty;
 
         [JsonPropertyName("destinationPort")]
+        [JsonConverter(typeof(FlexibleStringJsonConverter))]
         public string DestinationPort { get; set; } = string.Empty;
 
         [JsonPropertyName("host")]
@@ -50,6 +52,7 @@ namespace AnywhereWinUI.Services
         public long Download { get; set; }
 
         [JsonPropertyName("start")]
+        [JsonConverter(typeof(FlexibleDateTimeJsonConverter))]
         public DateTime Start { get; set; }
 
         [JsonPropertyName("chains")]
@@ -193,6 +196,56 @@ namespace AnywhereWinUI.Services
         public void Dispose()
         {
             _ = StopAsync();
+        }
+    }
+
+    /// <summary>
+    /// Allows Clash API fields such as sourcePort / destinationPort to deserialize cleanly
+    /// whether the active core serializes them as JSON strings ("443") or JSON numbers (443).
+    /// </summary>
+    internal sealed class FlexibleStringJsonConverter : JsonConverter<string>
+    {
+        public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            return reader.TokenType switch
+            {
+                JsonTokenType.String => reader.GetString() ?? string.Empty,
+                JsonTokenType.Number => reader.TryGetInt64(out var n) ? n.ToString() : string.Empty,
+                JsonTokenType.True => "true",
+                JsonTokenType.False => "false",
+                _ => string.Empty
+            };
+        }
+
+        public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value);
+        }
+    }
+
+    internal sealed class FlexibleDateTimeJsonConverter : JsonConverter<DateTime>
+    {
+        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.String)
+            {
+                if (reader.TryGetDateTime(out var dt)) return dt;
+                var raw = reader.GetString();
+                if (!string.IsNullOrEmpty(raw) && DateTimeOffset.TryParse(raw, out var dto))
+                    return dto.LocalDateTime;
+            }
+            else if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt64(out var unix))
+            {
+                return unix > 10_000_000_000L
+                    ? DateTimeOffset.FromUnixTimeMilliseconds(unix).LocalDateTime
+                    : DateTimeOffset.FromUnixTimeSeconds(unix).LocalDateTime;
+            }
+            return DateTime.Now;
+        }
+
+        public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value);
         }
     }
 }

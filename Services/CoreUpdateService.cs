@@ -16,10 +16,45 @@ namespace AnywhereWinUI.Services
     public sealed class CoreUpdateService
     {
         private const string SingboxApiUrl = "https://api.github.com/repos/SagerNet/sing-box/releases/latest";
+        private const string ShoesApiLatestUrl = "https://api.github.com/repos/yaog6700-bit/shoes/releases/latest";
+        private const string ShoesApiListUrl = "https://api.github.com/repos/yaog6700-bit/shoes/releases?per_page=15";
+
         private static readonly string EngineDir = Path.Combine(AppContext.BaseDirectory, "Assets");
         public static readonly string SingboxExePath = Path.Combine(EngineDir, "sing-box.exe");
         public static readonly string BundledBackupExePath = Path.Combine(EngineDir, "sing-box.bundled.bak");
         public static bool HasBundledBackup => File.Exists(BundledBackupExePath);
+
+        // On-demand Shoes binary lives under %LocalAppData%\SwellProxy\bin so it survives client self-updates
+        // and works without elevation even if the app is placed in a read-only folder; Assets\shoes.exe is also recognized.
+        public static readonly string ShoesBinDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SwellProxy",
+            "bin");
+        public static readonly string ShoesUserExePath = Path.Combine(ShoesBinDir, "shoes.exe");
+        public static readonly string ShoesBundledExePath = Path.Combine(EngineDir, "shoes.exe");
+
+        public static bool IsShoesInstalled =>
+            IsNonEmptyFile(ShoesUserExePath) || IsNonEmptyFile(ShoesBundledExePath);
+
+        public static string ResolveShoesExePath()
+        {
+            if (IsNonEmptyFile(ShoesUserExePath)) return ShoesUserExePath;
+            if (IsNonEmptyFile(ShoesBundledExePath)) return ShoesBundledExePath;
+            return ShoesUserExePath;
+        }
+
+        private static bool IsNonEmptyFile(string path)
+        {
+            try
+            {
+                var fi = new FileInfo(path);
+                return fi.Exists && fi.Length > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         public async Task<CoreUpdateInfo?> CheckSingboxAsync(string? proxyUrl, CancellationToken ct)
         {
@@ -52,6 +87,109 @@ namespace AnywhereWinUI.Services
 
             return new CoreUpdateInfo(remote, release.TagName!, zipUrl, shaUrl,
                                       shaUrl is not null ? ChecksumFormat.Sha256 : null, "sing-box.exe", zipName);
+        }
+
+        public async Task<CoreUpdateInfo?> CheckShoesAsync(
+            string? proxyUrl,
+            bool forceInstallIfMissing,
+            CancellationToken ct)
+        {
+            string archMatch = RuntimeInformation.ProcessArchitecture switch
+            {
+                Architecture.X64 => "x86_64-pc-windows",
+                Architecture.Arm64 => "aarch64-pc-windows",
+                _ => string.Empty
+            };
+            if (string.IsNullOrEmpty(archMatch)) return null;
+
+            GhRelease? release = null;
+            try
+            {
+                release = await FetchReleaseAsync(ShoesApiLatestUrl, proxyUrl, ct);
+            }
+            catch { }
+
+            if (release == null || PickShoesZipAsset(release, archMatch).ZipUrl == null)
+            {
+                var list = await FetchReleaseListAsync(ShoesApiListUrl, proxyUrl, ct);
+                if (list != null)
+                {
+                    foreach (var item in list)
+                    {
+                        if (item == null || item.Draft) continue;
+                        if (PickShoesZipAsset(item, archMatch).ZipUrl != null)
+                        {
+                            release = item;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (release is null || string.IsNullOrWhiteSpace(release.TagName)) return null;
+
+            var (zipName, zipUrl, shaUrl) = PickShoesZipAsset(release, archMatch);
+            if (zipName is null || zipUrl is null) return null;
+
+            var tag = release.TagName.TrimStart('v', 'V');
+            var dashIdx = tag.IndexOf('-');
+            var cleanTag = dashIdx > 0 ? tag[..dashIdx] : tag;
+            if (!Version.TryParse(cleanTag, out var remote))
+            {
+                remote = new Version(0, 3, 5);
+            }
+
+            if (!forceInstallIfMissing && IsShoesInstalled)
+            {
+                var local = GetLocalShoesNumericVersion();
+                if (local != null && remote <= local)
+                {
+                    return null;
+                }
+            }
+
+            return new CoreUpdateInfo(
+                remote,
+                release.TagName,
+                zipUrl,
+                shaUrl,
+                shaUrl is not null ? ChecksumFormat.Sha256 : null,
+                "shoes.exe",
+                zipName);
+        }
+
+        private static (string? ZipName, string? ZipUrl, string? ShaUrl) PickShoesZipAsset(GhRelease release, string archMatch)
+        {
+            if (release.Assets == null) return (null, null, null);
+
+            string? zipName = null, zipUrl = null;
+            foreach (var a in release.Assets)
+            {
+                if (string.IsNullOrEmpty(a?.Name) || string.IsNullOrEmpty(a.Url)) continue;
+                var lower = a.Name.ToLowerInvariant();
+                if (lower.Contains(archMatch) && lower.EndsWith(".zip", StringComparison.Ordinal))
+                {
+                    zipName = a.Name;
+                    zipUrl = a.Url;
+                    break;
+                }
+            }
+
+            if (zipName == null) return (null, null, null);
+
+            string? shaUrl = null;
+            string expectedShaName = zipName + ".sha256";
+            foreach (var a in release.Assets)
+            {
+                if (a?.Name != null && a.Url != null &&
+                    string.Equals(a.Name, expectedShaName, StringComparison.OrdinalIgnoreCase))
+                {
+                    shaUrl = a.Url;
+                    break;
+                }
+            }
+
+            return (zipName, zipUrl, shaUrl);
         }
 
         public async Task UpdateAsync(
@@ -88,7 +226,8 @@ namespace AnywhereWinUI.Services
                 progress.Report(L.Core_NoChecksumSkip);
             }
 
-            var actualHash = await DownloadAndHashAsync(client, info.ZipUrl, zipPath, info.ZipAssetName, progress, ct);
+            var actualHash = await DownloadWithMirrorFallbackAsync(
+                client, info.ZipUrl, zipPath, info.ZipAssetName, proxyUrl, progress, ct);
 
             if (expectedHash is not null)
             {
@@ -114,10 +253,12 @@ namespace AnywhereWinUI.Services
             }
 
             progress.Report(string.Format(L.Core_InstallingFmt, info.TargetExeName));
-            var targetPath = Path.Combine(EngineDir, info.TargetExeName);
-            Directory.CreateDirectory(EngineDir);
+            bool isShoes = string.Equals(info.TargetExeName, "shoes.exe", StringComparison.OrdinalIgnoreCase);
+            var installDir = isShoes ? ShoesBinDir : EngineDir;
+            var targetPath = Path.Combine(installDir, info.TargetExeName);
+            Directory.CreateDirectory(installDir);
 
-            if (!File.Exists(BundledBackupExePath) && File.Exists(targetPath))
+            if (!isShoes && !File.Exists(BundledBackupExePath) && File.Exists(targetPath))
             {
                 try { File.Copy(targetPath, BundledBackupExePath, overwrite: false); } catch { }
             }
@@ -129,15 +270,106 @@ namespace AnywhereWinUI.Services
 
             File.Copy(extractedExe, targetPath, overwrite: true);
 
+            if (isShoes)
+            {
+                CopySidecarDlls(Path.GetDirectoryName(extractedExe), installDir);
+            }
+
             try { Directory.Delete(stageDir, recursive: true); } catch { }
 
             progress.Report(string.Format(L.Core_UpdatedStatusFmt, info.TagName));
+        }
+
+        public static void InstallLocalShoesExecutable(string sourceExePath)
+        {
+            Directory.CreateDirectory(ShoesBinDir);
+            var targetPath = ShoesUserExePath;
+            if (!string.Equals(Path.GetFullPath(sourceExePath), Path.GetFullPath(targetPath), StringComparison.OrdinalIgnoreCase))
+            {
+                File.Copy(sourceExePath, targetPath, overwrite: true);
+            }
+            CopySidecarDlls(Path.GetDirectoryName(sourceExePath), ShoesBinDir);
+        }
+
+        private static void CopySidecarDlls(string? srcDir, string dstDir)
+        {
+            if (string.IsNullOrEmpty(srcDir) || !Directory.Exists(srcDir)) return;
+            try
+            {
+                foreach (var dll in Directory.GetFiles(srcDir, "*.dll", SearchOption.TopDirectoryOnly))
+                {
+                    var dstDll = Path.Combine(dstDir, Path.GetFileName(dll));
+                    if (!string.Equals(Path.GetFullPath(dll), Path.GetFullPath(dstDll), StringComparison.OrdinalIgnoreCase))
+                    {
+                        try { File.Copy(dll, dstDll, overwrite: true); } catch { }
+                    }
+                }
+            }
+            catch { }
         }
 
         private static async Task<GhRelease?> FetchReleaseAsync(string apiUrl, string? proxyUrl, CancellationToken ct)
         {
             using var client = CreateHttpClient(proxyUrl, TimeSpan.FromSeconds(20));
             return await client.GetFromJsonAsync(apiUrl, UpdateJsonSerializerContext.Default.GhRelease, ct);
+        }
+
+        private static async Task<System.Collections.Generic.List<GhRelease>?> FetchReleaseListAsync(
+            string apiUrl, string? proxyUrl, CancellationToken ct)
+        {
+            using var client = CreateHttpClient(proxyUrl, TimeSpan.FromSeconds(20));
+            return await client.GetFromJsonAsync(apiUrl, UpdateJsonSerializerContext.Default.ListGhRelease, ct);
+        }
+
+        private static async Task<string> DownloadWithMirrorFallbackAsync(
+            HttpClient client,
+            string url,
+            string destPath,
+            string displayName,
+            string? proxyUrl,
+            IProgress<string> progress,
+            CancellationToken ct)
+        {
+            try
+            {
+                return await DownloadAndHashAsync(client, url, destPath, displayName, progress, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception firstEx) when (
+                string.IsNullOrEmpty(proxyUrl) &&
+                (url.Contains("github.com/", StringComparison.OrdinalIgnoreCase) ||
+                 url.Contains("githubusercontent.com/", StringComparison.OrdinalIgnoreCase)))
+            {
+                string[] mirrors =
+                {
+                    "https://ghfast.top/",
+                    "https://mirror.ghproxy.com/",
+                    "https://ghproxy.net/"
+                };
+
+                foreach (var mirror in mirrors)
+                {
+                    try
+                    {
+                        try { if (File.Exists(destPath)) File.Delete(destPath); } catch { }
+                        return await DownloadAndHashAsync(client, mirror + url, destPath, displayName, progress, ct);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch
+                    {
+                        // Try next mirror
+                    }
+                }
+
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(firstEx).Throw();
+                throw;
+            }
         }
 
         private static HttpClient CreateHttpClient(string? proxyUrl, TimeSpan timeout)
@@ -286,6 +518,93 @@ namespace AnywhereWinUI.Services
         {
             if (!File.Exists(SingboxExePath)) return L.Core_NotInstalled;
             var probe = ProbeSingboxExecutable(SingboxExePath);
+            return probe.IsValid ? probe.VersionDisplay : L.Core_InstalledUnknownVer;
+        }
+
+        public static (bool IsValid, string VersionDisplay, Version? NumericVersion, string RawOutput) ProbeShoesExecutable(string exePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+                    return (false, L.Core_NotInstalled, null, string.Empty);
+
+                string combined = RunVersionProbeOnce(exePath, "version");
+                if (string.IsNullOrWhiteSpace(combined) ||
+                    combined.Contains("unrecognized", StringComparison.OrdinalIgnoreCase) ||
+                    combined.Contains("unexpected argument", StringComparison.OrdinalIgnoreCase))
+                {
+                    combined = RunVersionProbeOnce(exePath, "--version");
+                }
+
+                if (combined.Contains("sing-box", StringComparison.OrdinalIgnoreCase))
+                {
+                    return (false, L.Core_InvalidBinary, null, combined);
+                }
+
+                var verMatch = System.Text.RegularExpressions.Regex.Match(
+                    combined,
+                    @"v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z\.\-]+)?)");
+
+                if (verMatch.Success)
+                {
+                    // Confirm this is actually a shoes binary (either output says "shoes" or --help mentions --no-reload/shoes)
+                    bool looksLikeShoes = combined.Contains("shoes", StringComparison.OrdinalIgnoreCase);
+                    if (!looksLikeShoes)
+                    {
+                        string helpOut = RunVersionProbeOnce(exePath, "--help");
+                        looksLikeShoes = helpOut.Contains("shoes", StringComparison.OrdinalIgnoreCase) ||
+                                         helpOut.Contains("no-reload", StringComparison.OrdinalIgnoreCase);
+                    }
+
+                    if (looksLikeShoes)
+                    {
+                        var fullVerStr = verMatch.Groups[1].Value;
+                        var dashIdx = fullVerStr.IndexOf('-');
+                        var numericPart = dashIdx > 0 ? fullVerStr[..dashIdx] : fullVerStr;
+                        Version.TryParse(numericPart, out var numericVer);
+                        return (true, $"v{fullVerStr}", numericVer, combined);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return (false, L.Core_CannotExec, null, ex.Message);
+            }
+
+            return (false, L.Core_InvalidBinary, null, string.Empty);
+        }
+
+        private static string RunVersionProbeOnce(string exePath, string arguments)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = arguments,
+                WorkingDirectory = Path.GetDirectoryName(exePath) ?? AppContext.BaseDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            using var proc = Process.Start(psi);
+            if (proc == null) return string.Empty;
+            var output = proc.StandardOutput.ReadToEnd();
+            var err = proc.StandardError.ReadToEnd();
+            proc.WaitForExit(3000);
+            return string.IsNullOrWhiteSpace(output) ? err : output;
+        }
+
+        public static Version? GetLocalShoesNumericVersion()
+        {
+            if (!IsShoesInstalled) return null;
+            var probe = ProbeShoesExecutable(ResolveShoesExePath());
+            return probe.NumericVersion;
+        }
+
+        public static string GetLocalShoesVersionText()
+        {
+            if (!IsShoesInstalled) return L.Core_NotInstalled;
+            var probe = ProbeShoesExecutable(ResolveShoesExePath());
             return probe.IsValid ? probe.VersionDisplay : L.Core_InstalledUnknownVer;
         }
     }

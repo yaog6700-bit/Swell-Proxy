@@ -942,10 +942,28 @@
                                     BorderThickness="1" 
                                     CornerRadius="8">
                                 <StackPanel>
+                                    <!-- Experimental Dual-Core Engine Selector -->
+                                    <Grid ColumnDefinitions="*,Auto" Padding="16,16" ColumnSpacing="16">
+                                        <StackPanel Spacing="4" VerticalAlignment="Center">
+                                            <TextBlock x:Uid="Settings_CoreEngineTitle" Text="代理内核引擎（实验性）" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            <TextBlock x:Uid="Settings_CoreEngineDesc" Text="默认使用稳定全功能的 sing-box；可切换至 Rust 编写的轻量 Shoes 核心尝鲜（仅系统代理，遇到 TUN 或不支持的协议将自动无感借用 sing-box）" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <ComboBox x:Name="CoreEngineComboBox"
+                                                  Grid.Column="1"
+                                                  MinWidth="210"
+                                                  VerticalAlignment="Center"
+                                                  SelectionChanged="CoreEngineComboBox_SelectionChanged">
+                                            <ComboBoxItem x:Uid="Settings_CoreEngineSingboxItem" Tag="sing-box" Content="sing-box (默认推荐)"/>
+                                            <ComboBoxItem x:Uid="Settings_CoreEngineShoesItem" Tag="shoes" Content="Shoes (Rust 轻量尝鲜)"/>
+                                        </ComboBox>
+                                    </Grid>
+
+                                    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="16,0"/>
+
                                     <!-- Core settings line -->
                                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" Padding="16,16" ColumnSpacing="8">
                                         <StackPanel Spacing="4" VerticalAlignment="Center">
-                                            <TextBlock x:Uid="Settings_CoreTitle" Text="Sing-box Core 运行核心" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            <TextBlock x:Name="ActiveCoreTitleText" x:Uid="Settings_CoreTitle" Text="Sing-box Core 运行核心" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                             <TextBlock x:Name="SingboxVersionText" x:Uid="Settings_SingboxVerLoading" Text="加载中..." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <Button x:Name="RestoreCoreButton" x:Uid="Settings_RestoreCoreBtn" Grid.Column="1" Content="恢复默认核心" Padding="10,5" CornerRadius="4" Visibility="Collapsed" Click="RestoreCoreButton_Click" ToolTipService.ToolTip="恢复为客户端自带的原版 sing-box 核心" VerticalAlignment="Center"/>
@@ -954,6 +972,8 @@
                                         </Button>
                                         <Button x:Name="CheckUpdateButton" x:Uid="Settings_CheckCoreBtn" Grid.Column="3" Content="检查更新" Padding="12,5" CornerRadius="4" Click="CheckUpdateButton_Click" VerticalAlignment="Center"/>
                                     </Grid>
+
+                                    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="16,0"/>
 
                                     <Grid ColumnDefinitions="*,Auto,Auto" Padding="16,16" ColumnSpacing="12">
                                         <StackPanel Spacing="4" VerticalAlignment="Center">

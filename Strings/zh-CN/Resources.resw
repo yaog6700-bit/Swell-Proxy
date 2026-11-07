@@ -2456,4 +2456,118 @@ URL: {1}
   <data name="CustomCfg_CheckTimeout" xml:space="preserve">
     <value>sing-box check 执行超时（8 秒）。</value>
   </data>
+  <data name="Settings_CoreEngineTitle.Text" xml:space="preserve">
+    <value>代理内核引擎（实验性）</value>
+  </data>
+  <data name="Settings_CoreEngineDesc.Text" xml:space="preserve">
+    <value>默认使用稳定全功能的 sing-box；可切换至 Rust 编写的轻量 Shoes 核心尝鲜（仅系统代理，遇到 TUN 或不支持的协议将自动无感借用 sing-box）</value>
+  </data>
+  <data name="Settings_CoreEngineSingboxItem.Content" xml:space="preserve">
+    <value>sing-box (默认推荐)</value>
+  </data>
+  <data name="Settings_CoreEngineShoesItem.Content" xml:space="preserve">
+    <value>Shoes (Rust 轻量尝鲜)</value>
+  </data>
+  <data name="Shoes_ReasonNotInstalled" xml:space="preserve">
+    <value>本地未安装 Shoes 内核</value>
+  </data>
+  <data name="Shoes_ReasonTunMode" xml:space="preserve">
+    <value>TUN 模式需由 sing-box 承载</value>
+  </data>
+  <data name="Shoes_ReasonTailscale" xml:space="preserve">
+    <value>Tailscale 端点需由 sing-box 承载</value>
+  </data>
+  <data name="Shoes_ReasonUnsupportedNode" xml:space="preserve">
+    <value>当前节点配置需由 sing-box 承载</value>
+  </data>
+  <data name="Shoes_ReasonCustomConfig" xml:space="preserve">
+    <value>原生 sing-box 配置需由 sing-box 承载</value>
+  </data>
+  <data name="Shoes_ReasonShadowTls" xml:space="preserve">
+    <value>ShadowTLS 封装需由 sing-box 承载</value>
+  </data>
+  <data name="Shoes_ReasonProxyChain" xml:space="preserve">
+    <value>前置代理链需由 sing-box 承载</value>
+  </data>
+  <data name="Shoes_ReasonMultiNodeRule" xml:space="preserve">
+    <value>高级分流指定了多节点/自动测速策略</value>
+  </data>
+  <data name="Shoes_ReasonTransportFmt" xml:space="preserve">
+    <value>传输层 {0} 需由 sing-box 承载</value>
+  </data>
+  <data name="Shoes_ReasonProtocolFmt" xml:space="preserve">
+    <value>协议 {0} 需由 sing-box 承载</value>
+  </data>
+  <data name="Shoes_ReasonPrecheckFallback" xml:space="preserve">
+    <value>当前节点参数预检需由 sing-box 承载</value>
+  </data>
+  <data name="Shoes_FallbackLogFmt" xml:space="preserve">
+    <value>[双核智能回退] {0}，本次连接已自动无感借用 sing-box 核心启动</value>
+  </data>
+  <data name="Shoes_DashboardFallbackSuffixFmt" xml:space="preserve">
+    <value>（{0}，已自动借用 sing-box 运行）</value>
+  </data>
+  <data name="Shoes_EngineSwitchedRestartFmt" xml:space="preserve">
+    <value>[系统] 默认代理内核已切换为 {0}，正在无缝重启代理引擎...</value>
+  </data>
+  <data name="Settings_CoreTitleText" xml:space="preserve">
+    <value>Sing-box Core 运行核心</value>
+  </data>
+  <data name="Settings_ShoesCoreTitle" xml:space="preserve">
+    <value>Shoes Core 运行核心（实验性）</value>
+  </data>
+  <data name="Settings_ShoesCoreVerFmt" xml:space="preserve">
+    <value>当前版本: {0}（Rust 轻量内核 · 共享本地规则集 · 仅系统代理）</value>
+  </data>
+  <data name="Settings_ReplaceSingboxTooltip" xml:space="preserve">
+    <value>手动替换本地核心文件（支持 sing-box 1.13 / 1.14 / 1.15+）</value>
+  </data>
+  <data name="Settings_ReplaceShoesTooltip" xml:space="preserve">
+    <value>手动导入或替换本地 shoes.exe 核心文件</value>
+  </data>
+  <data name="Settings_DownloadShoesBtnText" xml:space="preserve">
+    <value>下载核心</value>
+  </data>
+  <data name="Settings_ShoesDownloadPromptTitle" xml:space="preserve">
+    <value>下载启用 Shoes 实验核心</value>
+  </data>
+  <data name="Settings_ShoesDownloadPromptMsg" xml:space="preserve">
+    <value>为保持安装包极致精简，客户端默认未内置 Shoes 核心。
+
+是否立即在线自动下载最新版 Shoes 核心？
+（也可选择本地已有的 shoes.exe 文件导入）</value>
+  </data>
+  <data name="Settings_ShoesDownloadNowBtn" xml:space="preserve">
+    <value>立即在线下载</value>
+  </data>
+  <data name="Settings_ShoesPickLocalBtn" xml:space="preserve">
+    <value>选择本地文件</value>
+  </data>
+  <data name="Settings_ShoesUpToDateFmt" xml:space="preserve">
+    <value>当前本地安装的 Shoes 核心（{0}）已是最新版本。</value>
+  </data>
+  <data name="Settings_ShoesReleaseNotFoundMsg" xml:space="preserve">
+    <value>未能获取到适用于当前系统架构的 Shoes 发布包，请检查网络或尝试手动导入本地 shoes.exe。</value>
+  </data>
+  <data name="Settings_ShoesConfirmUpdateFmt" xml:space="preserve">
+    <value>检测到新版 Shoes 核心 {0}。{1}是否立即下载并更新？</value>
+  </data>
+  <data name="Settings_UpdatingShoesTitle" xml:space="preserve">
+    <value>正在下载安装 Shoes 核心</value>
+  </data>
+  <data name="Settings_ShoesUpdateDoneFmt" xml:space="preserve">
+    <value>Shoes 核心已成功安装/更新至 {0}。{1}</value>
+  </data>
+  <data name="Settings_SelectShoesTitle" xml:space="preserve">
+    <value>选择本地 shoes.exe 核心文件</value>
+  </data>
+  <data name="Settings_InvalidShoesTitle" xml:space="preserve">
+    <value>无效的 Shoes 核心文件</value>
+  </data>
+  <data name="Settings_InvalidShoesFmt" xml:space="preserve">
+    <value>所选可执行文件不是有效的 Shoes 内核（探测结果：{0}）。请选择正确的 shoes.exe。</value>
+  </data>
+  <data name="Settings_ShoesReplaceOkFmt" xml:space="preserve">
+    <value>已成功导入本地 Shoes 核心 {0}（来源：{1}）。</value>
+  </data>
 </root>

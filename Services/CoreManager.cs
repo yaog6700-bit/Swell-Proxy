@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AnywhereWinUI.Helpers;
 
 namespace AnywhereWinUI.Services
 {
@@ -20,6 +21,11 @@ namespace AnywhereWinUI.Services
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "SwellProxy",
             "singbox_config.json"
+        );
+        public string ShoesConfigPath => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SwellProxy",
+            "runtime_shoes.yaml"
         );
 
         private const int LogBufferMax = 500;
@@ -97,74 +103,105 @@ namespace AnywhereWinUI.Services
             {
                 if (IsRunning) await StopInternalAsync();
 
-                // Self-healing: Kill any orphaned sing-box processes from previous crashes
-                try
+                // Self-healing: Kill any orphaned sing-box / shoes processes from previous crashes
+                foreach (var coreName in new[] { "sing-box", "shoes" })
                 {
-                    foreach (var p in Process.GetProcessesByName("sing-box"))
+                    try
                     {
-                        try { p.Kill(); } catch { }
+                        foreach (var p in Process.GetProcessesByName(coreName))
+                        {
+                            try { p.Kill(); } catch { }
+                        }
                     }
+                    catch { }
                 }
-                catch { }
 
                 LastError = string.Empty;
                 lock (_startupLogLock) { _startupLog.Clear(); }
 
-                // Ensure directory exists
-                var localDir = Path.GetDirectoryName(ConfigPath);
-                if (localDir != null)
-                {
-                    Directory.CreateDirectory(localDir);
+                // Ensure directory & shared *.srs rule-set files exist
+                var localDir = ShoesConfigBuilder.EnsureLocalRuleSetDirectory();
 
-                    // Self-healing: Copy local binary rule-sets (*.srs) from Assets/rules to LocalAppData/SwellProxy
-                    var sourceRulesDir = Path.Combine(AppContext.BaseDirectory, "Assets", "rules");
-                    if (Directory.Exists(sourceRulesDir))
+                bool useShoes = string.Equals(
+                    AppSession.Instance.ActiveCoreEngine,
+                    ShoesConfigBuilder.EngineShoes,
+                    StringComparison.OrdinalIgnoreCase);
+
+                string activeExePath = ExePath;
+                string activeConfigPath = ConfigPath;
+
+                if (useShoes)
+                {
+                    var shoesExe = CoreUpdateService.ResolveShoesExePath();
+                    if (!File.Exists(shoesExe))
                     {
-                        foreach (var file in Directory.GetFiles(sourceRulesDir, "*.srs"))
+                        AppSession.Instance.ActiveCoreEngine = ShoesConfigBuilder.EngineSingBox;
+                        AppSession.Instance.ActiveEngineFallbackReason = L.Shoes_ReasonNotInstalled;
+                        configJson = await ConfigBuilder.BuildAsync(AppSession.Instance.LastBuildNode, forceSingbox: true);
+                        useShoes = false;
+                    }
+                    else
+                    {
+                        await File.WriteAllTextAsync(ShoesConfigPath, configJson, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                        var (checkOk, checkErr) = await ShoesConfigBuilder.ValidateAndAutoHealAsync(shoesExe, ShoesConfigPath);
+                        if (!checkOk)
                         {
-                            var destFile = Path.Combine(localDir, Path.GetFileName(file));
-                            try
-                            {
-                                var srcInfo = new FileInfo(file);
-                                var dstInfo = new FileInfo(destFile);
-                                if (!dstInfo.Exists || dstInfo.Length != srcInfo.Length)
-                                {
-                                    File.Copy(file, destFile, overwrite: true);
-                                }
-                            }
-                            catch { }
+                            AppendLog($"[Shoes] 配置预检未通过 ({checkErr})");
+                            AppSession.Instance.ActiveCoreEngine = ShoesConfigBuilder.EngineSingBox;
+                            AppSession.Instance.ActiveEngineFallbackReason = L.Shoes_ReasonPrecheckFallback;
+                            configJson = await ConfigBuilder.BuildAsync(AppSession.Instance.LastBuildNode, forceSingbox: true);
+                            useShoes = false;
+                        }
+                        else
+                        {
+                            activeExePath = shoesExe;
+                            activeConfigPath = ShoesConfigPath;
+                            AppSession.Instance.ClashApiSecret = ShoesConfigBuilder.TryExtractClashSecret(configJson) ?? string.Empty;
                         }
                     }
                 }
 
-                // Sync ClashApiSecret from configJson after StopInternalAsync() may have cleared it
-                SyncClashApiSecretFromConfig(configJson);
-
-                // Write configuration
-                await File.WriteAllTextAsync(ConfigPath, configJson);
-
-                // In a real scenario, make sure ExePath exists.
-                // For now, we allow simulation if it is missing, or we can handle it gracefully.
-                if (!File.Exists(ExePath))
+                if (!useShoes)
                 {
-                    // Standalone Simulation fallback for visual UI demo when sing-box is not copied yet
-                    AppendLog("[系统] 未在 Assets 文件夹下检测到 sing-box.exe。启用独立 UI 仿真模式。");
-                    AppendLog("[启动] 仿真引擎启动成功...");
-                    RunningChanged?.Invoke(this, true);
-                    return true;
+                    if (!string.IsNullOrEmpty(AppSession.Instance.ActiveEngineFallbackReason))
+                    {
+                        AppendLog(string.Format(L.Shoes_FallbackLogFmt, AppSession.Instance.ActiveEngineFallbackReason));
+                    }
+
+                    // Sync ClashApiSecret from configJson after StopInternalAsync() may have cleared it
+                    SyncClashApiSecretFromConfig(configJson);
+
+                    // Write configuration
+                    await File.WriteAllTextAsync(ConfigPath, configJson);
+
+                    // In a real scenario, make sure ExePath exists.
+                    // For now, we allow simulation if it is missing, or we can handle it gracefully.
+                    if (!File.Exists(ExePath))
+                    {
+                        // Standalone Simulation fallback for visual UI demo when sing-box is not copied yet
+                        AppendLog("[系统] 未在 Assets 文件夹下检测到 sing-box.exe。启用独立 UI 仿真模式。");
+                        AppendLog("[启动] 仿真引擎启动成功...");
+                        RunningChanged?.Invoke(this, true);
+                        return true;
+                    }
                 }
 
                 try
                 {
-                    bool isCustom = AppSession.Instance.IsActiveNodeCustom;
-                    string workingDir = isCustom && !string.IsNullOrEmpty(localDir)
-                        ? localDir
-                        : Path.GetDirectoryName(ExePath)!;
+                    bool isCustom = !useShoes && AppSession.Instance.IsActiveNodeCustom;
+                    string coreTag = useShoes ? "shoes" : "sing-box";
+                    string workingDir = useShoes
+                        ? (Path.GetDirectoryName(activeExePath) ?? localDir)
+                        : (isCustom && !string.IsNullOrEmpty(localDir)
+                            ? localDir
+                            : Path.GetDirectoryName(ExePath)!);
 
                     var psi = new ProcessStartInfo
                     {
-                        FileName = ExePath,
-                        Arguments = $"run -c \"{ConfigPath}\"",
+                        FileName = activeExePath,
+                        Arguments = useShoes
+                            ? $"--no-reload \"{activeConfigPath}\""
+                            : $"run -c \"{activeConfigPath}\"",
                         WorkingDirectory = workingDir,
                         CreateNoWindow = true,
                         UseShellExecute = false,
@@ -189,7 +226,7 @@ namespace AnywhereWinUI.Services
                                     _startupLog.AppendLine(e.Data);
                             }
                         }
-                        AppendLog("[sing-box] " + e.Data);
+                        AppendLog($"[{coreTag}] " + e.Data);
                     };
 
                     proc.ErrorDataReceived += (_, e) =>
@@ -203,7 +240,7 @@ namespace AnywhereWinUI.Services
                                     _startupLog.AppendLine(e.Data);
                             }
                         }
-                        AppendLog("[sing-box] " + e.Data);
+                        AppendLog($"[{coreTag}] " + e.Data);
                     };
 
                     proc.Exited += (_, _) =>
@@ -211,7 +248,7 @@ namespace AnywhereWinUI.Services
                         // Ignore stale exit callbacks from a previous process replaced during restart
                         if (!ReferenceEquals(_process, proc)) return;
 
-                        AppendLog("[sing-box 进程已退出]");
+                        AppendLog($"[{coreTag} 进程已退出]");
                         StopStatsPolling();
                         AppSession.Instance.ClashApiSecret = string.Empty;
                         _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStopped);
@@ -228,7 +265,6 @@ namespace AnywhereWinUI.Services
                     };
 
                     // Attach the ready signal BEFORE Start() so no output line is missed.
-                    // sing-box prints "sing-box started (Xs)" once every inbound is bound.
                     int readyPort = isCustom
                         ? (AppSession.Instance.ActiveCustomReadyPort ?? 0)
                         : AppSession.Instance.MixedPort;
@@ -239,12 +275,10 @@ namespace AnywhereWinUI.Services
                     _process.BeginOutputReadLine();
                     _process.BeginErrorReadLine();
 
-                    AppendLog($"[启动] {ExePath}");
-                    AppendLog($"[配置] {ConfigPath}");
+                    AppendLog($"[启动] {activeExePath}");
+                    AppendLog($"[配置] {activeConfigPath}");
 
-                    // Wait for sing-box to confirm readiness instead of a fixed 800 ms delay.
-                    // Typical cold-start is ~200–400 ms → user sees the proxy active noticeably faster.
-                    // TimedOut (cap = 10 s) degrades gracefully to the old fixed-delay behaviour.
+                    // Wait for core to confirm readiness via TCP inbound port / ready line.
                     var signalOutcome = await readySignal.WaitAsync(TimeSpan.FromSeconds(3));
                     captureStartupLog = false;
 
@@ -254,11 +288,12 @@ namespace AnywhereWinUI.Services
                         {
                             var rawErr = _startupLog.Length > 0
                                 ? _startupLog.ToString().Trim()
-                                : $"sing-box 立即退出（退出码 {_process.ExitCode}）";
+                                : $"{coreTag} 立即退出（退出码 {_process.ExitCode}）";
                             _startupLog.Clear();
                             _startupLog.Capacity = 0;
 
-                            if (rawErr.Contains("nowhere", StringComparison.OrdinalIgnoreCase) &&
+                            if (!useShoes &&
+                                rawErr.Contains("nowhere", StringComparison.OrdinalIgnoreCase) &&
                                 rawErr.Contains("unknown", StringComparison.OrdinalIgnoreCase))
                             {
                                 rawErr += "\n\n提示：官方原版 sing-box 内核不包含私有 nowhere 协议，请切换其他协议节点或在设置中恢复定制核心。";
@@ -270,7 +305,7 @@ namespace AnywhereWinUI.Services
                         return false;
                     }
 
-                    // Release startup error buffer immediately once sing-box is up
+                    // Release startup error buffer immediately once core is up
                     lock (_startupLogLock)
                     {
                         _startupLog.Clear();
@@ -278,8 +313,8 @@ namespace AnywhereWinUI.Services
                     }
 
                     AppendLog(signalOutcome == CoreReadySignal.Outcome.Ready
-                        ? "[启动] sing-box 就绪信号已收到"
-                        : "[启动] 等待超时，假设 sing-box 已就绪");
+                        ? $"[启动] {coreTag} 就绪信号已收到"
+                        : $"[启动] 等待超时，假设 {coreTag} 已就绪");
 
                     // Configure Windows System Proxy (and DNS cache flush) BEFORE firing RunningChanged,
                     // so OS proxy/DNS state is settled before UI triggers AI unlock & exit IP checks.

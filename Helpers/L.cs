@@ -403,5 +403,41 @@ namespace AnywhereWinUI.Helpers
         public static string CustomCfg_ErrFileMissingOrEmpty => Loc.GetString("CustomCfg_ErrFileMissingOrEmpty");
         public static string CustomCfg_CoreMissingError     => Loc.GetString("CustomCfg_CoreMissingError");
         public static string CustomCfg_CheckTimeout         => Loc.GetString("CustomCfg_CheckTimeout");
+
+        // ── Experimental Dual-Core (sing-box + Shoes) ──────────────────────────
+        public static string Shoes_ReasonNotInstalled       => Loc.GetString("Shoes_ReasonNotInstalled");
+        public static string Shoes_ReasonTunMode            => Loc.GetString("Shoes_ReasonTunMode");
+        public static string Shoes_ReasonTailscale          => Loc.GetString("Shoes_ReasonTailscale");
+        public static string Shoes_ReasonUnsupportedNode    => Loc.GetString("Shoes_ReasonUnsupportedNode");
+        public static string Shoes_ReasonCustomConfig       => Loc.GetString("Shoes_ReasonCustomConfig");
+        public static string Shoes_ReasonShadowTls          => Loc.GetString("Shoes_ReasonShadowTls");
+        public static string Shoes_ReasonProxyChain         => Loc.GetString("Shoes_ReasonProxyChain");
+        public static string Shoes_ReasonMultiNodeRule      => Loc.GetString("Shoes_ReasonMultiNodeRule");
+        public static string Shoes_ReasonTransportFmt       => Loc.GetString("Shoes_ReasonTransportFmt");
+        public static string Shoes_ReasonProtocolFmt        => Loc.GetString("Shoes_ReasonProtocolFmt");
+        public static string Shoes_ReasonPrecheckFallback   => Loc.GetString("Shoes_ReasonPrecheckFallback");
+        public static string Shoes_FallbackLogFmt           => Loc.GetString("Shoes_FallbackLogFmt");
+        public static string Shoes_DashboardFallbackSuffixFmt => Loc.GetString("Shoes_DashboardFallbackSuffixFmt");
+        public static string Shoes_EngineSwitchedRestartFmt => Loc.GetString("Shoes_EngineSwitchedRestartFmt");
+
+        public static string Settings_CoreTitleText         => Loc.GetString("Settings_CoreTitleText");
+        public static string Settings_ShoesCoreTitle        => Loc.GetString("Settings_ShoesCoreTitle");
+        public static string Settings_ShoesCoreVerFmt       => Loc.GetString("Settings_ShoesCoreVerFmt");
+        public static string Settings_ReplaceSingboxTooltip => Loc.GetString("Settings_ReplaceSingboxTooltip");
+        public static string Settings_ReplaceShoesTooltip   => Loc.GetString("Settings_ReplaceShoesTooltip");
+        public static string Settings_DownloadShoesBtnText  => Loc.GetString("Settings_DownloadShoesBtnText");
+        public static string Settings_ShoesDownloadPromptTitle => Loc.GetString("Settings_ShoesDownloadPromptTitle");
+        public static string Settings_ShoesDownloadPromptMsg => Loc.GetString("Settings_ShoesDownloadPromptMsg");
+        public static string Settings_ShoesDownloadNowBtn   => Loc.GetString("Settings_ShoesDownloadNowBtn");
+        public static string Settings_ShoesPickLocalBtn     => Loc.GetString("Settings_ShoesPickLocalBtn");
+        public static string Settings_ShoesUpToDateFmt      => Loc.GetString("Settings_ShoesUpToDateFmt");
+        public static string Settings_ShoesReleaseNotFoundMsg => Loc.GetString("Settings_ShoesReleaseNotFoundMsg");
+        public static string Settings_ShoesConfirmUpdateFmt => Loc.GetString("Settings_ShoesConfirmUpdateFmt");
+        public static string Settings_UpdatingShoesTitle    => Loc.GetString("Settings_UpdatingShoesTitle");
+        public static string Settings_ShoesUpdateDoneFmt    => Loc.GetString("Settings_ShoesUpdateDoneFmt");
+        public static string Settings_SelectShoesTitle      => Loc.GetString("Settings_SelectShoesTitle");
+        public static string Settings_InvalidShoesTitle     => Loc.GetString("Settings_InvalidShoesTitle");
+        public static string Settings_InvalidShoesFmt       => Loc.GetString("Settings_InvalidShoesFmt");
+        public static string Settings_ShoesReplaceOkFmt     => Loc.GetString("Settings_ShoesReplaceOkFmt");
     }
 }

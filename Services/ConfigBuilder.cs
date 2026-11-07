@@ -11,7 +11,7 @@ namespace AnywhereWinUI.Services
     {
         private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
-        public static async System.Threading.Tasks.Task<string> BuildAsync(PersistedNode? selectedNode = null)
+        public static async System.Threading.Tasks.Task<string> BuildAsync(PersistedNode? selectedNode = null, bool forceSingbox = false)
         {
             var session = AppSession.Instance;
             var routingMode = session.RoutingMode;
@@ -59,6 +59,35 @@ namespace AnywhereWinUI.Services
                         Protocol = session.SelectedNodeProtocol,
                         Host = session.SelectedNodeHost
                     };
+                }
+            }
+
+            session.LastBuildNode = selectedNode;
+
+            bool wantsShoes = !forceSingbox &&
+                              string.Equals(session.CoreEngine, ShoesConfigBuilder.EngineShoes, StringComparison.OrdinalIgnoreCase);
+            if (wantsShoes)
+            {
+                var shoesSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+                if (ShoesConfigBuilder.TryBuild(selectedNode, session, shoesSecret, out var shoesYaml, out var fallbackReason))
+                {
+                    session.ResetActiveCustomState();
+                    session.ClashApiSecret = shoesSecret;
+                    session.ActiveCoreEngine = ShoesConfigBuilder.EngineShoes;
+                    session.ActiveEngineFallbackReason = null;
+                    return shoesYaml;
+                }
+
+                // Seamless fallback to sing-box without altering user's saved CoreEngine preference
+                session.ActiveCoreEngine = ShoesConfigBuilder.EngineSingBox;
+                session.ActiveEngineFallbackReason = fallbackReason;
+            }
+            else
+            {
+                session.ActiveCoreEngine = ShoesConfigBuilder.EngineSingBox;
+                if (!forceSingbox)
+                {
+                    session.ActiveEngineFallbackReason = null;
                 }
             }
 

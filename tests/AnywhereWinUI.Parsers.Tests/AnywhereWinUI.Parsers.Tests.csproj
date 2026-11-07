@@ -16,6 +16,7 @@
     <Compile Include="..\..\Services\PersistedNode.cs" Link="Linked\PersistedNode.cs" />
     <Compile Include="..\..\Services\NodeLinkParser.cs" Link="Linked\NodeLinkParser.cs" />
     <Compile Include="..\..\Services\ClashSubscriptionParser.cs" Link="Linked\ClashSubscriptionParser.cs" />
+    <Compile Include="..\..\Services\ShoesYamlSerializer.cs" Link="Linked\ShoesYamlSerializer.cs" />
   </ItemGroup>
 
   <ItemGroup>

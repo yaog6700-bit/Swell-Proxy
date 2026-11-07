@@ -24,7 +24,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>4.1.0</Version>
+    <Version>4.2.0</Version>
   </PropertyGroup>
 
   <!-- Publish & Optimization Properties for Ultra-Low Resource Usage -->

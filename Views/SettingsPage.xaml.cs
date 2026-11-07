@@ -20,6 +20,7 @@ namespace AnywhereWinUI.Views
         public ViewModels.MainViewModel MainViewModel { get; }
 
         private bool _isLoaded;
+        private bool _suppressEngineSelectionChanged;
 
         // ── Color Forwarding Properties for x:Bind ───────────────────────────
         public Color SsColor
@@ -107,8 +108,24 @@ namespace AnywhereWinUI.Views
                 }
             }
 
-            // 3. Initialize Core version & 1.15 capability state
+            // 3. Initialize Core engine selection, version & 1.15 capability state
+            SetCoreEngineComboSelection(AppSession.Instance.CoreEngine);
             RefreshCoreVersionUI();
+        }
+
+        private void SetCoreEngineComboSelection(string engine)
+        {
+            if (CoreEngineComboBox == null) return;
+            _suppressEngineSelectionChanged = true;
+            try
+            {
+                string normalized = ShoesConfigBuilder.NormalizeEngine(engine);
+                CoreEngineComboBox.SelectedIndex = string.Equals(normalized, ShoesConfigBuilder.EngineShoes, StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+            }
+            finally
+            {
+                _suppressEngineSelectionChanged = false;
+            }
         }
 
         private void CategoriesListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -228,19 +245,47 @@ namespace AnywhereWinUI.Views
             var verText = GetLocalSingboxVersionText();
             var numVer = Services.CoreUpdateService.GetLocalSingboxNumericVersion();
             bool is115OrAbove = numVer != null && numVer >= new Version(1, 15, 0);
+            bool isShoes = string.Equals(AppSession.Instance.CoreEngine, ShoesConfigBuilder.EngineShoes, StringComparison.OrdinalIgnoreCase);
+
+            if (ActiveCoreTitleText != null)
+            {
+                ActiveCoreTitleText.Text = isShoes ? L.Settings_ShoesCoreTitle : L.Settings_CoreTitleText;
+            }
 
             if (SingboxVersionText != null)
             {
-                SingboxVersionText.Text = is115OrAbove
-                    ? string.Format(L.Settings_CoreVer115Fmt, verText)
-                    : string.Format(L.Settings_CoreVerFmt, verText);
+                if (isShoes)
+                {
+                    var shoesVer = Services.CoreUpdateService.GetLocalShoesVersionText();
+                    SingboxVersionText.Text = string.Format(L.Settings_ShoesCoreVerFmt, shoesVer);
+                }
+                else
+                {
+                    SingboxVersionText.Text = is115OrAbove
+                        ? string.Format(L.Settings_CoreVer115Fmt, verText)
+                        : string.Format(L.Settings_CoreVerFmt, verText);
+                }
             }
 
             if (RestoreCoreButton != null)
             {
-                RestoreCoreButton.Visibility = Services.CoreUpdateService.HasBundledBackup
+                RestoreCoreButton.Visibility = (!isShoes && Services.CoreUpdateService.HasBundledBackup)
                     ? Visibility.Visible
                     : Visibility.Collapsed;
+            }
+
+            if (ReplaceCoreButton != null)
+            {
+                ToolTipService.SetToolTip(ReplaceCoreButton, isShoes
+                    ? L.Settings_ReplaceShoesTooltip
+                    : L.Settings_ReplaceSingboxTooltip);
+            }
+
+            if (CheckUpdateButton != null && CheckUpdateButton.IsEnabled)
+            {
+                CheckUpdateButton.Content = (isShoes && !Services.CoreUpdateService.IsShoesInstalled)
+                    ? L.Settings_DownloadShoesBtnText
+                    : L.Settings_CheckUpdateBtnText;
             }
 
             if (TunStackComboBox != null)
@@ -371,10 +416,310 @@ namespace AnywhereWinUI.Views
             }
         }
 
-        // ── Sing-box Core Management Handlers ────────────────────────────────
+        // ── Dual-Core & Sing-box / Shoes Core Management Handlers ────────────
+
+        private async void CoreEngineComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isLoaded || _suppressEngineSelectionChanged) return;
+
+            string targetEngine = (CoreEngineComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() == ShoesConfigBuilder.EngineShoes
+                ? ShoesConfigBuilder.EngineShoes
+                : ShoesConfigBuilder.EngineSingBox;
+
+            if (string.Equals(AppSession.Instance.CoreEngine, targetEngine, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (targetEngine == ShoesConfigBuilder.EngineShoes && !Services.CoreUpdateService.IsShoesInstalled)
+            {
+                var promptDialog = new ContentDialog
+                {
+                    Title = L.Settings_ShoesDownloadPromptTitle,
+                    Content = L.Settings_ShoesDownloadPromptMsg,
+                    PrimaryButtonText = L.Settings_ShoesDownloadNowBtn,
+                    SecondaryButtonText = L.Settings_ShoesPickLocalBtn,
+                    CloseButtonText = L.Dialog_Cancel,
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = this.XamlRoot
+                };
+
+                var choice = await promptDialog.WithAppTheme().ShowAsync();
+                bool ready = false;
+                if (choice == ContentDialogResult.Primary)
+                {
+                    ready = await DownloadOrUpdateShoesAsync(forceInstall: true);
+                }
+                else if (choice == ContentDialogResult.Secondary)
+                {
+                    ready = await PickAndInstallLocalShoesAsync(showSuccessDialog: false);
+                }
+
+                if (!ready || !Services.CoreUpdateService.IsShoesInstalled)
+                {
+                    SetCoreEngineComboSelection(ShoesConfigBuilder.EngineSingBox);
+                    RefreshCoreVersionUI();
+                    return;
+                }
+            }
+
+            AppSession.Instance.CoreEngine = targetEngine;
+            LocalSettingsHelper.SetValue("coreEngine", targetEngine);
+            RefreshCoreVersionUI();
+
+            if (CoreManager.Instance.IsRunning)
+            {
+                try
+                {
+                    CoreManager.Instance.AppendLog(string.Format(L.Shoes_EngineSwitchedRestartFmt, targetEngine));
+                    var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                    string runtimeCfg = await ConfigBuilder.BuildAsync(node);
+                    await CoreManager.Instance.StopAsync();
+                    await CoreManager.Instance.StartAsync(runtimeCfg);
+                }
+                catch (Exception ex)
+                {
+                    CoreManager.Instance.AppendLog("[异常] 切换内核重启失败: " + ex.Message);
+                }
+            }
+        }
+
+        private async Task<bool> DownloadOrUpdateShoesAsync(bool forceInstall)
+        {
+            CheckUpdateButton.IsEnabled = false;
+            CheckUpdateButton.Content = L.Settings_CheckingBtn;
+
+            try
+            {
+                var updater = new Services.CoreUpdateService();
+                var proxyUrl = CoreManager.Instance.IsRunning ? $"socks5://127.0.0.1:{AppSession.Instance.MixedPort}" : null;
+                var info = await updater.CheckShoesAsync(proxyUrl, forceInstallIfMissing: forceInstall, CancellationToken.None);
+
+                if (info == null)
+                {
+                    if (!forceInstall && Services.CoreUpdateService.IsShoesInstalled)
+                    {
+                        var upToDateDialog = new ContentDialog
+                        {
+                            Title = L.Settings_CoreCheckTitle,
+                            Content = string.Format(L.Settings_ShoesUpToDateFmt, Services.CoreUpdateService.GetLocalShoesVersionText()),
+                            CloseButtonText = L.Dialog_OK,
+                            XamlRoot = this.XamlRoot
+                        };
+                        await upToDateDialog.WithAppTheme().ShowAsync();
+                        return true;
+                    }
+
+                    var missingDialog = new ContentDialog
+                    {
+                        Title = L.Settings_CheckFailTitle,
+                        Content = L.Settings_ShoesReleaseNotFoundMsg,
+                        CloseButtonText = L.Dialog_OK,
+                        XamlRoot = this.XamlRoot
+                    };
+                    await missingDialog.WithAppTheme().ShowAsync();
+                    return false;
+                }
+
+                var proxyRunning = CoreManager.Instance.IsRunning;
+                if (!forceInstall)
+                {
+                    var stopWarning = proxyRunning ? L.Settings_CoreStopWarning : string.Empty;
+                    var confirmDialog = new ContentDialog
+                    {
+                        Title = L.Settings_NewVerTitle,
+                        Content = string.Format(L.Settings_ShoesConfirmUpdateFmt, info.TagName, stopWarning),
+                        PrimaryButtonText = L.Settings_ConfirmUpdateBtn,
+                        CloseButtonText = L.Dialog_Cancel,
+                        XamlRoot = this.XamlRoot
+                    };
+
+                    if (await confirmDialog.WithAppTheme().ShowAsync() != ContentDialogResult.Primary)
+                    {
+                        return false;
+                    }
+                }
+
+                var progressText = new TextBlock { Text = L.Settings_PreparingDownload, Margin = new Thickness(0, 0, 0, 10) };
+                var progressBar = new ProgressBar { IsIndeterminate = true, Width = 300 };
+                var stackPanel = new StackPanel { Children = { progressText, progressBar } };
+
+                var progressDialog = new ContentDialog
+                {
+                    Title = L.Settings_UpdatingShoesTitle,
+                    Content = stackPanel,
+                    XamlRoot = this.XamlRoot
+                };
+
+                var progress = new Progress<string>(msg =>
+                {
+                    DispatcherQueue.TryEnqueue(() => progressText.Text = msg);
+                });
+
+                var updateTask = updater.UpdateAsync(info, proxyUrl, progress, CancellationToken.None, async () =>
+                {
+                    if (proxyRunning && string.Equals(AppSession.Instance.ActiveCoreEngine, ShoesConfigBuilder.EngineShoes, StringComparison.OrdinalIgnoreCase))
+                    {
+                        await CoreManager.Instance.StopAsync();
+                        await Task.Delay(400);
+                    }
+                    try
+                    {
+                        foreach (var p in Process.GetProcessesByName("shoes"))
+                        {
+                            try { p.Kill(); } catch { }
+                        }
+                    }
+                    catch { }
+                });
+
+                _ = progressDialog.WithAppTheme().ShowAsync();
+
+                try
+                {
+                    await updateTask;
+                    progressDialog.Hide();
+                    await Task.Delay(50);
+
+                    RefreshCoreVersionUI();
+
+                    if (!forceInstall)
+                    {
+                        var reconnectNote = (proxyRunning && !CoreManager.Instance.IsRunning) ? L.Settings_CoreReconnectNote : string.Empty;
+                        var successDialog = new ContentDialog
+                        {
+                            Title = L.Settings_UpdateDoneTitle,
+                            Content = string.Format(L.Settings_ShoesUpdateDoneFmt, info.TagName, reconnectNote),
+                            CloseButtonText = L.Dialog_OK,
+                            XamlRoot = this.XamlRoot
+                        };
+                        await successDialog.WithAppTheme().ShowAsync();
+                    }
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    progressDialog.Hide();
+                    await Task.Delay(50);
+                    var errDialog = new ContentDialog
+                    {
+                        Title = L.Settings_UpdateFailTitle,
+                        Content = ex.Message,
+                        CloseButtonText = L.Dialog_OK,
+                        XamlRoot = this.XamlRoot
+                    };
+                    await errDialog.WithAppTheme().ShowAsync();
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = L.Settings_CheckFailTitle,
+                    Content = string.Format(L.Settings_CheckFailFmt, ex.Message),
+                    CloseButtonText = L.Dialog_OK,
+                    XamlRoot = this.XamlRoot
+                };
+                await dialog.WithAppTheme().ShowAsync();
+                return false;
+            }
+            finally
+            {
+                CheckUpdateButton.IsEnabled = true;
+                RefreshCoreVersionUI();
+            }
+        }
+
+        private async Task<bool> PickAndInstallLocalShoesAsync(bool showSuccessDialog)
+        {
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
+            var filePath = await Helpers.Win32FilePickerHelper.PickSingleFileAsync(
+                hwnd,
+                filters: [(L.Settings_ExeFilterName, "*.exe")],
+                title: L.Settings_SelectShoesTitle);
+            if (filePath == null) return false;
+
+            var probe = await Task.Run(() => Services.CoreUpdateService.ProbeShoesExecutable(filePath));
+            if (!probe.IsValid)
+            {
+                var invalidDialog = new ContentDialog
+                {
+                    Title = L.Settings_InvalidShoesTitle,
+                    Content = string.Format(L.Settings_InvalidShoesFmt, probe.VersionDisplay),
+                    CloseButtonText = L.Dialog_OK,
+                    XamlRoot = this.XamlRoot
+                };
+                await invalidDialog.WithAppTheme().ShowAsync();
+                return false;
+            }
+
+            var wasRunningShoes = CoreManager.Instance.IsRunning &&
+                                  string.Equals(AppSession.Instance.ActiveCoreEngine, ShoesConfigBuilder.EngineShoes, StringComparison.OrdinalIgnoreCase);
+            if (wasRunningShoes)
+            {
+                await CoreManager.Instance.StopAsync();
+                await Task.Delay(400);
+            }
+
+            try
+            {
+                foreach (var p in Process.GetProcessesByName("shoes"))
+                {
+                    try { p.Kill(); } catch { }
+                }
+            }
+            catch { }
+
+            try
+            {
+                Services.CoreUpdateService.InstallLocalShoesExecutable(filePath);
+                RefreshCoreVersionUI();
+
+                if (wasRunningShoes)
+                {
+                    var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                    var cfg = await ConfigBuilder.BuildAsync(node);
+                    await CoreManager.Instance.StartAsync(cfg);
+                }
+
+                if (showSuccessDialog)
+                {
+                    var dialog = new ContentDialog
+                    {
+                        Title = L.Settings_CoreReplaceOkTitle,
+                        Content = string.Format(L.Settings_ShoesReplaceOkFmt, probe.VersionDisplay, Path.GetFileName(filePath)),
+                        CloseButtonText = L.Dialog_OK,
+                        XamlRoot = this.XamlRoot
+                    };
+                    await dialog.WithAppTheme().ShowAsync();
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = L.Settings_CoreReplaceFailTitle,
+                    Content = string.Format(L.Settings_CoreReplaceFailFmt, ex.Message),
+                    CloseButtonText = L.Dialog_OK,
+                    XamlRoot = this.XamlRoot
+                };
+                await dialog.WithAppTheme().ShowAsync();
+                return false;
+            }
+        }
 
         private async void CheckUpdateButton_Click(object sender, RoutedEventArgs e)
         {
+            if (string.Equals(AppSession.Instance.CoreEngine, ShoesConfigBuilder.EngineShoes, StringComparison.OrdinalIgnoreCase))
+            {
+                await DownloadOrUpdateShoesAsync(forceInstall: !Services.CoreUpdateService.IsShoesInstalled);
+                return;
+            }
+
             CheckUpdateButton.IsEnabled = false;
             CheckUpdateButton.Content = L.Settings_CheckingBtn;
 
@@ -615,6 +960,12 @@ namespace AnywhereWinUI.Views
 
         private async void ReplaceCoreButton_Click(object sender, RoutedEventArgs e)
         {
+            if (string.Equals(AppSession.Instance.CoreEngine, ShoesConfigBuilder.EngineShoes, StringComparison.OrdinalIgnoreCase))
+            {
+                await PickAndInstallLocalShoesAsync(showSuccessDialog: true);
+                return;
+            }
+
             // 使用 Win32 IFileOpenDialog 替代 WinUI3 FileOpenPicker：
             // 当应用以管理员权限运行时（TUN 模式需要 elevated 权限），
             // FileOpenPicker 会抛出 COMException 0x80004005。

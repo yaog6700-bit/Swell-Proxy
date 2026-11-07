@@ -83,9 +83,14 @@ namespace AnywhereWinUI.Views
             {
                 StartPulseAnimation();
                 UpdateStatusDot(running: true);
+                string connectedMsg = Loc.Format("Dashboard_InfoConnectedMsg", ViewModel.CurrentNodeName);
+                if (!string.IsNullOrEmpty(AppSession.Instance.ActiveEngineFallbackReason))
+                {
+                    connectedMsg += string.Format(L.Shoes_DashboardFallbackSuffixFmt, AppSession.Instance.ActiveEngineFallbackReason);
+                }
                 ShowStatusInfoBar(
                     L.Common_Connected,
-                    Loc.Format("Dashboard_InfoConnectedMsg", ViewModel.CurrentNodeName),
+                    connectedMsg,
                     InfoBarSeverity.Success);
             }
             else

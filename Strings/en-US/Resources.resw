@@ -457,7 +457,7 @@ Location: {3}</value>
     <value>Delete Server</value>
   </data>
   <data name="Servers_DeleteConfirmFmt" xml:space="preserve">
-    <value>Are you sure you want to delete &quot;{0}&quot;?</value>
+    <value>Are you sure you want to delete "{0}"?</value>
   </data>
   <data name="Servers_SubSyncingBtn" xml:space="preserve">
     <value>Syncing...</value>
@@ -2235,7 +2235,7 @@ Fast, reliable, and seamless smart routing.</value>
     <value>Delete Plugin</value>
   </data>
   <data name="Plugins_DelConfirmFmt" xml:space="preserve">
-    <value>Delete plugin &apos;{0}&apos;?</value>
+    <value>Delete plugin '{0}'?</value>
   </data>
   <data name="Plugins_DelConfirmBtn" xml:space="preserve">
     <value>Delete</value>
@@ -2455,5 +2455,119 @@ Fast, reliable, and seamless smart routing.</value>
   </data>
   <data name="CustomCfg_CheckTimeout" xml:space="preserve">
     <value>sing-box check timed out (8s).</value>
+  </data>
+  <data name="Settings_CoreEngineTitle.Text" xml:space="preserve">
+    <value>Proxy Core Engine (Experimental)</value>
+  </data>
+  <data name="Settings_CoreEngineDesc.Text" xml:space="preserve">
+    <value>Uses full-featured sing-box by default; optionally try the lightweight Rust-based Shoes core (System Proxy mode; seamlessly borrows sing-box whenever TUN or an unsupported protocol is used)</value>
+  </data>
+  <data name="Settings_CoreEngineSingboxItem.Content" xml:space="preserve">
+    <value>sing-box (Default Recommended)</value>
+  </data>
+  <data name="Settings_CoreEngineShoesItem.Content" xml:space="preserve">
+    <value>Shoes (Rust Lightweight Preview)</value>
+  </data>
+  <data name="Shoes_ReasonNotInstalled" xml:space="preserve">
+    <value>Shoes binary is not installed locally</value>
+  </data>
+  <data name="Shoes_ReasonTunMode" xml:space="preserve">
+    <value>TUN mode requires sing-box</value>
+  </data>
+  <data name="Shoes_ReasonTailscale" xml:space="preserve">
+    <value>Tailscale endpoint requires sing-box</value>
+  </data>
+  <data name="Shoes_ReasonUnsupportedNode" xml:space="preserve">
+    <value>Selected node requires sing-box</value>
+  </data>
+  <data name="Shoes_ReasonCustomConfig" xml:space="preserve">
+    <value>Native sing-box config requires sing-box</value>
+  </data>
+  <data name="Shoes_ReasonShadowTls" xml:space="preserve">
+    <value>ShadowTLS requires sing-box</value>
+  </data>
+  <data name="Shoes_ReasonProxyChain" xml:space="preserve">
+    <value>Proxy chains require sing-box</value>
+  </data>
+  <data name="Shoes_ReasonMultiNodeRule" xml:space="preserve">
+    <value>Multi-node / URLTest routing requires sing-box</value>
+  </data>
+  <data name="Shoes_ReasonTransportFmt" xml:space="preserve">
+    <value>Transport {0} requires sing-box</value>
+  </data>
+  <data name="Shoes_ReasonProtocolFmt" xml:space="preserve">
+    <value>Protocol {0} requires sing-box</value>
+  </data>
+  <data name="Shoes_ReasonPrecheckFallback" xml:space="preserve">
+    <value>Node option check requires sing-box</value>
+  </data>
+  <data name="Shoes_FallbackLogFmt" xml:space="preserve">
+    <value>[Dual-Core Fallback] {0}; seamlessly started sing-box for this session</value>
+  </data>
+  <data name="Shoes_DashboardFallbackSuffixFmt" xml:space="preserve">
+    <value> ({0}; running on sing-box)</value>
+  </data>
+  <data name="Shoes_EngineSwitchedRestartFmt" xml:space="preserve">
+    <value>[System] Default proxy engine switched to {0}, restarting core...</value>
+  </data>
+  <data name="Settings_CoreTitleText" xml:space="preserve">
+    <value>Sing-box Core Runtime</value>
+  </data>
+  <data name="Settings_ShoesCoreTitle" xml:space="preserve">
+    <value>Shoes Core Runtime (Experimental)</value>
+  </data>
+  <data name="Settings_ShoesCoreVerFmt" xml:space="preserve">
+    <value>Installed: {0} (Rust lightweight core · shared rule-sets · System Proxy)</value>
+  </data>
+  <data name="Settings_ReplaceSingboxTooltip" xml:space="preserve">
+    <value>Manually replace local core binary (supports sing-box 1.13 / 1.14 / 1.15+)</value>
+  </data>
+  <data name="Settings_ReplaceShoesTooltip" xml:space="preserve">
+    <value>Manually import or replace local shoes.exe binary</value>
+  </data>
+  <data name="Settings_DownloadShoesBtnText" xml:space="preserve">
+    <value>Download Core</value>
+  </data>
+  <data name="Settings_ShoesDownloadPromptTitle" xml:space="preserve">
+    <value>Download Experimental Shoes Core</value>
+  </data>
+  <data name="Settings_ShoesDownloadPromptMsg" xml:space="preserve">
+    <value>To keep the installer lightweight, Shoes is not bundled by default.
+
+Download the latest Shoes binary online now?
+(Or pick an existing shoes.exe file from disk)</value>
+  </data>
+  <data name="Settings_ShoesDownloadNowBtn" xml:space="preserve">
+    <value>Download Now</value>
+  </data>
+  <data name="Settings_ShoesPickLocalBtn" xml:space="preserve">
+    <value>Pick Local File</value>
+  </data>
+  <data name="Settings_ShoesUpToDateFmt" xml:space="preserve">
+    <value>Installed Shoes core ({0}) is already up to date.</value>
+  </data>
+  <data name="Settings_ShoesReleaseNotFoundMsg" xml:space="preserve">
+    <value>Could not find a matching Shoes release package for this system. Check your network or manually select a local shoes.exe.</value>
+  </data>
+  <data name="Settings_ShoesConfirmUpdateFmt" xml:space="preserve">
+    <value>New Shoes version {0} is available.{1} Download and update now?</value>
+  </data>
+  <data name="Settings_UpdatingShoesTitle" xml:space="preserve">
+    <value>Downloading &amp; Installing Shoes Core</value>
+  </data>
+  <data name="Settings_ShoesUpdateDoneFmt" xml:space="preserve">
+    <value>Shoes core has been installed/updated to {0}.{1}</value>
+  </data>
+  <data name="Settings_SelectShoesTitle" xml:space="preserve">
+    <value>Select local shoes.exe binary</value>
+  </data>
+  <data name="Settings_InvalidShoesTitle" xml:space="preserve">
+    <value>Invalid Shoes Binary</value>
+  </data>
+  <data name="Settings_InvalidShoesFmt" xml:space="preserve">
+    <value>The selected executable is not a valid Shoes core (result: {0}). Please choose a valid shoes.exe.</value>
+  </data>
+  <data name="Settings_ShoesReplaceOkFmt" xml:space="preserve">
+    <value>Imported local Shoes core {0} (from {1}).</value>
   </data>
 </root>

@@ -47,6 +47,14 @@ namespace AnywhereWinUI.Services
         /// </summary>
         public string ClashApiSecret { get; set; } = string.Empty;
 
+        // Dual-Core Engine Selection ("sing-box" default; "shoes" experimental)
+        public string CoreEngine { get; set; } = ShoesConfigBuilder.EngineSingBox;
+
+        // Runtime state for active core engine & seamless fallback (not persisted)
+        public string ActiveCoreEngine { get; set; } = ShoesConfigBuilder.EngineSingBox;
+        public string? ActiveEngineFallbackReason { get; set; }
+        public PersistedNode? LastBuildNode { get; set; }
+
         // Runtime state for active Custom Config profile (not persisted)
         public bool IsActiveNodeCustom { get; set; } = false;
         public bool ActiveCustomHasTun { get; set; } = false;
@@ -109,6 +117,8 @@ namespace AnywhereWinUI.Services
 
             if (Helpers.LocalSettingsHelper.TryGetValue<int>("mixedPort", out var mp) && mp >= 1 && mp <= 65535) MixedPort = mp;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("allowLanAccess", out var ala)) AllowLanAccess = ala;
+            if (Helpers.LocalSettingsHelper.TryGetValue<string>("coreEngine", out var ce) && !string.IsNullOrEmpty(ce))
+                CoreEngine = ShoesConfigBuilder.NormalizeEngine(ce);
 
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("lastTunServerHost", out var ltsh) && !string.IsNullOrEmpty(ltsh)) LastTunServerHost = ltsh;
 

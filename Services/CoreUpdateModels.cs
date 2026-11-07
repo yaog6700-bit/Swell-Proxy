@@ -9,6 +9,12 @@ namespace AnywhereWinUI.Services
         [JsonPropertyName("tag_name")]
         public string? TagName { get; set; }
 
+        [JsonPropertyName("prerelease")]
+        public bool Prerelease { get; set; }
+
+        [JsonPropertyName("draft")]
+        public bool Draft { get; set; }
+
         [JsonPropertyName("assets")]
         public List<GhAsset>? Assets { get; set; }
     }
@@ -34,6 +40,7 @@ namespace AnywhereWinUI.Services
         string ZipAssetName);
 
     [JsonSerializable(typeof(GhRelease))]
+    [JsonSerializable(typeof(List<GhRelease>))]
     public partial class UpdateJsonSerializerContext : JsonSerializerContext
     {
     }
