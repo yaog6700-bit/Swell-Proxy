@@ -2570,4 +2570,73 @@ Download the latest Shoes binary online now?
   <data name="Settings_ShoesReplaceOkFmt" xml:space="preserve">
     <value>Imported local Shoes core {0} (from {1}).</value>
   </data>
+  <data name="Conn_AppRankHeader.Text" xml:space="preserve">
+    <value>Active Apps · Traffic Ranking</value>
+  </data>
+  <data name="Conn_AppRankHint.Text" xml:space="preserve">
+    <value>Click app to filter · Quick route on right</value>
+  </data>
+  <data name="Conn_AppRankEmpty.Text" xml:space="preserve">
+    <value>No active application connections</value>
+  </data>
+  <data name="Conn_ColProcess.Text" xml:space="preserve">
+    <value>App / Process</value>
+  </data>
+  <data name="Conn_ColRate.Text" xml:space="preserve">
+    <value>Rate</value>
+  </data>
+  <data name="Conn_ColActions.Text" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="Conn_UnknownApp" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="Conn_AppCountFmt" xml:space="preserve">
+    <value>{0} apps</value>
+  </data>
+  <data name="Conn_AppConnCountFmt" xml:space="preserve">
+    <value>{0} conns</value>
+  </data>
+  <data name="Conn_AppFilterPillFmt" xml:space="preserve">
+    <value>App: {0}  ✕</value>
+  </data>
+  <data name="Conn_QuickRouteTooltip" xml:space="preserve">
+    <value>Send via… (Quick routing rule)</value>
+  </data>
+  <data name="Conn_CloseConnTooltip" xml:space="preserve">
+    <value>Close connection</value>
+  </data>
+  <data name="Conn_QuickRuleSiteHeaderFmt" xml:space="preserve">
+    <value>Send site *.{0} via:</value>
+  </data>
+  <data name="Conn_QuickRuleIpHeaderFmt" xml:space="preserve">
+    <value>Send IP {0} via:</value>
+  </data>
+  <data name="Conn_QuickRuleExactSubmenuFmt" xml:space="preserve">
+    <value>Only {0} via…</value>
+  </data>
+  <data name="Conn_QuickRuleProcHeaderFmt" xml:space="preserve">
+    <value>Send app {0} via:</value>
+  </data>
+  <data name="Conn_QuickRuleProcSubmenuFmt" xml:space="preserve">
+    <value>Route app {0} via…</value>
+  </data>
+  <data name="Conn_FilterThisAppFmt" xml:space="preserve">
+    <value>Filter connections by {0}</value>
+  </data>
+  <data name="Conn_ClearAppFilterMenu" xml:space="preserve">
+    <value>Clear app filter</value>
+  </data>
+  <data name="Conn_CopyHostMenuFmt" xml:space="preserve">
+    <value>Copy host ({0})</value>
+  </data>
+  <data name="Conn_CopyProcMenuFmt" xml:space="preserve">
+    <value>Copy process ({0})</value>
+  </data>
+  <data name="Conn_CopiedToastFmt" xml:space="preserve">
+    <value>Copied to clipboard: {0}</value>
+  </data>
+  <data name="Conn_QuickRuleAppliedFmt" xml:space="preserve">
+    <value>Quick rule applied: {0} → {1}</value>
+  </data>
 </root>

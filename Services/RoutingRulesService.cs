@@ -257,5 +257,79 @@ namespace AnywhereWinUI.Services
         private static bool RequiresBuiltInMatchUpgrade(string id)
             => id.Equals("builtin:youtube", StringComparison.OrdinalIgnoreCase) ||
                id.Equals("builtin:google", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Inserts or updates a user-defined routing rule from ConnectionsPage quick actions,
+        /// enables Advanced Routing if needed, and hot-reloads the running proxy engine.
+        /// </summary>
+        public static async System.Threading.Tasks.Task<string> UpsertQuickRuleAsync(
+            string type,
+            string match,
+            string displayName,
+            string outboundTag)
+        {
+            var rules = LoadRules();
+            var existing = rules.FirstOrDefault(r =>
+                !r.IsBuiltIn &&
+                string.Equals(r.Type, type, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(r.Match, match, StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null)
+            {
+                existing.OutboundTag = outboundTag;
+                existing.IsEnabled = true;
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    existing.Name = displayName;
+                }
+            }
+            else
+            {
+                int insertIndex = rules.FindIndex(r => !r.IsBuiltIn);
+                var newRule = new RoutingRuleItem
+                {
+                    Id = $"custom:{Guid.NewGuid():N}",
+                    Name = string.IsNullOrWhiteSpace(displayName) ? match : displayName,
+                    Description = L.CustomRules_DefaultDesc,
+                    Type = type,
+                    Match = match,
+                    OutboundTag = outboundTag,
+                    IsEnabled = true,
+                    IsBuiltIn = false,
+                    MatchVersion = 0
+                };
+
+                if (insertIndex >= 0)
+                    rules.Insert(insertIndex, newRule);
+                else
+                    rules.Add(newRule);
+            }
+
+            SaveRules(rules);
+
+            if (!AppSession.Instance.EnableAdvancedRouting)
+            {
+                AppSession.Instance.EnableAdvancedRouting = true;
+                LocalSettingsHelper.SetValue("enableAdvancedRouting", true);
+            }
+
+            string actionLabel = outboundTag switch
+            {
+                "direct" => L.Routing_ActionDirect,
+                "block"  => L.Routing_ActionBlock,
+                _        => L.Routing_ActionProxy
+            };
+
+            if (CoreManager.Instance.IsRunning)
+            {
+                CoreManager.Instance.AppendLog($"[快捷分流] 已更新规则 {displayName} ({match}) -> {actionLabel}，正在重载代理引擎...");
+                var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                string realConfig = node != null ? await ConfigBuilder.BuildAsync(node) : await ConfigBuilder.BuildAsync();
+                await CoreManager.Instance.StopAsync();
+                await CoreManager.Instance.StartAsync(realConfig);
+            }
+
+            return string.Format(L.Conn_QuickRuleAppliedFmt, displayName, actionLabel);
+        }
     }
 }

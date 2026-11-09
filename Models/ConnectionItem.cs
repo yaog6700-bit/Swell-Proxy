@@ -1,35 +1,102 @@
 using System;
+using System.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.UI.Xaml.Media;
 using AnywhereWinUI.Helpers;
 
 namespace AnywhereWinUI.Models
 {
+    public partial class AppTrafficItem : ObservableObject
+    {
+        [ObservableProperty]
+        private string appName = string.Empty;
+
+        [ObservableProperty]
+        private string primaryHost = string.Empty;
+
+        [ObservableProperty]
+        private int connectionCount;
+
+        [ObservableProperty]
+        private string connectionCountText = string.Empty;
+
+        [ObservableProperty]
+        private long totalBytes;
+
+        [ObservableProperty]
+        private string totalBytesText = "0 B";
+
+        [ObservableProperty]
+        private long currentRateBytes;
+
+        [ObservableProperty]
+        private string rateText = "—";
+
+        [ObservableProperty]
+        private double sharePercentage;
+
+        [ObservableProperty]
+        private bool isSelectedFilter;
+
+        [ObservableProperty]
+        private bool canAddProcessRule;
+    }
+
     public partial class ConnectionItem : ObservableObject
     {
         [ObservableProperty]
         private string id = string.Empty;
 
         [ObservableProperty]
-        private string type; // TCP, UDP, HTTP, HTTPS, WS
+        private string type = string.Empty; // TCP, UDP, HTTP, HTTPS, WS
 
         [ObservableProperty]
-        private string host; // Target URL or IP
+        private string processName = string.Empty; // e.g. "chrome.exe"
 
         [ObservableProperty]
-        private string status; // e.g. "进行中", "200 OK", "Timeout"
+        private string host = string.Empty; // Target URL or IP:Port
 
         [ObservableProperty]
-        private string rule; // e.g. "Proxy", "Direct", "Reject"
+        private string rawHost = string.Empty; // Domain without port
 
         [ObservableProperty]
-        private string node; // Node name, e.g. "🇺🇸 US-01"
+        private string siteDomain = string.Empty; // Base registrable domain, e.g. "openai.com"
 
         [ObservableProperty]
-        private string duration; // e.g. "120ms"
+        private string rawIp = string.Empty; // Destination IP
 
         [ObservableProperty]
-        private string size; // e.g. "1.2KB"
+        private string status = string.Empty; // e.g. "进行中", "Active"
+
+        [ObservableProperty]
+        private string rule = string.Empty; // e.g. "Proxy", "Direct", "Reject"
+
+        [ObservableProperty]
+        private string node = string.Empty; // Node name, e.g. "🇺🇸 US-01"
+
+        [ObservableProperty]
+        private string duration = string.Empty; // e.g. "12s"
+
+        [ObservableProperty]
+        private string size = string.Empty; // e.g. "1.2 KB"
+
+        [ObservableProperty]
+        private string rateText = "—"; // e.g. "1.4 MB/s"
+
+        public long TotalBytes { get; private set; }
+        public long CurrentRateBytes { get; private set; }
+        private long _lastPollBytes = -1;
+        private long _lastPollTickMs;
+
+        public bool HasProcess =>
+            !string.IsNullOrWhiteSpace(ProcessName) &&
+            !string.Equals(ProcessName, "—", StringComparison.Ordinal) &&
+            !string.Equals(ProcessName, L.Conn_UnknownApp, StringComparison.OrdinalIgnoreCase);
+
+        public bool HasDistinctSubdomain =>
+            !string.IsNullOrWhiteSpace(RawHost) &&
+            !string.IsNullOrWhiteSpace(SiteDomain) &&
+            !string.Equals(RawHost, SiteDomain, StringComparison.OrdinalIgnoreCase);
 
         [ObservableProperty]
         private SolidColorBrush badgeBackground = _lightNeutralBg;
@@ -71,11 +138,26 @@ namespace AnywhereWinUI.Models
         private static readonly SolidColorBrush _darkNeutralFg   = new(Windows.UI.Color.FromArgb(255, 161, 168, 179));
         private static readonly SolidColorBrush _darkNeutralBg   = new(Windows.UI.Color.FromArgb( 38, 161, 168, 179));
 
-        public ConnectionItem(string id, string type, string host, string status, string rule, string node, string duration, string size)
+        public ConnectionItem(
+            string id,
+            string type,
+            string processName,
+            string host,
+            string rawHost,
+            string rawIp,
+            string status,
+            string rule,
+            string node,
+            string duration,
+            string size)
         {
             Id = id;
             Type = type;
+            ProcessName = string.IsNullOrWhiteSpace(processName) ? L.Conn_UnknownApp : processName;
             Host = host;
+            RawHost = rawHost;
+            SiteDomain = ExtractSiteDomain(rawHost);
+            RawIp = rawIp;
             Status = status;
             Rule = rule;
             Node = node;
@@ -92,17 +174,52 @@ namespace AnywhereWinUI.Models
             UpdateStatusColors(Status ?? string.Empty, isDark);
         }
 
-        public void UpdateFrom(Services.ClashConnectionNode nodeData)
+        public void UpdateFrom(Services.ClashConnectionNode nodeData, string? resolvedProcessName = null)
         {
+            if (!string.IsNullOrWhiteSpace(resolvedProcessName) &&
+                (string.IsNullOrWhiteSpace(ProcessName) || ProcessName == L.Conn_UnknownApp))
+            {
+                ProcessName = resolvedProcessName;
+            }
+
             long totalBytes = nodeData.Download + nodeData.Upload;
+            long nowTick = Environment.TickCount64;
+
+            if (_lastPollBytes >= 0 && nowTick > _lastPollTickMs)
+            {
+                long deltaBytes = Math.Max(0, totalBytes - _lastPollBytes);
+                double elapsedSec = Math.Max(0.25, (nowTick - _lastPollTickMs) / 1000.0);
+                CurrentRateBytes = (long)(deltaBytes / elapsedSec);
+            }
+            else
+            {
+                CurrentRateBytes = 0;
+            }
+
+            _lastPollBytes = totalBytes;
+            _lastPollTickMs = nowTick;
+            TotalBytes = totalBytes;
+
             Size = FormatBytes(totalBytes);
+            RateText = CurrentRateBytes > 0 ? $"{FormatBytes(CurrentRateBytes)}/s" : "—";
 
             var durationSpan = DateTime.Now - nodeData.Start.ToLocalTime();
-            Duration = $"{(int)durationSpan.TotalSeconds}s";
+            int totalSec = Math.Max(0, (int)durationSpan.TotalSeconds);
+            Duration = FormatDuration(totalSec);
         }
 
-        private static string FormatBytes(long bytes)
+        public static string FormatDuration(int totalSeconds)
         {
+            if (totalSeconds < 60)
+                return $"{totalSeconds}s";
+            if (totalSeconds < 3600)
+                return $"{totalSeconds / 60}m {totalSeconds % 60:D2}s";
+            return $"{totalSeconds / 3600}h {(totalSeconds % 3600) / 60:D2}m";
+        }
+
+        public static string FormatBytes(long bytes)
+        {
+            if (bytes <= 0) return "0 B";
             string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
             int counter = 0;
             decimal number = bytes;
@@ -112,7 +229,31 @@ namespace AnywhereWinUI.Models
                 counter++;
                 if (counter >= suffixes.Length - 1) break;
             }
-            return $"{number:n1} {suffixes[counter]}";
+            return counter == 0 ? $"{(long)number} B" : $"{number:n1} {suffixes[counter]}";
+        }
+
+        public static string ExtractSiteDomain(string? host)
+        {
+            if (string.IsNullOrWhiteSpace(host))
+                return string.Empty;
+
+            string clean = host.Trim().TrimEnd('.').ToLowerInvariant();
+            if (IPAddress.TryParse(clean, out _))
+                return string.Empty;
+
+            var parts = clean.Split('.', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length <= 2)
+                return clean;
+
+            string sld = parts[^2];
+            string tld = parts[^1];
+            if (tld.Length == 2 && parts.Length >= 3 &&
+                (sld == "co" || sld == "com" || sld == "org" || sld == "net" || sld == "edu" || sld == "gov" || sld == "ac"))
+            {
+                return $"{parts[^3]}.{sld}.{tld}";
+            }
+
+            return $"{sld}.{tld}";
         }
 
         private void UpdateBadgeColors(string type, bool isDark)

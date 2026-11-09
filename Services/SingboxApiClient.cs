@@ -35,6 +35,12 @@ namespace AnywhereWinUI.Services
 
         [JsonPropertyName("host")]
         public string Host { get; set; } = string.Empty;
+
+        [JsonPropertyName("process")]
+        public string Process { get; set; } = string.Empty;
+
+        [JsonPropertyName("processPath")]
+        public string ProcessPath { get; set; } = string.Empty;
     }
 
     public class ClashConnectionNode
@@ -191,6 +197,37 @@ namespace AnywhereWinUI.Services
             var secret = AppSession.Instance.ClashApiSecret;
             if (string.IsNullOrEmpty(secret)) return;
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
+        }
+
+        public async Task<bool> CloseConnectionAsync(string id, CancellationToken token = default)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return false;
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Delete, $"{ConnectionsUrl}/{Uri.EscapeDataString(id)}");
+                ApplyAuth(request);
+                using var response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> CloseAllConnectionsAsync(CancellationToken token = default)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Delete, ConnectionsUrl);
+                ApplyAuth(request);
+                using var response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public void Dispose()

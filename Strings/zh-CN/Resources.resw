@@ -2570,4 +2570,73 @@ URL: {1}
   <data name="Settings_ShoesReplaceOkFmt" xml:space="preserve">
     <value>已成功导入本地 Shoes 核心 {0}（来源：{1}）。</value>
   </data>
+  <data name="Conn_AppRankHeader.Text" xml:space="preserve">
+    <value>谁在用 · 应用流量排行</value>
+  </data>
+  <data name="Conn_AppRankHint.Text" xml:space="preserve">
+    <value>点击应用筛选 · 右侧一键分流</value>
+  </data>
+  <data name="Conn_AppRankEmpty.Text" xml:space="preserve">
+    <value>暂无活跃应用连接</value>
+  </data>
+  <data name="Conn_ColProcess.Text" xml:space="preserve">
+    <value>应用 / 进程</value>
+  </data>
+  <data name="Conn_ColRate.Text" xml:space="preserve">
+    <value>速率</value>
+  </data>
+  <data name="Conn_ColActions.Text" xml:space="preserve">
+    <value>操作</value>
+  </data>
+  <data name="Conn_UnknownApp" xml:space="preserve">
+    <value>未知应用</value>
+  </data>
+  <data name="Conn_AppCountFmt" xml:space="preserve">
+    <value>{0} 个应用</value>
+  </data>
+  <data name="Conn_AppConnCountFmt" xml:space="preserve">
+    <value>{0} 连接</value>
+  </data>
+  <data name="Conn_AppFilterPillFmt" xml:space="preserve">
+    <value>筛选应用: {0}  ✕</value>
+  </data>
+  <data name="Conn_QuickRouteTooltip" xml:space="preserve">
+    <value>让它走…（一键添加分流规则）</value>
+  </data>
+  <data name="Conn_CloseConnTooltip" xml:space="preserve">
+    <value>断开此连接</value>
+  </data>
+  <data name="Conn_QuickRuleSiteHeaderFmt" xml:space="preserve">
+    <value>让网站 *.{0} 走：</value>
+  </data>
+  <data name="Conn_QuickRuleIpHeaderFmt" xml:space="preserve">
+    <value>让 IP {0} 走：</value>
+  </data>
+  <data name="Conn_QuickRuleExactSubmenuFmt" xml:space="preserve">
+    <value>仅让 {0} 走…</value>
+  </data>
+  <data name="Conn_QuickRuleProcHeaderFmt" xml:space="preserve">
+    <value>让应用 {0} 走：</value>
+  </data>
+  <data name="Conn_QuickRuleProcSubmenuFmt" xml:space="preserve">
+    <value>按应用 {0} 分流…</value>
+  </data>
+  <data name="Conn_FilterThisAppFmt" xml:space="preserve">
+    <value>仅看 {0} 的连接</value>
+  </data>
+  <data name="Conn_ClearAppFilterMenu" xml:space="preserve">
+    <value>取消应用筛选</value>
+  </data>
+  <data name="Conn_CopyHostMenuFmt" xml:space="preserve">
+    <value>复制目标 ({0})</value>
+  </data>
+  <data name="Conn_CopyProcMenuFmt" xml:space="preserve">
+    <value>复制进程名 ({0})</value>
+  </data>
+  <data name="Conn_CopiedToastFmt" xml:space="preserve">
+    <value>已复制到剪贴板：{0}</value>
+  </data>
+  <data name="Conn_QuickRuleAppliedFmt" xml:space="preserve">
+    <value>快捷分流已生效：{0} → {1}</value>
+  </data>
 </root>

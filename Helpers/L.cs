@@ -324,6 +324,23 @@ namespace AnywhereWinUI.Helpers
         public static string Conn_StopCapture               => Loc.GetString("Conn_StopCapture");
         public static string Conn_StartCapture              => Loc.GetString("Conn_StartCapture");
         public static string Conn_StatusActive              => Loc.GetString("Conn_StatusActive");
+        public static string Conn_UnknownApp                => Loc.GetString("Conn_UnknownApp");
+        public static string Conn_AppCountFmt               => Loc.GetString("Conn_AppCountFmt");
+        public static string Conn_AppConnCountFmt           => Loc.GetString("Conn_AppConnCountFmt");
+        public static string Conn_AppFilterPillFmt          => Loc.GetString("Conn_AppFilterPillFmt");
+        public static string Conn_QuickRouteTooltip         => Loc.GetString("Conn_QuickRouteTooltip");
+        public static string Conn_CloseConnTooltip          => Loc.GetString("Conn_CloseConnTooltip");
+        public static string Conn_QuickRuleSiteHeaderFmt    => Loc.GetString("Conn_QuickRuleSiteHeaderFmt");
+        public static string Conn_QuickRuleIpHeaderFmt      => Loc.GetString("Conn_QuickRuleIpHeaderFmt");
+        public static string Conn_QuickRuleExactSubmenuFmt  => Loc.GetString("Conn_QuickRuleExactSubmenuFmt");
+        public static string Conn_QuickRuleProcHeaderFmt    => Loc.GetString("Conn_QuickRuleProcHeaderFmt");
+        public static string Conn_QuickRuleProcSubmenuFmt   => Loc.GetString("Conn_QuickRuleProcSubmenuFmt");
+        public static string Conn_FilterThisAppFmt          => Loc.GetString("Conn_FilterThisAppFmt");
+        public static string Conn_ClearAppFilterMenu        => Loc.GetString("Conn_ClearAppFilterMenu");
+        public static string Conn_CopyHostMenuFmt           => Loc.GetString("Conn_CopyHostMenuFmt");
+        public static string Conn_CopyProcMenuFmt           => Loc.GetString("Conn_CopyProcMenuFmt");
+        public static string Conn_CopiedToastFmt            => Loc.GetString("Conn_CopiedToastFmt");
+        public static string Conn_QuickRuleAppliedFmt       => Loc.GetString("Conn_QuickRuleAppliedFmt");
 
         public static string Logs_LineCountFmt              => Loc.GetString("Logs_LineCountFmt");
         public static string Logs_StatusRunning             => Loc.GetString("Logs_StatusRunning");
