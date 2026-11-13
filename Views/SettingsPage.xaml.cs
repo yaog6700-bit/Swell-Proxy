@@ -977,7 +977,7 @@ namespace AnywhereWinUI.Views
                 title: L.Settings_SelectCoreTitle);
             if (filePath == null) return;
 
-            var targetPath = Services.CoreUpdateService.SingboxExePath;
+            var targetPath = Services.CoreUpdateService.SingboxUserExePath;
             if (string.Equals(Path.GetFullPath(filePath), Path.GetFullPath(targetPath), StringComparison.OrdinalIgnoreCase))
             {
                 return;
@@ -1021,12 +1021,6 @@ namespace AnywhereWinUI.Views
                 if (dir != null && !Directory.Exists(dir))
                 {
                     Directory.CreateDirectory(dir);
-                }
-
-                // 首次替换时自动备份自带原版核心，支持一键回滚恢复
-                if (!Services.CoreUpdateService.HasBundledBackup && File.Exists(targetPath))
-                {
-                    try { File.Copy(targetPath, Services.CoreUpdateService.BundledBackupExePath, overwrite: false); } catch { }
                 }
 
                 File.Copy(filePath, targetPath, overwrite: true);
@@ -1081,8 +1075,18 @@ namespace AnywhereWinUI.Views
 
             try
             {
-                File.Copy(Services.CoreUpdateService.BundledBackupExePath, Services.CoreUpdateService.SingboxExePath, overwrite: true);
-                try { File.Delete(Services.CoreUpdateService.BundledBackupExePath); } catch { }
+                if (File.Exists(Services.CoreUpdateService.SingboxUserExePath))
+                {
+                    File.Delete(Services.CoreUpdateService.SingboxUserExePath);
+                }
+                if (File.Exists(Services.CoreUpdateService.BundledBackupExePath))
+                {
+                    if (!File.Exists(Services.CoreUpdateService.SingboxBundledExePath))
+                    {
+                        File.Copy(Services.CoreUpdateService.BundledBackupExePath, Services.CoreUpdateService.SingboxBundledExePath, overwrite: true);
+                    }
+                    try { File.Delete(Services.CoreUpdateService.BundledBackupExePath); } catch { }
+                }
 
                 RefreshCoreVersionUI();
 

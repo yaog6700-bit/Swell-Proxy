@@ -1282,6 +1282,7 @@ namespace AnywhereWinUI.Services
                     ["rule_set"] = ruleSets,
                     ["final"] = "proxy",
                     ["auto_detect_interface"] = true,
+                    ["find_process"] = true,
                     ["default_domain_resolver"] = "local-dns"
                 };
                 if (isSingbox114OrAbove)
@@ -1299,6 +1300,7 @@ namespace AnywhereWinUI.Services
                     ["rule_set"] = ruleSets,
                     ["final"] = "direct",
                     ["auto_detect_interface"] = true,
+                    ["find_process"] = true,
                     ["default_domain_resolver"] = "local-dns"
                 };
                 if (isSingbox114OrAbove)
@@ -1365,9 +1367,17 @@ namespace AnywhereWinUI.Services
                         addedRuleSetTags.Add(existingTag);
                 }
 
-                foreach (var routingRule in RoutingRulesService.LoadRules())
+                // User custom rules take precedence over built-in rules (first-match wins).
+                var loadedRules = RoutingRulesService.LoadRules();
+                foreach (var routingRule in loadedRules)
                 {
-                    AppendRoutingRule(rules, ruleSets, ruleSetDir, addedRuleSetTags, routingRule, ResolveOutbound, isSingbox114OrAbove);
+                    if (!routingRule.IsBuiltIn)
+                        AppendRoutingRule(rules, ruleSets, ruleSetDir, addedRuleSetTags, routingRule, ResolveOutbound, isSingbox114OrAbove);
+                }
+                foreach (var routingRule in loadedRules)
+                {
+                    if (routingRule.IsBuiltIn)
+                        AppendRoutingRule(rules, ruleSets, ruleSetDir, addedRuleSetTags, routingRule, ResolveOutbound, isSingbox114OrAbove);
                 }
             }
 
@@ -1386,6 +1396,7 @@ namespace AnywhereWinUI.Services
                 ["rule_set"] = ruleSets,
                 ["final"] = "proxy",
                 ["auto_detect_interface"] = true,
+                ["find_process"] = true,
                 ["default_domain_resolver"] = "local-dns"
             };
             if (isSingbox114OrAbove)

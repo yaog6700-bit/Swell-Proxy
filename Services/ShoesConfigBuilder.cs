@@ -137,6 +137,9 @@ namespace AnywhereWinUI.Services
                     if (ruleType == "process" ||
                         matchText.Contains("process_name:", StringComparison.OrdinalIgnoreCase) ||
                         matchText.Contains("process_path:", StringComparison.OrdinalIgnoreCase) ||
+                        matchText.Contains("domain_regex:", StringComparison.OrdinalIgnoreCase) ||
+                        matchText.Contains("regex:", StringComparison.OrdinalIgnoreCase) ||
+                        matchText.Contains("regexp:", StringComparison.OrdinalIgnoreCase) ||
                         matchText.Contains("https://", StringComparison.OrdinalIgnoreCase) ||
                         matchText.Contains("http://", StringComparison.OrdinalIgnoreCase))
                     {
@@ -260,7 +263,12 @@ namespace AnywhereWinUI.Services
             {
                 foreach (var rule in activeCustomRules)
                 {
-                    if (!rule.IsEnabled || string.IsNullOrWhiteSpace(rule.Match)) continue;
+                    if (rule.IsBuiltIn || !rule.IsEnabled || string.IsNullOrWhiteSpace(rule.Match)) continue;
+                    AppendSingleCustomRuleYaml(sb, rule, ruleDir);
+                }
+                foreach (var rule in activeCustomRules)
+                {
+                    if (!rule.IsBuiltIn || !rule.IsEnabled || string.IsNullOrWhiteSpace(rule.Match)) continue;
                     AppendSingleCustomRuleYaml(sb, rule, ruleDir);
                 }
             }

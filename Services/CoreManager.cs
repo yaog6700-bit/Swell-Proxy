@@ -16,7 +16,7 @@ namespace AnywhereWinUI.Services
         private static readonly Lazy<CoreManager> _instance = new(() => new CoreManager());
         public static CoreManager Instance => _instance.Value;
 
-        public string ExePath => Path.Combine(AppContext.BaseDirectory, "Assets", "sing-box.exe");
+        public string ExePath => CoreUpdateService.ResolveSingboxExePath();
         public string ConfigPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "SwellProxy",

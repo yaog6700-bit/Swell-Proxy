@@ -311,6 +311,13 @@ namespace AnywhereWinUI.Services
             {
                 AppSession.Instance.EnableAdvancedRouting = true;
                 LocalSettingsHelper.SetValue("enableAdvancedRouting", true);
+                MainWindow.Instance?.DispatcherQueue?.TryEnqueue(() => MainWindow.Instance?.UpdateRoutingNavVisibility());
+            }
+
+            if (!string.Equals(AppSession.Instance.RoutingMode, "smart", StringComparison.OrdinalIgnoreCase))
+            {
+                AppSession.Instance.RoutingMode = "smart";
+                LocalSettingsHelper.SetValue("routingMode", "smart");
             }
 
             string actionLabel = outboundTag switch

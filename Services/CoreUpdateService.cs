@@ -20,18 +20,31 @@ namespace AnywhereWinUI.Services
         private const string ShoesApiListUrl = "https://api.github.com/repos/yaog6700-bit/shoes/releases?per_page=15";
 
         private static readonly string EngineDir = Path.Combine(AppContext.BaseDirectory, "Assets");
-        public static readonly string SingboxExePath = Path.Combine(EngineDir, "sing-box.exe");
         public static readonly string BundledBackupExePath = Path.Combine(EngineDir, "sing-box.bundled.bak");
-        public static bool HasBundledBackup => File.Exists(BundledBackupExePath);
 
-        // On-demand Shoes binary lives under %LocalAppData%\SwellProxy\bin so it survives client self-updates
-        // and works without elevation even if the app is placed in a read-only folder; Assets\shoes.exe is also recognized.
+        // Core binaries updated or manually replaced by the user live under %LocalAppData%\SwellProxy\bin
+        // so they survive .NET single-file %TEMP% re-extraction across reboots and client self-updates,
+        // and work without elevation even if the app is placed in a read-only folder.
         public static readonly string ShoesBinDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "SwellProxy",
             "bin");
+        public static readonly string SingboxUserExePath = Path.Combine(ShoesBinDir, "sing-box.exe");
+        public static readonly string SingboxBundledExePath = Path.Combine(EngineDir, "sing-box.exe");
+        public static string SingboxExePath => ResolveSingboxExePath();
+        public static bool HasBundledBackup =>
+            (IsNonEmptyFile(SingboxUserExePath) && IsNonEmptyFile(SingboxBundledExePath)) ||
+            File.Exists(BundledBackupExePath);
+
         public static readonly string ShoesUserExePath = Path.Combine(ShoesBinDir, "shoes.exe");
         public static readonly string ShoesBundledExePath = Path.Combine(EngineDir, "shoes.exe");
+
+        public static string ResolveSingboxExePath()
+        {
+            if (IsNonEmptyFile(SingboxUserExePath)) return SingboxUserExePath;
+            if (IsNonEmptyFile(SingboxBundledExePath)) return SingboxBundledExePath;
+            return SingboxUserExePath;
+        }
 
         public static bool IsShoesInstalled =>
             IsNonEmptyFile(ShoesUserExePath) || IsNonEmptyFile(ShoesBundledExePath);
@@ -254,14 +267,8 @@ namespace AnywhereWinUI.Services
 
             progress.Report(string.Format(L.Core_InstallingFmt, info.TargetExeName));
             bool isShoes = string.Equals(info.TargetExeName, "shoes.exe", StringComparison.OrdinalIgnoreCase);
-            var installDir = isShoes ? ShoesBinDir : EngineDir;
-            var targetPath = Path.Combine(installDir, info.TargetExeName);
-            Directory.CreateDirectory(installDir);
-
-            if (!isShoes && !File.Exists(BundledBackupExePath) && File.Exists(targetPath))
-            {
-                try { File.Copy(targetPath, BundledBackupExePath, overwrite: false); } catch { }
-            }
+            var targetPath = Path.Combine(ShoesBinDir, info.TargetExeName);
+            Directory.CreateDirectory(ShoesBinDir);
 
             var bakPath = targetPath + ".bak";
             try { File.Delete(bakPath); } catch { }
@@ -272,7 +279,7 @@ namespace AnywhereWinUI.Services
 
             if (isShoes)
             {
-                CopySidecarDlls(Path.GetDirectoryName(extractedExe), installDir);
+                CopySidecarDlls(Path.GetDirectoryName(extractedExe), ShoesBinDir);
             }
 
             try { Directory.Delete(stageDir, recursive: true); } catch { }
