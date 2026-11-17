@@ -906,6 +906,18 @@ Location: {3}</value>
   <data name="Settings_CatAboutSub" xml:space="preserve">
     <value>Client version updates and sing-box core management</value>
   </data>
+  <data name="Settings_GitHubStarTipTitle" xml:space="preserve">
+    <value>Enjoying Swell Proxy?</value>
+  </data>
+  <data name="Settings_GitHubStarTipSubtitle" xml:space="preserve">
+    <value>If you find it helpful, please consider giving us a Star ⭐ on GitHub to support future updates!</value>
+  </data>
+  <data name="Settings_GitHubStarTipAction" xml:space="preserve">
+    <value>Star on GitHub</value>
+  </data>
+  <data name="Settings_GitHubStarTipClose" xml:space="preserve">
+    <value>Don't show again</value>
+  </data>
   <data name="Settings_MasterTitle.Text" xml:space="preserve">
     <value>Settings</value>
   </data>

@@ -148,6 +148,10 @@ namespace AnywhereWinUI.Helpers
         public static string Settings_CatAutostartSub       => Loc.GetString("Settings_CatAutostartSub");
         public static string Settings_CatAboutTitle         => Loc.GetString("Settings_CatAboutTitle");
         public static string Settings_CatAboutSub           => Loc.GetString("Settings_CatAboutSub");
+        public static string Settings_GitHubStarTipTitle    => Loc.GetString("Settings_GitHubStarTipTitle");
+        public static string Settings_GitHubStarTipSubtitle => Loc.GetString("Settings_GitHubStarTipSubtitle");
+        public static string Settings_GitHubStarTipAction   => Loc.GetString("Settings_GitHubStarTipAction");
+        public static string Settings_GitHubStarTipClose    => Loc.GetString("Settings_GitHubStarTipClose");
 
         // ── Phase 2: Settings, Updates, & File Picker ──────────────────────────
         public static string Settings_CoreVer115Fmt         => Loc.GetString("Settings_CoreVer115Fmt");

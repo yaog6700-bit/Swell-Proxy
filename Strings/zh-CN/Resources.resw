@@ -906,6 +906,18 @@ ASN 编号: {2}
   <data name="Settings_CatAboutSub" xml:space="preserve">
     <value>关于 Swell Proxy 原生客户端及代理内核管理</value>
   </data>
+  <data name="Settings_GitHubStarTipTitle" xml:space="preserve">
+    <value>喜欢 Swell Proxy 吗？</value>
+  </data>
+  <data name="Settings_GitHubStarTipSubtitle" xml:space="preserve">
+    <value>如果觉得好用，欢迎到 GitHub 点个 Star ⭐ 支持我们继续维护与更新！</value>
+  </data>
+  <data name="Settings_GitHubStarTipAction" xml:space="preserve">
+    <value>去点个 Star</value>
+  </data>
+  <data name="Settings_GitHubStarTipClose" xml:space="preserve">
+    <value>不再提示</value>
+  </data>
   <data name="Settings_MasterTitle.Text" xml:space="preserve">
     <value>系统设置</value>
   </data>

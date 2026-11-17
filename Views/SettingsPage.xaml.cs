@@ -143,6 +143,7 @@ namespace AnywhereWinUI.Views
                 if (BackupPanel != null) BackupPanel.Visibility = Visibility.Collapsed;
                 if (AutostartPanel != null) AutostartPanel.Visibility = Visibility.Collapsed;
                 if (AboutPanel != null) AboutPanel.Visibility = Visibility.Collapsed;
+                if (GitHubStarTeachingTip != null && GitHubStarTeachingTip.IsOpen) GitHubStarTeachingTip.IsOpen = false;
 
                 switch (tag)
                 {
@@ -185,8 +186,94 @@ namespace AnywhereWinUI.Views
                         if (AboutPanel != null) AboutPanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatAboutTitle;
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatAboutSub;
+                        ShowGitHubStarTipIfFirstTimeAsync();
                         break;
                 }
+            }
+        }
+
+        private const string GitHubStarTipShownKey = "hasShownGitHubStarTip";
+        private const string GitHubRepoUrl = "https://github.com/yaog6700-bit/Swell-Proxy";
+
+        private async void ShowGitHubStarTipIfFirstTimeAsync()
+        {
+            if (GitHubStarTeachingTip == null || GitHubLinkButton == null) return;
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>(GitHubStarTipShownKey, out var shown) && shown)
+            {
+                return;
+            }
+
+            // 等待面板入场动画完成后再弹出，确保气泡箭头准确指向 GitHub 图标
+            await Task.Delay(380);
+            if (AboutPanel?.Visibility != Visibility.Visible || !GitHubLinkButton.IsLoaded)
+            {
+                return;
+            }
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>(GitHubStarTipShownKey, out shown) && shown)
+            {
+                return;
+            }
+
+            GitHubStarTeachingTip.RequestedTheme = Helpers.ContentDialogExtensions.ResolveAppTheme();
+            if (string.Equals(MainWindow.Instance?.ActiveBackdrop, "Acrylic", StringComparison.OrdinalIgnoreCase))
+            {
+                bool isDark = Helpers.ContentDialogExtensions.IsDarkThemeActive();
+                var baseColor = isDark
+                    ? Windows.UI.Color.FromArgb(255, 44, 44, 44)
+                    : Windows.UI.Color.FromArgb(255, 252, 252, 252);
+                GitHubStarTeachingTip.Background = new Microsoft.UI.Xaml.Media.AcrylicBrush
+                {
+                    TintColor = baseColor,
+                    FallbackColor = baseColor,
+                    TintOpacity = 0.72,
+                    TintLuminosityOpacity = 0.85
+                };
+            }
+            else
+            {
+                GitHubStarTeachingTip.ClearValue(TeachingTip.BackgroundProperty);
+            }
+
+            GitHubStarTeachingTip.Title = L.Settings_GitHubStarTipTitle;
+            GitHubStarTeachingTip.Subtitle = L.Settings_GitHubStarTipSubtitle;
+            GitHubStarTeachingTip.ActionButtonContent = L.Settings_GitHubStarTipAction;
+            GitHubStarTeachingTip.CloseButtonContent = L.Settings_GitHubStarTipClose;
+            GitHubStarTeachingTip.IsOpen = true;
+        }
+
+        private void MarkGitHubStarTipShown()
+        {
+            Helpers.LocalSettingsHelper.SetValue(GitHubStarTipShownKey, true);
+        }
+
+        private async void GitHubStarTeachingTip_ActionButtonClick(TeachingTip sender, object args)
+        {
+            MarkGitHubStarTipShown();
+            sender.IsOpen = false;
+            try
+            {
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(GitHubRepoUrl));
+            }
+            catch { }
+        }
+
+        private void GitHubStarTeachingTip_CloseButtonClick(TeachingTip sender, object args)
+        {
+            MarkGitHubStarTipShown();
+            sender.IsOpen = false;
+        }
+
+        private void GitHubStarTeachingTip_Closed(TeachingTip sender, TeachingTipClosedEventArgs args)
+        {
+            MarkGitHubStarTipShown();
+        }
+
+        private void GitHubLinkButton_Click(object sender, RoutedEventArgs e)
+        {
+            MarkGitHubStarTipShown();
+            if (GitHubStarTeachingTip != null && GitHubStarTeachingTip.IsOpen)
+            {
+                GitHubStarTeachingTip.IsOpen = false;
             }
         }
 
