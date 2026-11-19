@@ -73,7 +73,31 @@ namespace AnywhereWinUI
                 {
                     UpdateAppIcon();
                     UpdateMiniModeUI();
+                    if (!isRunning)
+                    {
+                        _trayManager?.UpdateTooltip(null);
+                    }
                 });
+            };
+
+            CoreManager.Instance.TrafficUpdated += (s, stats) =>
+            {
+                if (!CoreManager.Instance.IsRunning) return;
+                string selectedId = NodesManager.Instance.SelectedNodeId;
+                string nodeName = NodesManager.Instance.Nodes.Find(n => n.Id == selectedId)?.Name ?? "Swell Proxy";
+                if (nodeName.Length > 32) nodeName = nodeName[..31] + "…";
+                string tip = $"Swell Proxy · {nodeName}\n↑ {FormatTraySpeed(stats.UpSpeed)}  ↓ {FormatTraySpeed(stats.DownSpeed)}";
+                DispatcherQueue.TryEnqueue(() => _trayManager?.UpdateTooltip(tip));
+            };
+
+            CoreManager.Instance.SystemProxyTampered += (s, result) =>
+            {
+                DispatcherQueue.TryEnqueue(() => ApplySystemProxyTamperBanner(result));
+            };
+
+            AppUpdateService.PendingUpdateReady += (s, versionTag) =>
+            {
+                DispatcherQueue.TryEnqueue(() => ShowAppUpdateReadyBanner(versionTag));
             };
 
             // Handle pane open/close to toggle header details visibility
@@ -208,6 +232,58 @@ namespace AnywhereWinUI
         public void HideOnboarding()
         {
             AppOnboardingHost.Visibility = Visibility.Collapsed;
+        }
+
+        private static string FormatTraySpeed(long bytesPerSec)
+        {
+            if (bytesPerSec < 1024) return $"{bytesPerSec} B/s";
+            if (bytesPerSec < 1024 * 1024) return $"{bytesPerSec / 1024.0:F1} KB/s";
+            if (bytesPerSec < 1024L * 1024 * 1024) return $"{bytesPerSec / (1024.0 * 1024.0):F1} MB/s";
+            return $"{bytesPerSec / (1024.0 * 1024.0 * 1024.0):F2} GB/s";
+        }
+
+        private void ApplySystemProxyTamperBanner(SystemProxyTamperResult result)
+        {
+            if (SystemProxyTamperInfoBar == null) return;
+
+            if (!result.IsTampered)
+            {
+                SystemProxyTamperInfoBar.IsOpen = false;
+                return;
+            }
+
+            SystemProxyTamperInfoBar.Title = Helpers.L.Dashboard_ProxyTamperedTitle;
+            SystemProxyTamperInfoBar.Message = result.Kind == SystemProxyTamperKind.DisabledByExternal
+                ? Helpers.L.Dashboard_ProxyDisabledMsg
+                : string.Format(Helpers.L.Dashboard_ProxyChangedMsgFmt, result.ActualServer, result.ExpectedServer);
+            if (RetakeSystemProxyButton != null)
+            {
+                RetakeSystemProxyButton.Content = Helpers.L.Dashboard_ProxyRetakeBtn;
+            }
+            SystemProxyTamperInfoBar.IsOpen = true;
+        }
+
+        private void RetakeSystemProxyButton_Click(object sender, RoutedEventArgs e)
+        {
+            CoreManager.Instance.RetakeSystemProxy();
+        }
+
+        private void ShowAppUpdateReadyBanner(string versionTag)
+        {
+            if (AppUpdateReadyInfoBar == null) return;
+            AppUpdateReadyInfoBar.Title = string.Format(Helpers.L.MainWindow_UpdateReadyTitleFmt, versionTag);
+            AppUpdateReadyInfoBar.Message = Helpers.L.MainWindow_UpdateReadyMsg;
+            if (RestartForUpdateButton != null)
+            {
+                RestartForUpdateButton.Content = Helpers.L.Settings_RestartNowBtn;
+            }
+            AppUpdateReadyInfoBar.IsOpen = true;
+        }
+
+        private async void RestartForUpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (RestartForUpdateButton != null) RestartForUpdateButton.IsEnabled = false;
+            await AppUpdateService.ApplyPendingUpdateAndRestartAsync();
         }
 
         private void MainNav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)

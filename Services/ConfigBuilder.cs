@@ -311,6 +311,29 @@ namespace AnywhereWinUI.Services
             var servers = new JsonArray { (JsonNode)proxyDnsObj, (JsonNode)localDnsObj, (JsonNode)bootstrapDnsObj };
             var rules = new JsonArray();
 
+            // Auto-detected Windows NRPT / corporate VPN / Tailscale split-DNS rules
+            // take precedence so intranet hostnames resolve through their own DNS servers.
+            var intranet = Helpers.WindowsIntranetDetector.Detect();
+            int intranetDnsIdx = 0;
+            foreach (var kv in intranet.SplitDnsServerToDomains)
+            {
+                if (kv.Value.Count == 0) continue;
+                string tag = $"intranet-dns-{intranetDnsIdx++}";
+                servers.Add(new JsonObject
+                {
+                    ["tag"] = tag,
+                    ["type"] = "udp",
+                    ["server"] = kv.Key
+                });
+                var domArr = new JsonArray();
+                foreach (var d in kv.Value) domArr.Add((JsonNode)d);
+                rules.Add(new JsonObject
+                {
+                    ["domain_suffix"] = domArr,
+                    ["server"] = tag
+                });
+            }
+
             // TUN 模式下（非纯 IPv6，且未开启"允许 IPv6 DNS 解析"选项）拦截 AAAA 查询
             // 防止代理节点 IPv6 兼容性差导致连接超时；用户可在设置中手动开启以支持纯 IPv6 域名
             if (enableTun && strategy != "ipv6_only" && !session.AllowIPv6Dns)
@@ -332,6 +355,18 @@ namespace AnywhereWinUI.Services
 
             if (bypassChina && routingMode == "smart")
             {
+                // Keep Google Play / googleapis.cn on remote-dns before geosite-cn captures *.cn
+                rules.Add(new JsonObject
+                {
+                    ["domain_suffix"] = new JsonArray
+                    {
+                        (JsonNode)"googleapis.cn",
+                        (JsonNode)"xn--ngstr-lra8j.com",
+                        (JsonNode)"play.googleapis.com"
+                    },
+                    ["server"] = "remote-dns"
+                });
+
                 rules.Add(new JsonObject
                 {
                     ["rule_set"] = new JsonArray { (JsonNode)"geosite-cn" },
@@ -1272,6 +1307,30 @@ namespace AnywhereWinUI.Services
                 }
             };
 
+            // Auto-detected Windows NRPT / corporate VPN / Tailscale intranet domains & CIDRs stay direct
+            // across Smart, Global, and TUN modes so corporate intranets and MagicDNS keep working.
+            var intranet = Helpers.WindowsIntranetDetector.Detect();
+            if (intranet.DirectDomainSuffixes.Count > 0)
+            {
+                var domArr = new JsonArray();
+                foreach (var d in intranet.DirectDomainSuffixes) domArr.Add((JsonNode)d);
+                rules.Add(new JsonObject
+                {
+                    ["domain_suffix"] = domArr,
+                    ["outbound"] = "direct"
+                });
+            }
+            if (intranet.DirectIpCidrs.Count > 0)
+            {
+                var cidrArr = new JsonArray();
+                foreach (var c in intranet.DirectIpCidrs) cidrArr.Add((JsonNode)c);
+                rules.Add(new JsonObject
+                {
+                    ["ip_cidr"] = cidrArr,
+                    ["outbound"] = "direct"
+                });
+            }
+
             var ruleSets = new JsonArray();
 
             if (routingMode == "global")
@@ -1383,6 +1442,18 @@ namespace AnywhereWinUI.Services
 
             if (bypassChina)
             {
+                // Prevent Google Play download domains (googleapis.cn) from being sent direct by geosite-cn.
+                rules.Add(new JsonObject
+                {
+                    ["domain_suffix"] = new JsonArray
+                    {
+                        (JsonNode)"googleapis.cn",
+                        (JsonNode)"xn--ngstr-lra8j.com",
+                        (JsonNode)"play.googleapis.com"
+                    },
+                    ["outbound"] = "proxy"
+                });
+
                 rules.Add(new JsonObject
                 {
                     ["rule_set"] = new JsonArray { (JsonNode)"geosite-cn", (JsonNode)"geoip-cn" },

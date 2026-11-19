@@ -36,6 +36,34 @@ namespace AnywhereWinUI.Services
             }
         }
 
+        public static UpdateStaging? PendingStaging { get; private set; }
+        public static string? PendingVersionTag { get; private set; }
+        public static bool HasPendingUpdate => PendingStaging != null;
+
+        public static event EventHandler<string>? PendingUpdateReady;
+
+        public static void MarkPendingUpdateReady(string versionTag, UpdateStaging staging)
+        {
+            PendingVersionTag = versionTag;
+            PendingStaging = staging;
+            PendingUpdateReady?.Invoke(null, versionTag);
+        }
+
+        public static async Task ApplyPendingUpdateAndRestartAsync()
+        {
+            if (PendingStaging == null)
+                return;
+
+            var staging = PendingStaging;
+            if (CoreManager.Instance.IsRunning)
+            {
+                await CoreManager.Instance.StopAsync();
+            }
+
+            new AppUpdateService().LaunchUpdater(staging);
+            Microsoft.UI.Xaml.Application.Current.Exit();
+        }
+
         private static string UpdatesDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SwellProxy", "Updates");
 
         public async Task<UpdateInfo?> CheckAsync(string? proxyUrl, CancellationToken ct)

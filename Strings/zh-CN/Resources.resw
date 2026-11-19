@@ -2651,4 +2651,49 @@ URL: {1}
   <data name="Conn_QuickRuleAppliedFmt" xml:space="preserve">
     <value>快捷分流已生效：{0} → {1}</value>
   </data>
+  <data name="AddRule_RunningAppsLabel" xml:space="preserve">
+    <value>正在运行的应用（点击填入）</value>
+  </data>
+  <data name="AddRule_RunningAppsLoading" xml:space="preserve">
+    <value>正在获取运行中的应用…</value>
+  </data>
+  <data name="AddRule_RunningAppsEmpty" xml:space="preserve">
+    <value>未检测到可选择的桌面应用，可手动输入或浏览 exe。</value>
+  </data>
+  <data name="AddRule_RunningAppsNoMatchFmt" xml:space="preserve">
+    <value>没有正在运行且包含「{0}」的应用，仍可直接添加。</value>
+  </data>
+  <data name="Servers_SubExcludedCountFmt" xml:space="preserve">
+    <value>已屏蔽 {0} 个节点</value>
+  </data>
+  <data name="Servers_SubRestoreExcludedBtn" xml:space="preserve">
+    <value>恢复</value>
+  </data>
+  <data name="Dashboard_ProxyTamperedTitle" xml:space="preserve">
+    <value>系统代理已被其他程序修改</value>
+  </data>
+  <data name="Dashboard_ProxyDisabledMsg" xml:space="preserve">
+    <value>检测到 Windows 系统代理已被外部程序关闭，当前浏览器流量可能未经过代理。</value>
+  </data>
+  <data name="Dashboard_ProxyChangedMsgFmt" xml:space="preserve">
+    <value>检测到 Windows 系统代理已被外部程序改为 {0}（预期 {1}）。</value>
+  </data>
+  <data name="Dashboard_ProxyRetakeBtn" xml:space="preserve">
+    <value>重新接管</value>
+  </data>
+  <data name="Dashboard_ProxyRetakenTitle" xml:space="preserve">
+    <value>已重新接管系统代理</value>
+  </data>
+  <data name="Dashboard_ProxyRetakenMsgFmt" xml:space="preserve">
+    <value>系统代理已恢复指向 {0}。</value>
+  </data>
+  <data name="MainWindow_UpdateReadyTitleFmt" xml:space="preserve">
+    <value>新版本 {0} 已就绪</value>
+  </data>
+  <data name="MainWindow_UpdateReadyMsg" xml:space="preserve">
+    <value>更新已在后台下载并校验完成，您可以继续正常使用，方便时点击「立即重启」完成升级。</value>
+  </data>
+  <data name="Settings_AppDownloadingBtnFmt" xml:space="preserve">
+    <value>后台下载中 {0}%…</value>
+  </data>
 </root>

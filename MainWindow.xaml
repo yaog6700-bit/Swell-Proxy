@@ -135,7 +135,42 @@
                 </NavigationView.MenuItems>
 
                 <!-- CacheSize keeps recently visited pages alive with NavigationCacheMode on each Page -->
-                <Frame x:Name="ContentFrame" Margin="0,48,0,0" CacheSize="2"/>
+                <Grid Margin="0,48,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Spacing="4">
+                    <InfoBar x:Name="AppUpdateReadyInfoBar"
+                             Severity="Success"
+                             IsOpen="False"
+                             IsClosable="True"
+                             Margin="16,4,16,4">
+                        <InfoBar.ActionButton>
+                            <Button x:Name="RestartForUpdateButton"
+                                    Click="RestartForUpdateButton_Click"
+                                    Content="立即重启" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
+
+                    <InfoBar x:Name="SystemProxyTamperInfoBar"
+                             Grid.Row="0"
+                             Severity="Warning"
+                             IsOpen="False"
+                             IsClosable="True"
+                             Margin="16,4,16,8">
+                        <InfoBar.ActionButton>
+                            <Button x:Name="RetakeSystemProxyButton"
+                                    Click="RetakeSystemProxyButton_Click"
+                                    Content="重新接管" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
+
+                    </StackPanel>
+
+                    <Frame x:Name="ContentFrame" Grid.Row="1" CacheSize="2"/>
+                </Grid>
             </NavigationView>
 
             <StackPanel x:Name="LogoStackPanel" Orientation="Horizontal" VerticalAlignment="Top" Margin="48,0,0,0" Height="48" Spacing="8" HorizontalAlignment="Left" IsHitTestVisible="False">

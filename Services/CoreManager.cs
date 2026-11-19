@@ -41,8 +41,20 @@ namespace AnywhereWinUI.Services
 
         public bool IsRunning => _process is { HasExited: false };
         public string LastError { get; private set; } = string.Empty;
+        public SystemProxyTamperResult LastProxyTamperState { get; private set; } = SystemProxyTamperResult.Ok();
 
         public event EventHandler<string>? LogReceived;
+        public event EventHandler<SystemProxyTamperResult>? SystemProxyTampered;
+
+        public void RetakeSystemProxy()
+        {
+            if (SystemProxyManager.RetakeProxy())
+            {
+                LastProxyTamperState = SystemProxyTamperResult.Ok(SystemProxyManager.ExpectedServer);
+                AppendLog($"[SystemProxy] 已重新接管系统代理 ({SystemProxyManager.ExpectedServer})");
+                SystemProxyTampered?.Invoke(this, LastProxyTamperState);
+            }
+        }
         public event EventHandler<bool>? RunningChanged;
         public event EventHandler<(long Down, long Up, long DownSpeed, long UpSpeed)>? TrafficUpdated;
 
@@ -260,6 +272,8 @@ namespace AnywhereWinUI.Services
                         if (AppSession.Instance.EnableSystemProxy)
                         {
                             SystemProxyManager.DisableProxy();
+                LastProxyTamperState = SystemProxyTamperResult.Ok();
+                SystemProxyTampered?.Invoke(this, LastProxyTamperState);
                         }
                         RunningChanged?.Invoke(this, false);
                     };
@@ -321,6 +335,8 @@ namespace AnywhereWinUI.Services
                     if (isCustom && AppSession.Instance.ActiveCustomSkipSystemProxy)
                     {
                         SystemProxyManager.DisableProxy();
+                LastProxyTamperState = SystemProxyTamperResult.Ok();
+                SystemProxyTampered?.Invoke(this, LastProxyTamperState);
                         AppendLog("[CustomConfig] 原生配置直连或未声明本地 HTTP/Mixed 入站，已跳过系统代理修改");
                     }
                     else if (AppSession.Instance.EnableSystemProxy)
@@ -334,6 +350,8 @@ namespace AnywhereWinUI.Services
                     else
                     {
                         SystemProxyManager.DisableProxy();
+                LastProxyTamperState = SystemProxyTamperResult.Ok();
+                SystemProxyTampered?.Invoke(this, LastProxyTamperState);
                     }
 
                     if (AppSession.Instance.EnableTunMode || (isCustom && AppSession.Instance.ActiveCustomHasTun))
@@ -411,6 +429,8 @@ namespace AnywhereWinUI.Services
             if (AppSession.Instance.EnableSystemProxy)
             {
                 SystemProxyManager.DisableProxy();
+                LastProxyTamperState = SystemProxyTamperResult.Ok();
+                SystemProxyTampered?.Invoke(this, LastProxyTamperState);
             }
 
             if (proc is null)
@@ -459,6 +479,8 @@ namespace AnywhereWinUI.Services
             _ = Task.Run(async () =>
             {
                 var token = _statsCts.Token;
+                int proxyCheckTicks = 0;
+                LastProxyTamperState = SystemProxyTamperResult.Ok();
                 // Brief wait so clash_api is listening after ready signal.
                 try { await Task.Delay(400, token); } catch (TaskCanceledException) { return; }
 
@@ -496,6 +518,13 @@ namespace AnywhereWinUI.Services
                             SingboxApiClient.Instance.PublishConnectionsSnapshot(message);
                         }
 
+                        // Every 3 seconds, verify Windows System Proxy was not modified externally.
+                        if (++proxyCheckTicks >= 3)
+                        {
+                            proxyCheckTicks = 0;
+                            CheckAndNotifySystemProxyTamper();
+                        }
+
                         await Task.Delay(1000, token);
                     }
                     catch (TaskCanceledException)
@@ -506,9 +535,35 @@ namespace AnywhereWinUI.Services
                     {
                         break;
                     }
-                    catch { }
+                    catch
+                    {
+                        // Even if /connections fetch transiently fails, keep checking system proxy integrity.
+                        if (++proxyCheckTicks >= 3)
+                        {
+                            proxyCheckTicks = 0;
+                            CheckAndNotifySystemProxyTamper();
+                        }
+                        try { await Task.Delay(1000, token); } catch { break; }
+                    }
                 }
             });
+        }
+
+        private void CheckAndNotifySystemProxyTamper()
+        {
+            var tamper = SystemProxyManager.CheckSystemProxyIntegrity();
+            if (tamper != LastProxyTamperState)
+            {
+                LastProxyTamperState = tamper;
+                if (tamper.IsTampered)
+                {
+                    string detail = tamper.Kind == SystemProxyTamperKind.DisabledByExternal
+                        ? "已被外部程序关闭"
+                        : $"已被外部程序修改为 {tamper.ActualServer}";
+                    AppendLog($"[SystemProxy] 警告：系统代理{detail}");
+                }
+                SystemProxyTampered?.Invoke(this, tamper);
+            }
         }
 
         private void StopStatsPolling()

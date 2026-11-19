@@ -165,6 +165,22 @@ namespace AnywhereWinUI.Services
             if (existing != null)
             {
                 CustomConfigService.DeleteConfigFile(existing);
+
+                // Remember single-node deletion for subscription nodes so refreshing
+                // the subscription won't resurrect unwanted info/dead nodes.
+                if (!string.IsNullOrEmpty(existing.SubscriptionId) && !string.IsNullOrWhiteSpace(existing.Name))
+                {
+                    var sub = Subscriptions.Find(s => s.Id == existing.SubscriptionId);
+                    if (sub != null)
+                    {
+                        sub.ExcludedNodeNames ??= new List<string>();
+                        string trimmedName = existing.Name.Trim();
+                        if (!sub.ExcludedNodeNames.Exists(x => string.Equals(x, trimmedName, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            sub.ExcludedNodeNames.Add(trimmedName);
+                        }
+                    }
+                }
             }
             Nodes.RemoveAll(n => n.Id == id);
             if (SelectedNodeId == id)
@@ -172,6 +188,33 @@ namespace AnywhereWinUI.Services
                 SelectedNodeId = Nodes.Count > 0 ? Nodes[0].Id : string.Empty;
             }
             Save();
+        }
+
+        public async Task<string?> RestoreExcludedNodesAsync(string subId)
+        {
+            var sub = Subscriptions.Find(s => s.Id == subId);
+            if (sub == null) return "订阅不存在";
+
+            sub.ExcludedNodeNames?.Clear();
+            Save();
+            return await UpdateSubscriptionAsync(subId);
+        }
+
+        internal static List<PersistedNode> FilterExcludedSubscriptionNodes(
+            List<PersistedNode> nodes,
+            IReadOnlyCollection<string>? excludedNodeNames)
+        {
+            if (excludedNodeNames == null || excludedNodeNames.Count == 0 || nodes.Count == 0)
+                return nodes;
+
+            var excludedSet = new HashSet<string>(
+                excludedNodeNames.Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim()),
+                StringComparer.OrdinalIgnoreCase);
+
+            if (excludedSet.Count == 0)
+                return nodes;
+
+            return nodes.FindAll(n => !excludedSet.Contains((n.Name ?? string.Empty).Trim()));
         }
 
         public void AddSubscription(string name, string url)
@@ -251,6 +294,9 @@ namespace AnywhereWinUI.Services
                 {
                     n.SubscriptionId = subId;
                 }
+
+                // Filter out nodes that the user previously removed from this subscription.
+                newNodes = FilterExcludedSubscriptionNodes(newNodes, sub.ExcludedNodeNames);
 
                 var newEndpointKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var n in newNodes)

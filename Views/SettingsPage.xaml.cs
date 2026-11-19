@@ -926,6 +926,23 @@ namespace AnywhereWinUI.Views
 
         private async void CheckAppUpdateButton_Click(object sender, RoutedEventArgs e)
         {
+            if (AppUpdateService.HasPendingUpdate)
+            {
+                var readyDialog = new ContentDialog
+                {
+                    Title = L.Settings_AppReadyTitle,
+                    Content = string.Format(L.Settings_AppReadyFmt, AppUpdateService.PendingVersionTag ?? string.Empty),
+                    PrimaryButtonText = L.Settings_RestartNowBtn,
+                    CloseButtonText = L.Dialog_Cancel,
+                    XamlRoot = this.XamlRoot
+                };
+                if (await readyDialog.WithAppTheme().ShowAsync() == ContentDialogResult.Primary)
+                {
+                    await AppUpdateService.ApplyPendingUpdateAndRestartAsync();
+                }
+                return;
+            }
+
             CheckAppUpdateButton.IsEnabled = false;
             CheckAppUpdateButton.Content = L.Settings_CheckingBtn;
 
@@ -962,61 +979,32 @@ namespace AnywhereWinUI.Views
                     return;
                 }
 
-                var progressText = new TextBlock { Text = L.Settings_PreparingDownload, Margin = new Thickness(0, 0, 0, 10) };
-                var progressBar = new ProgressBar { IsIndeterminate = true, Width = 300 };
-                var stackPanel = new StackPanel { Children = { progressText, progressBar } };
-
-                var progressDialog = new ContentDialog
-                {
-                    Title = L.Settings_UpdatingAppTitle,
-                    Content = stackPanel,
-                    XamlRoot = this.XamlRoot
-                };
-
+                // Silent background download — does not block UI or interrupt active network traffic.
+                CheckAppUpdateButton.Content = L.Settings_PreparingDownload;
                 var progress = new Progress<AnywhereWinUI.Models.ProgressDialogUpdate>(msg =>
                 {
-                    DispatcherQueue.TryEnqueue(() => {
-                        progressText.Text = msg.StatusText;
+                    DispatcherQueue.TryEnqueue(() =>
+                    {
                         if (msg.PercentComplete.HasValue)
                         {
-                            progressBar.IsIndeterminate = false;
-                            progressBar.Value = msg.PercentComplete.Value;
+                            CheckAppUpdateButton.Content = string.Format(
+                                L.Settings_AppDownloadingBtnFmt,
+                                (int)Math.Round(msg.PercentComplete.Value));
+                        }
+                        else if (!string.IsNullOrWhiteSpace(msg.StatusText))
+                        {
+                            CheckAppUpdateButton.Content = msg.StatusText;
                         }
                     });
                 });
 
-                var updateTask = updater.DownloadVerifyAndExtractAsync(info, proxyUrl, progress, CancellationToken.None);
-                
-                _ = progressDialog.WithAppTheme().ShowAsync();
-                
                 try
                 {
-                    var staging = await updateTask;
-                    progressDialog.Hide();
-                    await Task.Delay(50);
-
-                    var successDialog = new ContentDialog
-                    {
-                        Title = L.Settings_AppReadyTitle,
-                        Content = string.Format(L.Settings_AppReadyFmt, info.TagName),
-                        PrimaryButtonText = L.Settings_RestartNowBtn,
-                        XamlRoot = this.XamlRoot
-                    };
-                    
-                    if (await successDialog.WithAppTheme().ShowAsync() == ContentDialogResult.Primary)
-                    {
-                        if (CoreManager.Instance.IsRunning)
-                        {
-                            await CoreManager.Instance.StopAsync();
-                        }
-                        updater.LaunchUpdater(staging);
-                        Application.Current.Exit();
-                    }
+                    var staging = await updater.DownloadVerifyAndExtractAsync(info, proxyUrl, progress, CancellationToken.None);
+                    AppUpdateService.MarkPendingUpdateReady(info.TagName, staging);
                 }
                 catch (Exception ex)
                 {
-                    progressDialog.Hide();
-                    await Task.Delay(50);
                     var errDialog = new ContentDialog
                     {
                         Title = L.Settings_UpdateFailTitle,

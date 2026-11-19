@@ -436,7 +436,9 @@ namespace AnywhereWinUI.ViewModels
         {
             if (server != null)
             {
+                bool hadSub = !string.IsNullOrEmpty(server.SubscriptionId);
                 NodesManager.Instance.DeleteNode(server.Id);
+                if (hadSub) LoadSubscriptions();
                 LoadServersList();
                 SelectedServer = null; // Clear selection
             }
@@ -510,6 +512,17 @@ namespace AnywhereWinUI.ViewModels
             if (sub != null)
             {
                 await NodesManager.Instance.UpdateSubscriptionAsync(sub.Id);
+                LoadSubscriptions();
+                LoadServersList();
+            }
+        }
+
+        [RelayCommand]
+        private async Task RestoreExcludedNodesAsync(PersistedSubscription sub)
+        {
+            if (sub != null)
+            {
+                await NodesManager.Instance.RestoreExcludedNodesAsync(sub.Id);
                 LoadSubscriptions();
                 LoadServersList();
             }

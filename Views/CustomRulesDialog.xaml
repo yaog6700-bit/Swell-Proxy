@@ -323,6 +323,7 @@
                        FontWeight="SemiBold"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             <TextBox x:Name="FormMatchTextBox"
+                     TextChanged="FormMatchTextBox_TextChanged"
                      HorizontalAlignment="Stretch"
                      PlaceholderText="youtube.com 或 geosite:cn"/>
 
@@ -343,6 +344,54 @@
                     <ComboBoxItem x:Uid="CustomRules_BrowseByName" Content="匹配同名进程" Tag="name"/>
                     <ComboBoxItem x:Uid="CustomRules_BrowseByPath" Content="匹配完整路径" Tag="path"/>
                 </ComboBox>
+            </StackPanel>
+
+            <!-- 进程类型：正在运行的应用快捷点选 -->
+            <StackPanel x:Name="FormRunningAppsPanel"
+                        Spacing="6"
+                        Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="FormRunningAppsHeaderText"
+                               Grid.Column="0"
+                               Text="正在运行的应用（点击填入）"
+                               FontSize="11"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <Button x:Name="FormRefreshRunningAppsButton"
+                            Grid.Column="1"
+                            Click="FormRefreshRunningAppsButton_Click"
+                            Padding="6,3"
+                            MinWidth="0"
+                            MinHeight="0"
+                            Background="Transparent"
+                            BorderThickness="0">
+                        <FontIcon Glyph="&#xE72C;" FontSize="11"/>
+                    </Button>
+                </Grid>
+
+                <TextBlock x:Name="FormRunningAppsStatusText"
+                           FontSize="11"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                           TextWrapping="Wrap"
+                           Visibility="Collapsed"/>
+
+                <Border x:Name="FormRunningAppsBorder"
+                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        MaxHeight="150"
+                        Visibility="Collapsed">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Padding="6">
+                        <StackPanel x:Name="FormRunningAppsListPanel" Spacing="4"/>
+                    </ScrollViewer>
+                </Border>
             </StackPanel>
 
             <TextBlock x:Name="FormHintText"

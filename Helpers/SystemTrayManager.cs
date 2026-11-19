@@ -78,6 +78,8 @@ namespace AnywhereWinUI.Helpers
         private IntPtr _inactiveIcon;
         private int _loadedIconWidth;
         private int _loadedIconHeight;
+        private bool _loadedTaskbarLight;
+        private string? _customTooltip;
         private bool _isActive;
         private bool _isAdded;
         private bool _disposed;
@@ -123,7 +125,44 @@ namespace AnywhereWinUI.Helpers
         {
             if (_disposed) return;
             _isActive = isActive;
+            if (!isActive)
+            {
+                _customTooltip = null;
+            }
             AddOrUpdateTrayIcon();
+        }
+
+        /// <summary>
+        /// Updates the tray icon hover tooltip text (e.g. live upload/download speed &amp; active node)
+        /// without flickering the icon. Pass null to revert to the default status tooltip.
+        /// </summary>
+        public void UpdateTooltip(string? tooltip)
+        {
+            if (_disposed || _hwnd == IntPtr.Zero || !_isAdded) return;
+
+            string? normalized = string.IsNullOrWhiteSpace(tooltip)
+                ? null
+                : (tooltip.Length > 127 ? tooltip[..127] : tooltip);
+
+            if (string.Equals(_customTooltip, normalized, StringComparison.Ordinal))
+                return;
+
+            _customTooltip = normalized;
+
+            string effective = _customTooltip ?? (_isActive ? L.Tray_ConnectedTooltip : L.Tray_DisconnectedTooltip);
+            if (effective.Length > 127) effective = effective[..127];
+
+            var nid = new NOTIFYICONDATAW
+            {
+                cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATAW>(),
+                hWnd = _hwnd,
+                uID = TRAY_ICON_ID,
+                uFlags = NIF_TIP,
+                szTip = effective,
+                szInfo = string.Empty,
+                szInfoTitle = string.Empty
+            };
+            Shell_NotifyIconW(NIM_MODIFY, ref nid);
         }
 
         public void EnsureVisible()
@@ -260,13 +299,36 @@ namespace AnywhereWinUI.Helpers
             }
         }
 
+        private static bool IsTaskbarLightTheme()
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", writable: false);
+                if (key?.GetValue("SystemUsesLightTheme") is int val)
+                    return val != 0;
+            }
+            catch { }
+            return false;
+        }
+
         private void LoadIcons()
         {
             int cx = Math.Max(16, GetSystemMetrics(SM_CXSMICON));
             int cy = Math.Max(16, GetSystemMetrics(SM_CYSMICON));
+            bool taskbarLight = IsTaskbarLightTheme();
 
             IntPtr newActive = LoadSingleIcon("output.ico", cx, cy);
-            IntPtr newInactive = LoadSingleIcon("output_grey.ico", cx, cy);
+            IntPtr rawInactive = LoadSingleIcon("output_grey.ico", cx, cy);
+            IntPtr newInactive = CreateTaskbarAdaptiveGreyIcon(rawInactive, taskbarLight);
+            if (newInactive != IntPtr.Zero && newInactive != rawInactive)
+            {
+                DestroyIcon(rawInactive);
+            }
+            else
+            {
+                newInactive = rawInactive;
+            }
 
             IntPtr oldActive = _activeIcon;
             IntPtr oldInactive = _inactiveIcon;
@@ -275,6 +337,7 @@ namespace AnywhereWinUI.Helpers
             _inactiveIcon = newInactive;
             _loadedIconWidth = cx;
             _loadedIconHeight = cy;
+            _loadedTaskbarLight = taskbarLight;
 
             if (oldActive != IntPtr.Zero && oldActive != _activeIcon)
             {
@@ -283,6 +346,76 @@ namespace AnywhereWinUI.Helpers
             if (oldInactive != IntPtr.Zero && oldInactive != _inactiveIcon)
             {
                 DestroyIcon(oldInactive);
+            }
+        }
+
+        /// <summary>
+        /// Retints the monochrome disconnected icon so it stays clearly legible on both
+        /// dark Windows taskbars (light silver) and light Windows taskbars (charcoal grey).
+        /// </summary>
+        private static IntPtr CreateTaskbarAdaptiveGreyIcon(IntPtr sourceIcon, bool taskbarLight)
+        {
+            if (sourceIcon == IntPtr.Zero) return IntPtr.Zero;
+
+            if (!GetIconInfo(sourceIcon, out ICONINFO info))
+                return sourceIcon;
+
+            IntPtr hdc = IntPtr.Zero;
+            try
+            {
+                if (info.hbmColor == IntPtr.Zero)
+                    return sourceIcon;
+
+                if (GetObjectW(info.hbmColor, Marshal.SizeOf<BITMAP>(), out BITMAP bm) == 0 ||
+                    bm.bmWidth <= 0 || bm.bmHeight <= 0)
+                    return sourceIcon;
+
+                int w = bm.bmWidth;
+                int h = bm.bmHeight;
+                var bmi = new BITMAPINFOHEADER
+                {
+                    biSize = (uint)Marshal.SizeOf<BITMAPINFOHEADER>(),
+                    biWidth = w,
+                    biHeight = -h,
+                    biPlanes = 1,
+                    biBitCount = 32,
+                    biCompression = 0 // BI_RGB
+                };
+
+                byte[] pixels = new byte[w * h * 4];
+                hdc = GetDC(IntPtr.Zero);
+                if (hdc == IntPtr.Zero) return sourceIcon;
+
+                if (GetDIBits(hdc, info.hbmColor, 0, (uint)h, pixels, ref bmi, 0) == 0)
+                    return sourceIcon;
+
+                byte target = taskbarLight ? (byte)72 : (byte)216;
+                for (int i = 0; i < pixels.Length; i += 4)
+                {
+                    byte a = pixels[i + 3];
+                    if (a == 0) continue;
+                    // Premultiplied BGRA
+                    byte premul = (byte)((target * a) / 255);
+                    pixels[i] = premul;
+                    pixels[i + 1] = premul;
+                    pixels[i + 2] = premul;
+                }
+
+                if (SetDIBits(hdc, info.hbmColor, 0, (uint)h, pixels, ref bmi, 0) == 0)
+                    return sourceIcon;
+
+                IntPtr newIcon = CreateIconIndirect(ref info);
+                return newIcon != IntPtr.Zero ? newIcon : sourceIcon;
+            }
+            catch
+            {
+                return sourceIcon;
+            }
+            finally
+            {
+                if (hdc != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
+                if (info.hbmColor != IntPtr.Zero) DeleteObject(info.hbmColor);
+                if (info.hbmMask != IntPtr.Zero) DeleteObject(info.hbmMask);
             }
         }
 
@@ -305,7 +438,9 @@ namespace AnywhereWinUI.Helpers
         {
             int cx = Math.Max(16, GetSystemMetrics(SM_CXSMICON));
             int cy = Math.Max(16, GetSystemMetrics(SM_CYSMICON));
-            if (cx != _loadedIconWidth || cy != _loadedIconHeight || _activeIcon == IntPtr.Zero || _inactiveIcon == IntPtr.Zero)
+            bool taskbarLight = IsTaskbarLightTheme();
+            if (cx != _loadedIconWidth || cy != _loadedIconHeight || taskbarLight != _loadedTaskbarLight ||
+                _activeIcon == IntPtr.Zero || _inactiveIcon == IntPtr.Zero)
             {
                 LoadIcons();
             }
@@ -319,7 +454,8 @@ namespace AnywhereWinUI.Helpers
                 iconHandle = LoadIconW(IntPtr.Zero, (IntPtr)IDI_APPLICATION);
             }
 
-            string tooltip = _isActive ? L.Tray_ConnectedTooltip : L.Tray_DisconnectedTooltip;
+            string tooltip = _customTooltip ?? (_isActive ? L.Tray_ConnectedTooltip : L.Tray_DisconnectedTooltip);
+            if (tooltip.Length > 127) tooltip = tooltip[..127];
 
             return new NOTIFYICONDATAW
             {
@@ -772,6 +908,71 @@ namespace AnywhereWinUI.Helpers
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr GetModuleHandleW(string? lpModuleName);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct ICONINFO
+        {
+            [MarshalAs(UnmanagedType.Bool)]
+            public bool fIcon;
+            public int xHotspot;
+            public int yHotspot;
+            public IntPtr hbmMask;
+            public IntPtr hbmColor;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BITMAP
+        {
+            public int bmType;
+            public int bmWidth;
+            public int bmHeight;
+            public int bmWidthBytes;
+            public ushort bmPlanes;
+            public ushort bmBitsPixel;
+            public IntPtr bmBits;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BITMAPINFOHEADER
+        {
+            public uint biSize;
+            public int biWidth;
+            public int biHeight;
+            public ushort biPlanes;
+            public ushort biBitCount;
+            public uint biCompression;
+            public uint biSizeImage;
+            public int biXPelsPerMeter;
+            public int biYPelsPerMeter;
+            public uint biClrUsed;
+            public uint biClrImportant;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetIconInfo(IntPtr hIcon, out ICONINFO piconinfo);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr CreateIconIndirect(ref ICONINFO piconinfo);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetDC(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+        [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetObjectW(IntPtr hgdiobj, int cbBuffer, out BITMAP lpvObject);
+
+        [DllImport("gdi32.dll")]
+        private static extern int GetDIBits(IntPtr hdc, IntPtr hbm, uint start, uint cLines, [Out] byte[] lpvBits, ref BITMAPINFOHEADER lpbmi, uint usage);
+
+        [DllImport("gdi32.dll")]
+        private static extern int SetDIBits(IntPtr hdc, IntPtr hbm, uint start, uint cLines, byte[] lpBits, ref BITMAPINFOHEADER lpbmi, uint colorUse);
+
+        [DllImport("gdi32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool DeleteObject(IntPtr hObject);
 
         #endregion
     }

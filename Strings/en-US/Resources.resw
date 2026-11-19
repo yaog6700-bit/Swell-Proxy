@@ -2651,4 +2651,49 @@ Download the latest Shoes binary online now?
   <data name="Conn_QuickRuleAppliedFmt" xml:space="preserve">
     <value>Quick rule applied: {0} → {1}</value>
   </data>
+  <data name="AddRule_RunningAppsLabel" xml:space="preserve">
+    <value>Running apps (click to add)</value>
+  </data>
+  <data name="AddRule_RunningAppsLoading" xml:space="preserve">
+    <value>Listing running apps…</value>
+  </data>
+  <data name="AddRule_RunningAppsEmpty" xml:space="preserve">
+    <value>No running desktop apps detected. You can still type a process name or browse for an exe.</value>
+  </data>
+  <data name="AddRule_RunningAppsNoMatchFmt" xml:space="preserve">
+    <value>No running app matches "{0}"; you can still add it manually.</value>
+  </data>
+  <data name="Servers_SubExcludedCountFmt" xml:space="preserve">
+    <value>{0} hidden node(s)</value>
+  </data>
+  <data name="Servers_SubRestoreExcludedBtn" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="Dashboard_ProxyTamperedTitle" xml:space="preserve">
+    <value>System proxy modified by another app</value>
+  </data>
+  <data name="Dashboard_ProxyDisabledMsg" xml:space="preserve">
+    <value>Windows system proxy was turned off externally. Browser traffic may bypass the proxy.</value>
+  </data>
+  <data name="Dashboard_ProxyChangedMsgFmt" xml:space="preserve">
+    <value>Windows system proxy was changed externally to {0} (expected {1}).</value>
+  </data>
+  <data name="Dashboard_ProxyRetakeBtn" xml:space="preserve">
+    <value>Retake Proxy</value>
+  </data>
+  <data name="Dashboard_ProxyRetakenTitle" xml:space="preserve">
+    <value>System proxy restored</value>
+  </data>
+  <data name="Dashboard_ProxyRetakenMsgFmt" xml:space="preserve">
+    <value>Windows system proxy is pointing to {0} again.</value>
+  </data>
+  <data name="MainWindow_UpdateReadyTitleFmt" xml:space="preserve">
+    <value>Update {0} is ready</value>
+  </data>
+  <data name="MainWindow_UpdateReadyMsg" xml:space="preserve">
+    <value>Downloaded and verified in the background. Restart whenever convenient to finish updating.</value>
+  </data>
+  <data name="Settings_AppDownloadingBtnFmt" xml:space="preserve">
+    <value>Downloading {0}%…</value>
+  </data>
 </root>

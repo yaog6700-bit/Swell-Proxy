@@ -460,5 +460,28 @@ namespace AnywhereWinUI.Helpers
         public static string Settings_InvalidShoesTitle     => Loc.GetString("Settings_InvalidShoesTitle");
         public static string Settings_InvalidShoesFmt       => Loc.GetString("Settings_InvalidShoesFmt");
         public static string Settings_ShoesReplaceOkFmt     => Loc.GetString("Settings_ShoesReplaceOkFmt");
+
+        // ── Feature 1: Running App Picker in Custom Rule Dialog ────────────────
+        public static string AddRule_RunningAppsLabel       => Loc.GetString("AddRule_RunningAppsLabel");
+        public static string AddRule_RunningAppsLoading     => Loc.GetString("AddRule_RunningAppsLoading");
+        public static string AddRule_RunningAppsEmpty       => Loc.GetString("AddRule_RunningAppsEmpty");
+        public static string AddRule_RunningAppsNoMatchFmt  => Loc.GetString("AddRule_RunningAppsNoMatchFmt");
+
+        // ── Feature 2: Subscription Excluded Nodes Memory ──────────────────────
+        public static string Servers_SubExcludedCountFmt    => Loc.GetString("Servers_SubExcludedCountFmt");
+        public static string Servers_SubRestoreExcludedBtn  => Loc.GetString("Servers_SubRestoreExcludedBtn");
+
+        // ── Feature 3: System Proxy Tamper Detection ───────────────────────────
+        public static string Dashboard_ProxyTamperedTitle   => Loc.GetString("Dashboard_ProxyTamperedTitle");
+        public static string Dashboard_ProxyDisabledMsg     => Loc.GetString("Dashboard_ProxyDisabledMsg");
+        public static string Dashboard_ProxyChangedMsgFmt   => Loc.GetString("Dashboard_ProxyChangedMsgFmt");
+        public static string Dashboard_ProxyRetakeBtn       => Loc.GetString("Dashboard_ProxyRetakeBtn");
+        public static string Dashboard_ProxyRetakenTitle    => Loc.GetString("Dashboard_ProxyRetakenTitle");
+        public static string Dashboard_ProxyRetakenMsgFmt   => Loc.GetString("Dashboard_ProxyRetakenMsgFmt");
+
+        // ── Feature B: Background App Update Ready Banner ──────────────────────
+        public static string MainWindow_UpdateReadyTitleFmt => Loc.GetString("MainWindow_UpdateReadyTitleFmt");
+        public static string MainWindow_UpdateReadyMsg      => Loc.GetString("MainWindow_UpdateReadyMsg");
+        public static string Settings_AppDownloadingBtnFmt  => Loc.GetString("Settings_AppDownloadingBtnFmt");
     }
 }

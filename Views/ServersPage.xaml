@@ -759,10 +759,29 @@
                                         <!-- Sub URL -->
                                         <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Bind Url, Mode=OneWay}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
 
-                                        <!-- Last Updated -->
-                                        <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Spacing="4" Margin="0,6,0,0">
-                                            <TextBlock x:Uid="Servers_SubLastSync" Text="上次同步:" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            <TextBlock Text="{x:Bind LastUpdated, Mode=OneWay}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <!-- Last Updated + Excluded Nodes Badge -->
+                                        <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                <TextBlock x:Uid="Servers_SubLastSync" Text="上次同步:" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                <TextBlock Text="{x:Bind LastUpdated, Mode=OneWay}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal"
+                                                        Spacing="4"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{x:Bind HasExcludedNodes, Mode=OneWay}">
+                                                <TextBlock Text="·" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{x:Bind views:ServersPage.FormatExcludedSummary(ExcludedNodeCount), Mode=OneWay}"
+                                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           VerticalAlignment="Center"/>
+                                                <HyperlinkButton Content="{x:Bind views:ServersPage.RestoreExcludedButtonText}"
+                                                                 Click="RestoreSubExcluded_Click"
+                                                                 Padding="4,0"
+                                                                 MinWidth="0"
+                                                                 MinHeight="0"
+                                                                 FontSize="12"
+                                                                 VerticalAlignment="Center"/>
+                                            </StackPanel>
                                         </StackPanel>
 
                                         <!-- Actions -->

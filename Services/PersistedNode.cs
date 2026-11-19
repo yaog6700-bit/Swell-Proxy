@@ -74,6 +74,18 @@ namespace AnywhereWinUI.Services
         public string Name { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
         public string LastUpdated { get; set; } = "从不";
+
+        /// <summary>
+        /// Node names manually deleted by the user from this subscription.
+        /// Future subscription refreshes automatically filter these out until restored.
+        /// </summary>
+        public List<string> ExcludedNodeNames { get; set; } = new();
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int ExcludedNodeCount => ExcludedNodeNames?.Count ?? 0;
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool HasExcludedNodes => ExcludedNodeCount > 0;
     }
 
     public class NodesConfig

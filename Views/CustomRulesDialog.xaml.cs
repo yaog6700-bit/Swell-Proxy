@@ -548,6 +548,10 @@ namespace AnywhereWinUI.Views
 
         // ─── Form: Type change ───────────────────────────────────────────
 
+        private List<LocalProcessResolver.RunningAppChoice> _runningApps = new();
+        private bool _runningAppsLoaded;
+        private bool _runningAppsLoading;
+
         private void FormTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (FormTypeComboBox.SelectedItem is not ComboBoxItem item) return;
@@ -563,25 +567,218 @@ namespace AnywhereWinUI.Views
             {
                 case "domain":
                     FormBrowsePanel.Visibility       = Visibility.Collapsed;
+                    if (FormRunningAppsPanel != null) FormRunningAppsPanel.Visibility = Visibility.Collapsed;
                     FormMatchTextBox.PlaceholderText = L.CustomRules_PhDomain;
                     FormHintText.Text                = L.CustomRules_HintDomain;
                     break;
                 case "ip":
                     FormBrowsePanel.Visibility       = Visibility.Collapsed;
+                    if (FormRunningAppsPanel != null) FormRunningAppsPanel.Visibility = Visibility.Collapsed;
                     FormMatchTextBox.PlaceholderText = L.CustomRules_PhIp;
                     FormHintText.Text                = L.CustomRules_HintIp;
                     break;
                 case "process":
                     FormBrowsePanel.Visibility       = Visibility.Visible;
+                    if (FormRunningAppsPanel != null)
+                    {
+                        FormRunningAppsPanel.Visibility = Visibility.Visible;
+                        if (FormRunningAppsHeaderText != null)
+                            FormRunningAppsHeaderText.Text = L.AddRule_RunningAppsLabel;
+                        _ = LoadFormRunningAppsAsync(forceRefresh: false);
+                    }
                     FormMatchTextBox.PlaceholderText = L.CustomRules_PhProcess;
                     FormHintText.Text                = L.CustomRules_HintProcess;
                     break;
                 case "mixed":
                     FormBrowsePanel.Visibility       = Visibility.Collapsed;
+                    if (FormRunningAppsPanel != null) FormRunningAppsPanel.Visibility = Visibility.Collapsed;
                     FormMatchTextBox.PlaceholderText = "domain_suffix:youtube.com, geosite:youtube, ip_cidr:1.1.1.1/32";
                     FormHintText.Text                = L.CustomRules_HintMixed;
                     break;
             }
+        }
+
+        private void FormMatchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string type = (FormTypeComboBox?.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "domain";
+            if (type == "process" && _runningAppsLoaded)
+            {
+                RenderFormRunningAppsList();
+            }
+        }
+
+        private void FormRefreshRunningAppsButton_Click(object sender, RoutedEventArgs e)
+        {
+            _ = LoadFormRunningAppsAsync(forceRefresh: true);
+        }
+
+        private async Task LoadFormRunningAppsAsync(bool forceRefresh)
+        {
+            if (_runningAppsLoading || (_runningAppsLoaded && !forceRefresh))
+            {
+                if (_runningAppsLoaded) RenderFormRunningAppsList();
+                return;
+            }
+
+            _runningAppsLoading = true;
+            if (FormRunningAppsStatusText != null)
+            {
+                FormRunningAppsStatusText.Text = L.AddRule_RunningAppsLoading;
+                FormRunningAppsStatusText.Visibility = Visibility.Visible;
+            }
+            if (FormRunningAppsBorder != null)
+            {
+                FormRunningAppsBorder.Visibility = Visibility.Collapsed;
+            }
+
+            try
+            {
+                _runningApps = await Task.Run(() => LocalProcessResolver.GetRunningUserApps());
+                _runningAppsLoaded = true;
+            }
+            catch
+            {
+                _runningApps = new List<LocalProcessResolver.RunningAppChoice>();
+                _runningAppsLoaded = true;
+            }
+            finally
+            {
+                _runningAppsLoading = false;
+            }
+
+            string type = (FormTypeComboBox?.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "domain";
+            if (type == "process")
+            {
+                RenderFormRunningAppsList();
+            }
+        }
+
+        private void RenderFormRunningAppsList()
+        {
+            if (FormRunningAppsListPanel == null || FormRunningAppsBorder == null || FormRunningAppsStatusText == null)
+                return;
+
+            FormRunningAppsListPanel.Children.Clear();
+
+            if (_runningApps.Count == 0)
+            {
+                FormRunningAppsStatusText.Text = L.AddRule_RunningAppsEmpty;
+                FormRunningAppsStatusText.Visibility = Visibility.Visible;
+                FormRunningAppsBorder.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            string raw = FormMatchTextBox?.Text ?? string.Empty;
+            int lastComma = raw.LastIndexOf(',');
+            string filter = (lastComma >= 0 ? raw[(lastComma + 1)..] : raw).Trim();
+
+            var matched = string.IsNullOrEmpty(filter)
+                ? _runningApps
+                : _runningApps.Where(a =>
+                    a.ProcessName.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                    a.DisplayName.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (!string.IsNullOrEmpty(filter) &&
+                _runningApps.Any(a => string.Equals(a.ProcessName, filter, StringComparison.OrdinalIgnoreCase) ||
+                                      string.Equals(a.ExecutablePath, filter, StringComparison.OrdinalIgnoreCase)))
+            {
+                matched = _runningApps;
+            }
+
+            if (matched.Count == 0)
+            {
+                FormRunningAppsStatusText.Text = string.Format(L.AddRule_RunningAppsNoMatchFmt, filter);
+                FormRunningAppsStatusText.Visibility = Visibility.Visible;
+                FormRunningAppsBorder.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            FormRunningAppsStatusText.Visibility = Visibility.Collapsed;
+            FormRunningAppsBorder.Visibility = Visibility.Visible;
+
+            foreach (var app in matched)
+            {
+                var rowGrid = new Grid { ColumnSpacing = 8 };
+                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var titleBlock = new TextBlock
+                {
+                    Text = app.DisplayName,
+                    FontSize = 12,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                Grid.SetColumn(titleBlock, 0);
+
+                var procBlock = new TextBlock
+                {
+                    Text = app.ProcessName,
+                    FontSize = 11,
+                    Opacity = 0.65,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                Grid.SetColumn(procBlock, 1);
+
+                rowGrid.Children.Add(titleBlock);
+                rowGrid.Children.Add(procBlock);
+
+                var btn = new Button
+                {
+                    Content = rowGrid,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                    Padding = new Thickness(8, 5, 8, 5),
+                    Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                    BorderThickness = new Thickness(0),
+                    CornerRadius = new CornerRadius(4),
+                    Tag = app
+                };
+                ToolTipService.SetToolTip(btn, app.ExecutablePath);
+                btn.Click += FormRunningAppItem_Click;
+
+                FormRunningAppsListPanel.Children.Add(btn);
+            }
+        }
+
+        private void FormRunningAppItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn || btn.Tag is not LocalProcessResolver.RunningAppChoice app)
+                return;
+
+            bool useFullPath = (FormBrowseFormatComboBox.SelectedItem as ComboBoxItem)
+                               ?.Tag?.ToString() == "path";
+            string value = useFullPath ? app.ExecutablePath : app.ProcessName;
+            string current = FormMatchTextBox.Text ?? string.Empty;
+
+            var parts = current
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .Where(p => !string.IsNullOrEmpty(p))
+                .ToList();
+
+            if (parts.Count > 0 && !current.TrimEnd().EndsWith(','))
+            {
+                string last = parts[^1];
+                bool isAlreadyExact = _runningApps.Any(a =>
+                    string.Equals(a.ProcessName, last, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(a.ExecutablePath, last, StringComparison.OrdinalIgnoreCase));
+
+                if (!isAlreadyExact &&
+                    (app.ProcessName.Contains(last, StringComparison.OrdinalIgnoreCase) ||
+                     app.DisplayName.Contains(last, StringComparison.OrdinalIgnoreCase)))
+                {
+                    parts.RemoveAt(parts.Count - 1);
+                }
+            }
+
+            if (!parts.Any(p => string.Equals(p, value, StringComparison.OrdinalIgnoreCase)))
+            {
+                parts.Add(value);
+            }
+
+            FormMatchTextBox.Text = string.Join(", ", parts);
+            FormMatchTextBox.SelectionStart = FormMatchTextBox.Text.Length;
         }
 
         // ─── Form: Browse exe ────────────────────────────────────────────

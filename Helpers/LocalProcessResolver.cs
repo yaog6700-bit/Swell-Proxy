@@ -352,6 +352,199 @@ namespace AnywhereWinUI.Helpers
         [DllImport("kernel32.dll", ExactSpelling = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool CloseHandle(IntPtr hObject);
+
+        private const uint TH32CS_SNAPPROCESS = 0x00000002;
+        private static readonly IntPtr INVALID_HANDLE_VALUE = new(-1);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct PROCESSENTRY32W
+        {
+            public uint dwSize;
+            public uint cntUsage;
+            public uint th32ProcessID;
+            public IntPtr th32DefaultHeapID;
+            public uint th32ModuleID;
+            public uint cntThreads;
+            public uint th32ParentProcessID;
+            public int pcPriClassBase;
+            public uint dwFlags;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            public string szExeFile;
+        }
+
+        [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
+        private static extern IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
+
+        [DllImport("kernel32.dll", ExactSpelling = true, CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool Process32FirstW(IntPtr hSnapshot, ref PROCESSENTRY32W lppe);
+
+        [DllImport("kernel32.dll", ExactSpelling = true, CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool Process32NextW(IntPtr hSnapshot, ref PROCESSENTRY32W lppe);
+
+        [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool ProcessIdToSessionId(uint dwProcessId, out uint pSessionId);
+
+        public sealed class RunningAppChoice
+        {
+            public string ProcessName { get; init; } = string.Empty;
+            public string ExecutablePath { get; init; } = string.Empty;
+            public string DisplayName { get; init; } = string.Empty;
+            public int ActiveConnections { get; init; }
+        }
+
+        private static readonly HashSet<string> _ignoredPickerProcesses = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Swell Proxy.exe",
+            "sing-box.exe",
+            "shoes.exe",
+            "conhost.exe",
+            "RuntimeBroker.exe",
+            "backgroundTaskHost.exe",
+            "dllhost.exe",
+            "sihost.exe",
+            "ctfmon.exe",
+            "SearchHost.exe",
+            "StartMenuExperienceHost.exe",
+            "ShellExperienceHost.exe",
+            "TextInputHost.exe",
+            "LockApp.exe",
+            "WidgetService.exe",
+            "Widgets.exe",
+            "ApplicationFrameHost.exe"
+        };
+
+        /// <summary>
+        /// Enumerates non-system desktop applications currently running in the active Windows logon session,
+        /// inspired by bowel's internal/procinfo/running_windows.go.
+        /// </summary>
+        public static List<RunningAppChoice> GetRunningUserApps(IReadOnlyDictionary<string, int>? activeConnCounts = null)
+        {
+            var results = new Dictionary<string, RunningAppChoice>(StringComparer.OrdinalIgnoreCase);
+
+            if (!ProcessIdToSessionId(_currentPid, out uint ownSession))
+                return new List<RunningAppChoice>();
+
+            string sysDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            string sysPrefix = string.IsNullOrEmpty(sysDir)
+                ? @"c:\windows\"
+                : sysDir.TrimEnd('\\').ToLowerInvariant() + "\\";
+
+            IntPtr snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+            if (snap == IntPtr.Zero || snap == INVALID_HANDLE_VALUE)
+                return new List<RunningAppChoice>();
+
+            try
+            {
+                var entry = new PROCESSENTRY32W { dwSize = (uint)Marshal.SizeOf<PROCESSENTRY32W>() };
+                if (Process32FirstW(snap, ref entry))
+                {
+                    do
+                    {
+                        uint pid = entry.th32ProcessID;
+                        if (pid <= 4 || pid == _currentPid)
+                            continue;
+
+                        if (!ProcessIdToSessionId(pid, out uint procSession) || procSession != ownSession)
+                            continue;
+
+                        string fullPath = QueryProcessFullPath(pid);
+                        if (string.IsNullOrEmpty(fullPath))
+                            continue;
+
+                        if (fullPath.StartsWith(sysPrefix, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        string procName = ExtractShortProcessName(fullPath);
+                        if (string.IsNullOrEmpty(procName) || _ignoredPickerProcesses.Contains(procName))
+                            continue;
+
+                        if (results.ContainsKey(procName))
+                            continue;
+
+                        int connCount = 0;
+                        if (activeConnCounts != null)
+                        {
+                            activeConnCounts.TryGetValue(procName, out connCount);
+                        }
+
+                        string displayName = ResolveFriendlyAppName(fullPath, procName);
+                        results[procName] = new RunningAppChoice
+                        {
+                            ProcessName = procName,
+                            ExecutablePath = fullPath,
+                            DisplayName = displayName,
+                            ActiveConnections = connCount
+                        };
+                    }
+                    while (Process32NextW(snap, ref entry));
+                }
+            }
+            catch
+            {
+                // Best-effort enumeration
+            }
+            finally
+            {
+                CloseHandle(snap);
+            }
+
+            var list = new List<RunningAppChoice>(results.Values);
+            list.Sort((a, b) =>
+            {
+                int cmp = b.ActiveConnections.CompareTo(a.ActiveConnections);
+                if (cmp != 0) return cmp;
+                return string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase);
+            });
+            return list;
+        }
+
+        private static unsafe string QueryProcessFullPath(uint pid)
+        {
+            IntPtr hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+            if (hProcess == IntPtr.Zero)
+                return string.Empty;
+
+            try
+            {
+                char* buffer = stackalloc char[512];
+                uint capacity = 512;
+                if (QueryFullProcessImageNameW(hProcess, 0, buffer, ref capacity) && capacity > 0)
+                {
+                    return new string(buffer, 0, (int)capacity);
+                }
+            }
+            catch
+            {
+            }
+            finally
+            {
+                CloseHandle(hProcess);
+            }
+
+            return string.Empty;
+        }
+
+        private static string ResolveFriendlyAppName(string fullPath, string fallbackProcessName)
+        {
+            try
+            {
+                var info = System.Diagnostics.FileVersionInfo.GetVersionInfo(fullPath);
+                string? candidate = !string.IsNullOrWhiteSpace(info.FileDescription)
+                    ? info.FileDescription.Trim()
+                    : info.ProductName?.Trim();
+
+                if (!string.IsNullOrWhiteSpace(candidate) && candidate.Length <= 48)
+                    return candidate;
+            }
+            catch
+            {
+            }
+
+            return Path.GetFileNameWithoutExtension(fallbackProcessName);
+        }
     }
 }
 

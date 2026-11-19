@@ -2587,6 +2587,28 @@ namespace AnywhereWinUI.Views
             CancelEdit_Click(sender, e);
         }
 
+        public static string FormatExcludedSummary(int count)
+            => count > 0 ? string.Format(L.Servers_SubExcludedCountFmt, count) : string.Empty;
+
+        public static string RestoreExcludedButtonText
+            => L.Servers_SubRestoreExcludedBtn;
+
+        private async void RestoreSubExcluded_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is PersistedSubscription sub)
+            {
+                if (fe is Control ctrl) ctrl.IsEnabled = false;
+                try
+                {
+                    await ViewModel.RestoreExcludedNodesCommand.ExecuteAsync(sub);
+                }
+                finally
+                {
+                    if (fe is Control ctrl2) ctrl2.IsEnabled = true;
+                }
+            }
+        }
+
         private async void UpdateSub_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.DataContext is PersistedSubscription sub)
