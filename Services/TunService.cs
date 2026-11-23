@@ -56,16 +56,29 @@ namespace AnywhereWinUI.Services
         {
             try
             {
-                IPAddress? outboundAddr;
-                using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+                IPAddress? outboundAddr = null;
+                try
                 {
+                    using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                     socket.Connect("223.5.5.5", 53);
                     outboundAddr = (socket.LocalEndPoint as IPEndPoint)?.Address;
                 }
+                catch { }
 
-                if (outboundAddr == null)
+                if (outboundAddr == null || outboundAddr.Equals(IPAddress.Any))
                 {
-                    Debug.WriteLine("[TunService] 无法获取默认出站 IPv4 地址");
+                    try
+                    {
+                        using var v6Socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
+                        v6Socket.Connect("2400:3200::1", 53);
+                        outboundAddr = (v6Socket.LocalEndPoint as IPEndPoint)?.Address;
+                    }
+                    catch { }
+                }
+
+                if (outboundAddr == null || outboundAddr.Equals(IPAddress.Any) || outboundAddr.Equals(IPAddress.IPv6Any))
+                {
+                    Debug.WriteLine("[TunService] 无法获取默认出站地址");
                     return null;
                 }
 
@@ -84,7 +97,7 @@ namespace AnywhereWinUI.Services
 
                     foreach (var ua in nic.GetIPProperties().UnicastAddresses)
                     {
-                        if (ua.Address.AddressFamily == AddressFamily.InterNetwork &&
+                        if (ua.Address.AddressFamily == outboundAddr.AddressFamily &&
                             ua.Address.Equals(outboundAddr))
                         {
                             // Prefer real physical NIC, but allow Hyper-V External Virtual Switch if it owns the host's primary IP

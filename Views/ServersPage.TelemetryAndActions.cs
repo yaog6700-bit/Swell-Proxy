@@ -91,35 +91,45 @@ namespace AnywhereWinUI.Views
                     return;
                 }
 
-                // Feature N2: Prefer true end-to-end HTTP 204 URL-Test on the active "proxy" selector
+                // Feature N2: Allow fresh TUN interface routes to settle on cold start, then probe URL-Test;
+                // if URL-Test is unavailable or times out (e.g. domestic IPv6 relay / blocked gstatic), seamlessly
+                // fall back to direct entry-node probe so an active working node never falsely reports Timeout!
                 int? trueDelay = null;
                 if (CoreManager.Instance.IsRunning &&
                     string.Equals(AppSession.Instance.ActiveCoreEngine, ShoesConfigBuilder.EngineSingBox, StringComparison.OrdinalIgnoreCase) &&
                     !AppSession.Instance.IsActiveNodeCustom)
                 {
-                    trueDelay = await SingboxApiClient.Instance.ProbeOutboundDelayAsync("proxy", 3500);
+                    if ((DateTime.Now - _sessionStartTime).TotalMilliseconds < 1200)
+                    {
+                        await Task.Delay(400);
+                    }
+                    trueDelay = await SingboxApiClient.Instance.ProbeOutboundDelayAsync("proxy", 4000);
                 }
 
                 LatencyProbeResult result;
-                if (trueDelay.HasValue)
+                if (trueDelay is > 0)
                 {
-                    result = trueDelay.Value > 0
-                        ? new LatencyProbeResult { Status = LatencyProbeStatus.Success, Milliseconds = trueDelay.Value }
-                        : new LatencyProbeResult { Status = LatencyProbeStatus.Timeout };
+                    result = new LatencyProbeResult { Status = LatencyProbeStatus.Success, Milliseconds = trueDelay.Value };
                 }
                 else
                 {
-                    if (node == null) return;
-                    if (!NodeLinkParser.TrySplitHostPort(node.Host, out string host, out int port) || string.IsNullOrWhiteSpace(host))
+                    if (node == null)
                     {
-                        host = node.Host;
-                        port = 443;
+                        result = new LatencyProbeResult { Status = LatencyProbeStatus.Timeout };
                     }
-                    if (port <= 0) port = 443;
+                    else
+                    {
+                        if (!NodeLinkParser.TrySplitHostPort(node.Host, out string host, out int port) || string.IsNullOrWhiteSpace(host))
+                        {
+                            host = node.Host;
+                            port = 443;
+                        }
+                        if (port <= 0) port = 443;
 
-                    result = await _latencyProbeService.ProbeAsync(
-                        node.Protocol, host, port,
-                        TimeSpan.FromSeconds(5));
+                        result = await _latencyProbeService.ProbeAsync(
+                            node.Protocol, host, port,
+                            TimeSpan.FromSeconds(5));
+                    }
                 }
 
                 DispatcherQueue.TryEnqueue(() =>

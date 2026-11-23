@@ -412,14 +412,13 @@ namespace AnywhereWinUI.ViewModels
             }
 
             LatencyProbeResult result;
-            if (trueUrlTestDelay.HasValue)
+            if (trueUrlTestDelay is > 0)
             {
-                result = trueUrlTestDelay.Value > 0
-                    ? new LatencyProbeResult { Status = LatencyProbeStatus.Success, Milliseconds = trueUrlTestDelay.Value }
-                    : new LatencyProbeResult { Status = LatencyProbeStatus.Timeout };
+                result = new LatencyProbeResult { Status = LatencyProbeStatus.Success, Milliseconds = trueUrlTestDelay.Value };
             }
             else
             {
+                // Seamless fallback to direct TCP/ICMP entry-server probe (crucial for domestic IPv6 relays & non-gstatic exits)
                 result = await _latencyProbeService.ProbeAsync(item.Protocol, item.Host, item.Port, TimeSpan.FromSeconds(3));
             }
 

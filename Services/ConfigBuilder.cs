@@ -103,14 +103,16 @@ namespace AnywhereWinUI.Services
             var enableTun = session.EnableTunMode;
             var intranet = Helpers.WindowsIntranetDetector.Detect();
 
-            // TUN 模式下探测物理出站网卡；若检测到外部企业 VPN / Tailscale 隧道共存，则交由 auto_detect_interface 按系统路由表分流，避免内网直连黑洞
+            // TUN 模式下始终探测真实物理出站网卡（同时为 IPv4 IP_UNICAST_IF 与 IPv6 IPV6_UNICAST_IF 绑定真实网卡，彻底杜绝 TUN 回环）
             string? outboundInterface = null;
-            if (enableTun && !session.EnableTailscale && intranet.DirectIpCidrs.Count == 0)
+            if (enableTun && !session.EnableTailscale)
             {
                 var tunSvc = new TunService();
                 outboundInterface = tunSvc.DetectDefaultOutboundInterfaceName();
                 System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] TUN 出站网卡: {outboundInterface ?? "(未探测到)"}");
             }
+
+            bool hasIntranetTunnelRoutes = intranet.DirectDomainSuffixes.Count > 0 || intranet.DirectIpCidrs.Count > 0;
 
             // 检测本地 sing-box 内核版本，用于按版本生成不同的配置节（兼容 1.13 / 1.14 / 1.15+）
             var coreVersionStr = CoreUpdateService.GetLocalSingboxVersionText();
@@ -129,6 +131,7 @@ namespace AnywhereWinUI.Services
                 allowNowhereProtocol,
                 enableTun,
                 outboundInterface,
+                hasIntranetTunnelRoutes,
                 isSingbox114OrAbove,
                 out var wireGuardEndpoints,
                 out var validOutboundTags,
@@ -145,7 +148,7 @@ namespace AnywhereWinUI.Services
                     ["timestamp"] = true
                 },
                 ["dns"] = BuildDns(bypassChina, blockIPv6, routingMode, intranet, enableTun),
-                ["inbounds"] = await BuildInboundsAsync(enableTun, selectedNode, nodesSnapshot, actions, isSingbox115OrAbove),
+                ["inbounds"] = await BuildInboundsAsync(enableTun, nodesSnapshot, isSingbox115OrAbove),
                 ["outbounds"] = outbounds,
                 ["route"] = BuildRoute(routingMode, bypassChina, blockAds, intranet, validOutboundTags, enableTun, outboundInterface, isSingbox114OrAbove),
                 ["experimental"] = new JsonObject
@@ -156,9 +159,9 @@ namespace AnywhereWinUI.Services
                         ["path"] = System.IO.Path.Combine(
                             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                             "SwellProxy",
-                            "cache.db"),
+                            "swell_cache_v2.db"),
                         ["store_fakeip"] = session.EnableFakeDns,
-                        ["store_rdrc"] = true
+                        ["store_rdrc"] = false
                     },
                     ["clash_api"] = new JsonObject
                     {
@@ -460,9 +463,7 @@ namespace AnywhereWinUI.Services
 
         private static async System.Threading.Tasks.Task<JsonArray> BuildInboundsAsync(
             bool enableTun,
-            PersistedNode? selectedNode,
             List<PersistedNode> nodesSnapshot,
-            List<string> appActions,
             bool isSingbox115OrAbove = false)
         {
             var list = new JsonArray();
@@ -477,7 +478,7 @@ namespace AnywhereWinUI.Services
                     ["address"]        = new JsonArray { (JsonNode)"172.18.0.1/30", (JsonNode)"fdfe:dcba:9876::1/126" },
                     ["auto_route"]     = true,
                     ["strict_route"]   = false,
-                    ["mtu"]            = 1500
+                    ["mtu"]            = 9000
                 };
 
                 if (!isSingbox115OrAbove)
@@ -505,67 +506,17 @@ namespace AnywhereWinUI.Services
                 excludeAddresses.Add((JsonNode)"114.114.114.114/32");
                 excludeAddresses.Add((JsonNode)"8.8.8.8/32");
                 excludeAddresses.Add((JsonNode)"1.1.1.1/32");
+                excludeAddresses.Add((JsonNode)"2400:3200::1/128");
 
-                // Always resolve selectedNode, its chain, and explicitly referenced rule nodes FIRST,
-                // plus a bounded slice of favorite/initial candidate nodes so TUN startup stays < 200ms!
-                var candidateNodes = new List<PersistedNode>();
-                bool hasUrlTest = AppSession.Instance.IsAutoNodeSelect;
-                var referencedIds = new HashSet<string>(StringComparer.Ordinal);
-                foreach (var act in appActions)
-                {
-                    if (act == "urltest") hasUrlTest = true;
-                    else if (act.StartsWith("node:", StringComparison.Ordinal)) referencedIds.Add(act.Substring(5));
-                    else if (act != "proxy" && act != "direct" && act != "block" && act != "reject") referencedIds.Add(act);
-                }
-
-                if (selectedNode != null)
-                {
-                    candidateNodes.Add(selectedNode);
-                    if (!string.IsNullOrEmpty(selectedNode.ProxyChainId))
-                    {
-                        var chain = nodesSnapshot.Find(n => n.Id == selectedNode.ProxyChainId);
-                        if (chain != null) candidateNodes.Add(chain);
-                    }
-                }
-
-                foreach (var refId in referencedIds)
-                {
-                    var extra = nodesSnapshot.Find(n => n.Id == refId);
-                    if (extra != null)
-                    {
-                        candidateNodes.Add(extra);
-                        if (!string.IsNullOrEmpty(extra.ProxyChainId))
-                        {
-                            var chain = nodesSnapshot.Find(n => n.Id == extra.ProxyChainId);
-                            if (chain != null) candidateNodes.Add(chain);
-                        }
-                    }
-                }
-
-                int preResolveBudget = hasUrlTest ? 32 : 16;
-                int addedPreResolve = 0;
-                foreach (var n in nodesSnapshot)
-                {
-                    if (addedPreResolve >= preResolveBudget) break;
-                    if (!n.IsFavorite || CustomConfigService.IsCustomNode(n) || IsInformationalPseudoNode(n)) continue;
-                    candidateNodes.Add(n);
-                    addedPreResolve++;
-                }
-                foreach (var n in nodesSnapshot)
-                {
-                    if (addedPreResolve >= preResolveBudget) break;
-                    if (n.IsFavorite || CustomConfigService.IsCustomNode(n) || IsInformationalPseudoNode(n)) continue;
-                    candidateNodes.Add(n);
-                    addedPreResolve++;
-                }
-
+                // Exclude ALL valid IPv4/IPv6 proxy server addresses so neither startup nor hot-switching ever loops into TUN
                 var resolvedCidrs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var uniqueDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var excludeLock = new object();
 
-                foreach (var node in candidateNodes)
+                foreach (var node in nodesSnapshot)
                 {
-                    if (string.IsNullOrWhiteSpace(node.Host) || CustomConfigService.IsCustomNode(node)) continue;
+                    if (string.IsNullOrWhiteSpace(node.Host) || CustomConfigService.IsCustomNode(node) || IsInformationalPseudoNode(node))
+                        continue;
                     var (nHost, _) = NodeLinkParser.SplitHostPort(node.Host);
                     var cleanNHost = CleanHost(nHost);
                     if (string.IsNullOrWhiteSpace(cleanNHost)) continue;
@@ -586,7 +537,7 @@ namespace AnywhereWinUI.Services
 
                 if (uniqueDomains.Count > 0)
                 {
-                    using var gate = new System.Threading.SemaphoreSlim(16, 16);
+                    using var gate = new System.Threading.SemaphoreSlim(32, 32);
                     using var overallCts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(1500));
                     var dnsTasks = new List<System.Threading.Tasks.Task>(uniqueDomains.Count);
 
@@ -724,6 +675,7 @@ namespace AnywhereWinUI.Services
             bool allowNowhereProtocol,
             bool enableTun,
             string? outboundInterface,
+            bool hasIntranetTunnelRoutes,
             bool isSingbox114OrAbove,
             out JsonArray wireGuardEndpoints,
             out HashSet<string> validOutboundTags,
@@ -739,6 +691,16 @@ namespace AnywhereWinUI.Services
             var urlTestNodeIds = new List<string>();
             validOutboundTags = addedTags;
             hotSwitchTags = selectorTagSet;
+
+            bool needsUrlTest = isAutoSelect;
+            foreach (var act in appActions)
+            {
+                if (act == "urltest")
+                {
+                    needsUrlTest = true;
+                    break;
+                }
+            }
 
             string primaryTag = !string.IsNullOrWhiteSpace(selectedNode.Id) ? selectedNode.Id : "selected-node";
 
@@ -824,8 +786,10 @@ namespace AnywhereWinUI.Services
                 }
             }
 
-            // 4. Build "urltest" outbound (idle_timeout keeps it at 0 background probes unless active!)
-            if (urlTestNodeIds.Count > 0)
+            // 4. ONLY build "urltest" outbound when explicitly needed (Auto Select mode or routing rule uses urltest)!
+            // NOTE: sing-box's URLTest.PostStart() unconditionally probes ALL child outbounds concurrently at t=0ms
+            // even when not selected, which otherwise floods DNS/NAT/TUN on startup in normal manual node mode!
+            if (needsUrlTest && urlTestNodeIds.Count > 0)
             {
                 var urlTestOutbounds = new JsonArray();
                 foreach (var id in urlTestNodeIds)
@@ -845,7 +809,7 @@ namespace AnywhereWinUI.Services
                 });
             }
 
-            // 5. Build top-level "proxy" selector outbound at index 0
+            // 5. Build top-level "proxy" selector outbound at index 0 (100% passive — zero background probes!)
             var selectorOutbounds = new JsonArray();
             if (addedTags.Contains("urltest"))
             {
@@ -877,6 +841,13 @@ namespace AnywhereWinUI.Services
             }
             addedTags.Add("direct");
             list.Add(directOutbound);
+
+            if (hasIntranetTunnelRoutes)
+            {
+                // Unbound direct outbound used ONLY for corporate VPN / intranet split-tunnel CIDRs & domains
+                addedTags.Add("intranet-direct");
+                list.Add(new JsonObject { ["type"] = "direct", ["tag"] = "intranet-direct" });
+            }
 
             return list;
         }
@@ -1576,6 +1547,7 @@ namespace AnywhereWinUI.Services
                 });
             }
 
+            string intranetTarget = validOutboundTags.Contains("intranet-direct") ? "intranet-direct" : "direct";
             if (intranet.DirectDomainSuffixes.Count > 0)
             {
                 var domArr = new JsonArray();
@@ -1583,7 +1555,7 @@ namespace AnywhereWinUI.Services
                 rules.Add(new JsonObject
                 {
                     ["domain_suffix"] = domArr,
-                    ["outbound"] = "direct"
+                    ["outbound"] = intranetTarget
                 });
             }
             if (intranet.DirectIpCidrs.Count > 0)
@@ -1593,7 +1565,7 @@ namespace AnywhereWinUI.Services
                 rules.Add(new JsonObject
                 {
                     ["ip_cidr"] = cidrArr,
-                    ["outbound"] = "direct"
+                    ["outbound"] = intranetTarget
                 });
             }
 
