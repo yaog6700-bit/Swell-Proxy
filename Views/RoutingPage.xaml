@@ -7,25 +7,92 @@
     mc:Ignorable="d"
     Background="Transparent">
 
-    <Grid Margin="24">
+    <Grid Margin="24" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,16" Spacing="4">
+        <StackPanel Grid.Row="0" Spacing="4">
             <TextBlock x:Uid="Routing_Title" Text="分流规则" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
             <TextBlock x:Uid="Routing_Subtitle" Text="配置智能分流拦截规则，支持应用规则、自定义规则与顺序匹配" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 
-        <Border Grid.Row="1"
-                Background="Transparent"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="12"
-                Padding="24"
-                MaxWidth="750"
-                HorizontalAlignment="Left">
+        <Grid Grid.Row="1"
+              MaxWidth="750"
+              HorizontalAlignment="Left"
+              RowSpacing="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Feature N5: Fluent 2 Routing Rule Hit Simulator Card (matches exact width of bottom card) -->
+            <Border Grid.Row="0"
+                    Background="Transparent"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="24,16"
+                    HorizontalAlignment="Stretch">
+                <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <FontIcon Glyph="&#xE945;"
+                                  FontSize="14"
+                                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                  VerticalAlignment="Center"/>
+                        <TextBlock x:Name="RouteSimHeaderText"
+                                   Grid.Column="1"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <TextBox x:Name="RouteSimInputBox"
+                             HorizontalAlignment="Stretch"
+                             TextChanged="RouteSimInputBox_TextChanged"/>
+
+                    <Border x:Name="RouteSimResultPanel"
+                            Visibility="Collapsed"
+                            CornerRadius="{ThemeResource ControlCornerRadius}"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            Padding="10,8"
+                            HorizontalAlignment="Stretch">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                            <Border x:Name="RouteSimOutboundBadge"
+                                    CornerRadius="4"
+                                    Padding="8,2"
+                                    VerticalAlignment="Center">
+                                <TextBlock x:Name="RouteSimOutboundText"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           FontWeight="SemiBold"/>
+                            </Border>
+
+                            <TextBlock x:Name="RouteSimMatchedRuleText"
+                                       Grid.Column="1"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"/>
+
+                            <TextBlock x:Name="RouteSimDnsText"
+                                       Grid.Column="2"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Background="Transparent"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="24"
+                    HorizontalAlignment="Stretch">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -72,8 +139,9 @@
                             <Setter Property="Margin" Value="0,0,0,8"/>
                         </Style>
                     </ListView.ItemContainerStyle>
-                </ListView>
-            </Grid>
-        </Border>
+                    </ListView>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Page>

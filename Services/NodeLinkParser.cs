@@ -73,7 +73,7 @@ namespace AnywhereWinUI.Services
                     Id = Guid.NewGuid().ToString("N"),
                     Name = name,
                     Protocol = "snell",
-                    Host = $"{host}:{port}"
+                    Host = FormatHostPort(host, port)
                 };
                 
                 for (int i = 3; i < tokens.Length; i++)
@@ -117,11 +117,12 @@ namespace AnywhereWinUI.Services
                     rest = rest.Substring(0, hashIdx);
                 }
 
-                // Reject SIP003 plugin links (xray has no SIP003 outbound)
+                // Reject SIP003 plugin links (no external SIP003 plugin support)
+                Dictionary<string, string>? ssQuery = null;
                 var queryIdx = rest.IndexOf('?');
                 if (queryIdx >= 0)
                 {
-                    var ssQuery = ParseQuery(rest.Substring(queryIdx));
+                    ssQuery = ParseQuery(rest.Substring(queryIdx));
                     if (ssQuery.ContainsKey("plugin"))
                         return null;
                     rest = rest.Substring(0, queryIdx);
@@ -135,25 +136,31 @@ namespace AnywhereWinUI.Services
                 {
                     var userinfoPart = rest.Substring(0, atIdx);
                     var hostPart     = rest.Substring(atIdx + 1);
+                    var unescaped    = Uri.UnescapeDataString(userinfoPart);
 
-                    var decoded = TryBase64Decode(userinfoPart);
-                    if (decoded != null && decoded.Contains(':'))
+                    int rawColonIdx = unescaped.IndexOf(':');
+                    if (rawColonIdx > 0 && IsPlausibleSsCipher(unescaped.AsSpan(0, rawColonIdx)))
                     {
-                        // Valid SIP002 Base64
-                        var colonIdx = decoded.IndexOf(':');
-                        method   = decoded.Substring(0, colonIdx);
-                        password = decoded.Substring(colonIdx + 1);
+                        // Raw SIP002: method:password@host:port (including SS-2022 method:base64key)
+                        method   = unescaped.Substring(0, rawColonIdx);
+                        password = unescaped.Substring(rawColonIdx + 1);
                         (host, port) = SplitHostPort(hostPart);
                     }
                     else
                     {
-                        // Raw SIP002: method:password@host:port
-                        var unescaped = Uri.UnescapeDataString(userinfoPart);
-                        if (unescaped.Contains(':'))
+                        var decoded = TryBase64Decode(unescaped) ?? TryBase64Decode(userinfoPart);
+                        if (decoded != null && decoded.Contains(':'))
                         {
-                            var colonIdx = unescaped.IndexOf(':');
-                            method   = unescaped.Substring(0, colonIdx);
-                            password = unescaped.Substring(colonIdx + 1);
+                            // Valid SIP002 Base64
+                            var colonIdx = decoded.IndexOf(':');
+                            method   = decoded.Substring(0, colonIdx);
+                            password = decoded.Substring(colonIdx + 1);
+                            (host, port) = SplitHostPort(hostPart);
+                        }
+                        else if (rawColonIdx > 0)
+                        {
+                            method   = unescaped.Substring(0, rawColonIdx);
+                            password = unescaped.Substring(rawColonIdx + 1);
                             (host, port) = SplitHostPort(hostPart);
                         }
                         else
@@ -165,7 +172,10 @@ namespace AnywhereWinUI.Services
                 else
                 {
                     // Legacy: entire string is BASE64(method:password@host:port)
-                    return ParseSsLegacy(rest, name);
+                    var legacyNode = ParseSsLegacy(rest, name);
+                    if (legacyNode != null && ssQuery != null)
+                        ApplyShadowTls(legacyNode, ssQuery);
+                    return legacyNode;
                 }
 
                 var entry = new PersistedNode
@@ -178,8 +188,8 @@ namespace AnywhereWinUI.Services
                     Network    = "tcp"
                 };
 
-                var query = ParseQuery(link.Contains('?') ? link.Substring(link.IndexOf('?')) : "");
-                ApplyShadowTls(entry, query);
+                if (ssQuery != null)
+                    ApplyShadowTls(entry, ssQuery);
                 return entry;
             }
             catch
@@ -223,7 +233,15 @@ namespace AnywhereWinUI.Services
             try
             {
                 var base64 = link.Substring("vmess://".Length);
-                var json   = TryBase64Decode(base64);
+                string fragmentName = string.Empty;
+                var hashIdx = base64.IndexOf('#');
+                if (hashIdx >= 0)
+                {
+                    fragmentName = Uri.UnescapeDataString(base64.Substring(hashIdx + 1));
+                    base64 = base64.Substring(0, hashIdx);
+                }
+
+                var json = TryBase64Decode(base64);
                 if (json == null) return null;
 
                 using var doc = JsonDocument.Parse(json);
@@ -244,10 +262,11 @@ namespace AnywhereWinUI.Services
 
                 var host = GetStr("add");
                 var port = GetInt("port");
+                var ps   = GetStr("ps");
 
                 return new PersistedNode
                 {
-                    Name        = GetStr("ps"),
+                    Name        = !string.IsNullOrEmpty(ps) ? ps : fragmentName,
                     Protocol    = "VMess",
                     Host        = FormatHostPort(host, port),
                     Uuid        = GetStr("id"),
@@ -277,9 +296,9 @@ namespace AnywhereWinUI.Services
             try
             {
                 var uri  = new Uri(link);
-                var uuid = uri.UserInfo;
+                var uuid = Uri.UnescapeDataString(uri.UserInfo);
                 var host = uri.Host;
-                var port = uri.Port;
+                var port = uri.Port > 0 ? uri.Port : 443;
                 var name = string.IsNullOrEmpty(uri.Fragment)
                     ? string.Empty
                     : Uri.UnescapeDataString(uri.Fragment.TrimStart('#'));
@@ -338,15 +357,16 @@ namespace AnywhereWinUI.Services
         {
             try
             {
-                // Normalize hy2:// -> hysteria2:// for Uri parsing
+                // Normalize hy2:// -> hysteria2:// and degrade port-hopping ranges (e.g. :443,20000-30000) for Uri parsing
                 var normalized = link.StartsWith("hy2://", StringComparison.OrdinalIgnoreCase)
                     ? "hysteria2://" + link.Substring(6)
                     : link;
+                normalized = NormalizePortHoppingAuthority(normalized, "hysteria2://");
 
                 var uri      = new Uri(normalized);
                 var password = Uri.UnescapeDataString(uri.UserInfo);
                 var host     = uri.Host;
-                var port     = uri.Port;
+                var port     = uri.Port > 0 ? uri.Port : 443;
                 var name     = string.IsNullOrEmpty(uri.Fragment)
                     ? string.Empty
                     : Uri.UnescapeDataString(uri.Fragment.TrimStart('#'));
@@ -409,6 +429,9 @@ namespace AnywhereWinUI.Services
 
                 var sni    = Q(query, "sni") ?? Q(query, "servername") ?? Q(query, "peer") ?? string.Empty;
                 var fp     = Q(query, "fp",  string.Empty) ?? string.Empty;
+                var pk     = Q(query, "pbk", string.Empty) ?? string.Empty;
+                var sid    = Q(query, "sid", string.Empty) ?? string.Empty;
+                var spx    = Q(query, "spx", string.Empty) ?? string.Empty;
                 var path   = Q(query, "path") ?? Q(query, "serviceName") ?? string.Empty;
                 var wsHost = Q(query, "host", string.Empty) ?? string.Empty;
                 var alpn   = Q(query, "alpn", string.Empty) ?? string.Empty;
@@ -425,6 +448,9 @@ namespace AnywhereWinUI.Services
                     Security      = security,
                     Sni           = sni,
                     Fingerprint   = fp,
+                    PublicKey     = pk,
+                    ShortId       = sid,
+                    SpiderX       = spx,
                     AllowInsecure = allowInsecure,
                     Path          = path,
                     WsHost        = wsHost,
@@ -747,16 +773,76 @@ namespace AnywhereWinUI.Services
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
+        private static bool IsPlausibleSsCipher(ReadOnlySpan<char> candidate)
+        {
+            if (candidate.Length < 2 || candidate.Length > 48)
+                return false;
+
+            foreach (char c in candidate)
+            {
+                bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-';
+                if (!ok) return false;
+            }
+            return true;
+        }
+
+        private static string NormalizePortHoppingAuthority(string link, string schemePrefix)
+        {
+            if (!link.StartsWith(schemePrefix, StringComparison.OrdinalIgnoreCase))
+                return link;
+
+            int authStart = schemePrefix.Length;
+            int authEnd = link.Length;
+            for (int i = authStart; i < link.Length; i++)
+            {
+                char c = link[i];
+                if (c == '/' || c == '?' || c == '#')
+                {
+                    authEnd = i;
+                    break;
+                }
+            }
+
+            string authority = link.Substring(authStart, authEnd - authStart);
+            int atIdx = authority.LastIndexOf('@');
+            int bracketIdx = authority.LastIndexOf(']');
+            int searchAfter = Math.Max(atIdx, bracketIdx);
+            int colonIdx = authority.IndexOf(':', searchAfter + 1);
+            if (colonIdx < 0 || colonIdx == authority.Length - 1)
+                return link;
+
+            string portExpr = authority.Substring(colonIdx + 1);
+            if (portExpr.IndexOfAny(new[] { ',', '-' }) < 0)
+                return link;
+
+            int digitLen = 0;
+            while (digitLen < portExpr.Length && char.IsDigit(portExpr[digitLen]))
+                digitLen++;
+
+            if (digitLen == 0)
+                return link;
+
+            string firstPort = portExpr.Substring(0, digitLen);
+            return link.Substring(0, authStart + colonIdx + 1) + firstPort + link.Substring(authEnd);
+        }
+
         private static string? TryBase64Decode(string input)
         {
             try
             {
-                input = input.Replace('-', '+').Replace('_', '/');
-                var pad = input.Length % 4;
-                if (pad == 2)      input += "==";
-                else if (pad == 3) input += "=";
+                var sb = new StringBuilder(input.Length + 4);
+                foreach (char c in input)
+                {
+                    if (!char.IsWhiteSpace(c))
+                        sb.Append(c == '-' ? '+' : (c == '_' ? '/' : c));
+                }
 
-                var bytes = Convert.FromBase64String(input);
+                var pad = sb.Length % 4;
+                if (pad == 1) return null;
+                if (pad == 2)      sb.Append("==");
+                else if (pad == 3) sb.Append('=');
+
+                var bytes = Convert.FromBase64String(sb.ToString());
                 return Encoding.UTF8.GetString(bytes);
             }
             catch { return null; }
@@ -808,8 +894,9 @@ namespace AnywhereWinUI.Services
                    || value.Equals("yes",  StringComparison.OrdinalIgnoreCase));
 
         private static bool IsValidParsedNode(PersistedNode? node)
-            => node != null && TrySplitHostPort(node.Host, out var host, out _)
-                            && !string.IsNullOrWhiteSpace(host);
+            => node != null && TrySplitHostPort(node.Host, out var host, out var port)
+                            && !string.IsNullOrWhiteSpace(host)
+                            && port > 0 && port <= 65535;
 
         private static string NormalizeTrojanNetwork(string network)
         {
@@ -858,8 +945,12 @@ namespace AnywhereWinUI.Services
 
             if (firstColon != lastColon)
             {
-                host = hostPort;
-                return !string.IsNullOrWhiteSpace(host);
+                if (System.Net.IPAddress.TryParse(hostPort, out _))
+                {
+                    host = hostPort;
+                    return true;
+                }
+                return false;
             }
 
             if (lastColon <= 0 || lastColon == hostPort.Length - 1)
@@ -898,6 +989,9 @@ namespace AnywhereWinUI.Services
         public static string FormatHostPortPublic(string host, int port)
         {
             if (string.IsNullOrWhiteSpace(host)) return string.Empty;
+            host = host.Trim();
+            if (host.Length > 2 && host[0] == '[' && host[^1] == ']')
+                host = host.Substring(1, host.Length - 2);
             return host.Contains(':') ? $"[{host}]:{port}" : $"{host}:{port}";
         }
     }

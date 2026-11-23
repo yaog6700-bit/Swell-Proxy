@@ -16,7 +16,7 @@ namespace AnywhereWinUI.Models
     [JsonSerializable(typeof(List<CustomRule>))]
     [JsonSerializable(typeof(RoutingRuleItem))]
     [JsonSerializable(typeof(List<RoutingRuleItem>))]
-    [JsonSerializable(typeof(Dictionary<string, object>))]
+    [JsonSerializable(typeof(SystemProxyManager.ProxySnapshot))]
     [JsonSerializable(typeof(string))]
     [JsonSerializable(typeof(bool))]
     [JsonSerializable(typeof(ClashConnectionsMessage))]

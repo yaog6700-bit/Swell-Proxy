@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
@@ -22,6 +23,7 @@ namespace AnywhereWinUI.Services
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
         private static readonly int[] RetryDelaysMs = { 500, 1000 };
+        private static readonly ConcurrentDictionary<int, HttpClient> SharedClients = new();
 
         public Task<AiUnlockStatus> CheckOpenAiAsync(int? httpProxyPort, CancellationToken ct = default)
             => ExecuteWithRetryAsync(httpProxyPort, ct, async (client, token) =>
@@ -30,15 +32,19 @@ namespace AnywhereWinUI.Services
                 request.Headers.TryAddWithoutValidation("User-Agent", BrowserUserAgent);
 
                 using var response = await client.SendAsync(request, token).ConfigureAwait(false);
+                int code = (int)response.StatusCode;
+                if (code >= 500 || code == 408)
+                    throw new HttpRequestException($"Transient upstream error: HTTP {code}");
+
                 var body = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
 
                 if (body.Contains("unsupported_country_region_territory", StringComparison.OrdinalIgnoreCase))
                     return AiUnlockStatus.Blocked;
 
-                if ((int)response.StatusCode == 403)
+                if (code == 403)
                     return AiUnlockStatus.Blocked;
 
-                return AiUnlockStatus.Unlocked;
+                return code is >= 200 and < 500 ? AiUnlockStatus.Unlocked : AiUnlockStatus.Blocked;
             });
 
         public Task<AiUnlockStatus> CheckClaudeAsync(int? httpProxyPort, CancellationToken ct = default)
@@ -49,6 +55,8 @@ namespace AnywhereWinUI.Services
 
                 using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
                 var code = (int)response.StatusCode;
+                if (code >= 500 || code == 408)
+                    throw new HttpRequestException($"Transient upstream error: HTTP {code}");
 
                 if (code == 401 || code == 400 || code == 405)
                     return AiUnlockStatus.Unlocked;
@@ -120,8 +128,7 @@ namespace AnywhereWinUI.Services
 
                 try
                 {
-                    using var handler = CreateHandler(httpProxyPort);
-                    using var client = new HttpClient(handler) { Timeout = AttemptTimeout };
+                    var client = GetOrCreateClient(httpProxyPort);
                     using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     attemptCts.CancelAfter(AttemptTimeout);
 
@@ -146,25 +153,30 @@ namespace AnywhereWinUI.Services
             return AiUnlockStatus.Blocked;
         }
 
-        private static SocketsHttpHandler CreateHandler(int? httpProxyPort)
+        private static HttpClient GetOrCreateClient(int? httpProxyPort)
         {
-            var handler = new SocketsHttpHandler
+            int key = httpProxyPort ?? -1;
+            return SharedClients.GetOrAdd(key, static p =>
             {
-                ConnectTimeout = TimeSpan.FromSeconds(5),
-                AutomaticDecompression = DecompressionMethods.All
-            };
+                var handler = new SocketsHttpHandler
+                {
+                    ConnectTimeout = TimeSpan.FromSeconds(5),
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                    AutomaticDecompression = DecompressionMethods.All
+                };
 
-            if (httpProxyPort.HasValue)
-            {
-                handler.Proxy = new WebProxy($"http://127.0.0.1:{httpProxyPort.Value}");
-                handler.UseProxy = true;
-            }
-            else
-            {
-                handler.UseProxy = false;
-            }
+                if (p > 0)
+                {
+                    handler.Proxy = new WebProxy($"http://127.0.0.1:{p}");
+                    handler.UseProxy = true;
+                }
+                else
+                {
+                    handler.UseProxy = false;
+                }
 
-            return handler;
+                return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+            });
         }
 
         private static bool TryGetArrayItem(JsonElement parent, int index, out JsonElement item)

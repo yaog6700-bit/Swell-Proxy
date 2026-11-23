@@ -17,27 +17,29 @@ namespace AnywhereWinUI.Services
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 _jobHandle = CreateJobObject(IntPtr.Zero, null);
+                if (_jobHandle != IntPtr.Zero)
+                {
+                    var info = new JOBOBJECT_BASIC_LIMIT_INFORMATION
+                    {
+                        LimitFlags = 0x2000 // JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+                    };
 
-                var info = new JOBOBJECT_BASIC_LIMIT_INFORMATION
-                {
-                    LimitFlags = 0x2000 // JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-                };
+                    var extendedInfo = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+                    {
+                        BasicLimitInformation = info
+                    };
 
-                var extendedInfo = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION
-                {
-                    BasicLimitInformation = info
-                };
-
-                int length = Marshal.SizeOf(typeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
-                IntPtr extendedInfoPtr = Marshal.AllocHGlobal(length);
-                try
-                {
-                    Marshal.StructureToPtr(extendedInfo, extendedInfoPtr, false);
-                    SetInformationJobObject(_jobHandle, 9, extendedInfoPtr, (uint)length); // 9 = JobObjectExtendedLimitInformation
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal(extendedInfoPtr);
+                    int length = Marshal.SizeOf(typeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+                    IntPtr extendedInfoPtr = Marshal.AllocHGlobal(length);
+                    try
+                    {
+                        Marshal.StructureToPtr(extendedInfo, extendedInfoPtr, false);
+                        SetInformationJobObject(_jobHandle, 9, extendedInfoPtr, (uint)length); // 9 = JobObjectExtendedLimitInformation
+                    }
+                    finally
+                    {
+                        Marshal.FreeHGlobal(extendedInfoPtr);
+                    }
                 }
             }
         }
@@ -57,10 +59,10 @@ namespace AnywhereWinUI.Services
             }
         }
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr CreateJobObject(IntPtr lpJobAttributes, string? lpName);
 
-        [DllImport("kernel32.dll")]
+        [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool SetInformationJobObject(IntPtr hJob, int JobObjectInformationClass, IntPtr lpJobObjectInformation, uint cbJobObjectInformationLength);
 
         [DllImport("kernel32.dll", SetLastError = true)]

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
@@ -22,6 +23,7 @@ namespace AnywhereWinUI.Services
     {
         private static readonly TimeSpan AttemptTimeout = TimeSpan.FromSeconds(7);
         private static readonly int[] RetryDelaysMs = { 500, 1000 };
+        private static readonly ConcurrentDictionary<int, HttpClient> SharedClients = new();
         private const string BrowserUserAgent =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
@@ -51,8 +53,7 @@ namespace AnywhereWinUI.Services
         {
             try
             {
-                using var handler = CreateHandler(httpProxyPort);
-                using var client = new HttpClient(handler) { Timeout = AttemptTimeout };
+                var client = GetOrCreateClient(httpProxyPort);
                 using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 attemptCts.CancelAfter(AttemptTimeout);
 
@@ -81,8 +82,7 @@ namespace AnywhereWinUI.Services
         {
             try
             {
-                using var handler = CreateHandler(httpProxyPort);
-                using var client = new HttpClient(handler) { Timeout = AttemptTimeout };
+                var client = GetOrCreateClient(httpProxyPort);
                 using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 attemptCts.CancelAfter(AttemptTimeout);
 
@@ -138,25 +138,30 @@ namespace AnywhereWinUI.Services
             }
         }
 
-        private static SocketsHttpHandler CreateHandler(int? httpProxyPort)
+        private static HttpClient GetOrCreateClient(int? httpProxyPort)
         {
-            var handler = new SocketsHttpHandler
+            int key = httpProxyPort ?? -1;
+            return SharedClients.GetOrAdd(key, static p =>
             {
-                ConnectTimeout = TimeSpan.FromSeconds(5),
-                AutomaticDecompression = DecompressionMethods.All
-            };
+                var handler = new SocketsHttpHandler
+                {
+                    ConnectTimeout = TimeSpan.FromSeconds(5),
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                    AutomaticDecompression = DecompressionMethods.All
+                };
 
-            if (httpProxyPort.HasValue)
-            {
-                handler.Proxy = new WebProxy($"http://127.0.0.1:{httpProxyPort.Value}");
-                handler.UseProxy = true;
-            }
-            else
-            {
-                handler.UseProxy = false;
-            }
+                if (p > 0)
+                {
+                    handler.Proxy = new WebProxy($"http://127.0.0.1:{p}");
+                    handler.UseProxy = true;
+                }
+                else
+                {
+                    handler.UseProxy = false;
+                }
 
-            return handler;
+                return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+            });
         }
     }
 }

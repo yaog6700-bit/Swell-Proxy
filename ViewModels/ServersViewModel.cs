@@ -36,6 +36,7 @@ namespace AnywhereWinUI.ViewModels
 
         private readonly LatencyProbeService _latencyProbeService;
         private readonly DispatcherQueue _dispatcherQueue;
+        private volatile bool _isBatchPinging;
 
         [ObservableProperty]
         private ObservableCollection<ServerEntryItem> _allServers = new();
@@ -85,6 +86,40 @@ namespace AnywhereWinUI.ViewModels
             // 不需要在此处额外再调用，避免三次重复重建
             LoadSubscriptions();
             LoadServersList();
+
+            ProtocolColorStore.ColorsChanged += (_, _) =>
+            {
+                _dispatcherQueue?.TryEnqueue(() =>
+                {
+                    foreach (var s in AllServers)
+                        s.NotifyProtocolColorChanged();
+                });
+            };
+
+            CoreManager.Instance.ActiveNodeChanged += (_, _) =>
+            {
+                _dispatcherQueue?.TryEnqueue(SyncActiveNodeIndicators);
+            };
+        }
+
+        public void SyncActiveNodeIndicators()
+        {
+            string currentSelectedId = NodesManager.Instance.SelectedNodeId;
+            bool isRunning = CoreManager.Instance.IsRunning;
+            bool isAuto = AppSession.Instance.IsAutoNodeSelect;
+            SelectedNodeId = currentSelectedId;
+
+            foreach (var s in AllServers)
+            {
+                s.ActiveIndicatorVisibility = (!isAuto && s.Id == currentSelectedId && isRunning)
+                    ? Microsoft.UI.Xaml.Visibility.Visible
+                    : Microsoft.UI.Xaml.Visibility.Collapsed;
+            }
+
+            if (SortMode == ServerSortMode.Active)
+            {
+                ApplyFilters();
+            }
         }
 
         public void LoadSubscriptions()
@@ -200,27 +235,66 @@ namespace AnywhereWinUI.ViewModels
                 _ => query
             };
 
-            // Snapshot the currently-selected item's ID before we clear the collection.
-            // FilteredServers.Clear() causes the ListView to fire SelectionChanged(null),
-            // which would reset the detail panel to "empty". By restoring SelectedServer
-            // after rebuilding we keep the UI in the correct state — this is especially
-            // important when a latency test completes and calls ApplyFilters() to re-sort
-            // while the user already has a node selected.
-            var previousSelectedId = SelectedServer?.Id;
+            var desired = query.ToList();
+            SyncFilteredServersInPlace(desired);
+        }
 
-            FilteredServers.Clear();
-            foreach (var item in query)
+        /// <summary>
+        /// Incrementally synchronizes FilteredServers using Move/Insert/RemoveAt instead of Clear(),
+        /// preserving ListView container virtualization and preventing SelectedItem drop / re-ping loops.
+        /// </summary>
+        private void SyncFilteredServersInPlace(System.Collections.Generic.List<ServerEntryItem> desired)
+        {
+            if (desired.Count == 0)
             {
-                FilteredServers.Add(item);
+                if (FilteredServers.Count > 0)
+                    FilteredServers.Clear();
+                return;
             }
 
-            // Restore the selection so the view doesn't snap back to "empty".
-            if (previousSelectedId != null)
+            if (FilteredServers.Count == 0 || Math.Abs(FilteredServers.Count - desired.Count) > 120)
             {
-                var restored = FilteredServers.FirstOrDefault(s => s.Id == previousSelectedId);
-                if (restored != null && SelectedServer != restored)
+                var previousSelectedId = SelectedServer?.Id;
+                FilteredServers.Clear();
+                foreach (var item in desired)
+                    FilteredServers.Add(item);
+
+                if (previousSelectedId != null)
                 {
-                    SelectedServer = restored;
+                    var restored = FilteredServers.FirstOrDefault(s => s.Id == previousSelectedId);
+                    if (restored != null && SelectedServer != restored)
+                        SelectedServer = restored;
+                }
+                return;
+            }
+
+            var desiredIds = new System.Collections.Generic.HashSet<string>(
+                desired.Select(x => x.Id),
+                StringComparer.Ordinal);
+
+            for (int i = FilteredServers.Count - 1; i >= 0; i--)
+            {
+                if (!desiredIds.Contains(FilteredServers[i].Id))
+                {
+                    FilteredServers.RemoveAt(i);
+                }
+            }
+
+            for (int i = 0; i < desired.Count; i++)
+            {
+                var targetItem = desired[i];
+                if (i < FilteredServers.Count && ReferenceEquals(FilteredServers[i], targetItem))
+                    continue;
+
+                int existingIdx = FilteredServers.IndexOf(targetItem);
+                if (existingIdx >= 0)
+                {
+                    if (existingIdx != i)
+                        FilteredServers.Move(existingIdx, i);
+                }
+                else
+                {
+                    FilteredServers.Insert(i, targetItem);
                 }
             }
         }
@@ -283,24 +357,38 @@ namespace AnywhereWinUI.ViewModels
         [RelayCommand]
         private async Task PingAllServersAsync()
         {
-            // BUG-7 fix: 先快照，防止 ping 期间 ApplyFilters() 重建集合引发 "集合已被修改" 异常
             var snapshot = FilteredServers.ToArray();
-            using var semaphore = new System.Threading.SemaphoreSlim(10);
-            var tasks = snapshot.Select(async item =>
+            _isBatchPinging = true;
+            try
             {
-                await semaphore.WaitAsync();
-                try
+                using var semaphore = new System.Threading.SemaphoreSlim(10);
+                var tasks = snapshot.Select(async item =>
                 {
-                    await TestSingleLatencyAsync(item);
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
-            }).ToList();
+                    await semaphore.WaitAsync();
+                    try
+                    {
+                        await TestSingleLatencyAsync(item);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }).ToList();
 
-            await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks);
+            }
+            finally
+            {
+                _isBatchPinging = false;
+                if (SortMode == ServerSortMode.Latency)
+                {
+                    _dispatcherQueue?.TryEnqueue(ApplyFilters);
+                }
+            }
         }
+
+        private static Brush ResolveSemanticPingBrush(string key, Windows.UI.Color fallback)
+            => Helpers.ContentDialogExtensions.LookupThemeBrush(key, Helpers.ContentDialogExtensions.IsDarkThemeActive(), fallback);
 
         [RelayCommand]
         private async Task TestSingleLatencyAsync(ServerEntryItem item)
@@ -311,10 +399,29 @@ namespace AnywhereWinUI.ViewModels
             {
                 item.LatencyMs = null;
                 item.PingText = L.Servers_PingTesting;
-                item.PingColor = new SolidColorBrush(Colors.Orange);
+                item.PingColor = ResolveSemanticPingBrush("SystemFillColorCautionBrush", Colors.Orange);
             });
 
-            var result = await _latencyProbeService.ProbeAsync(item.Protocol, item.Host, item.Port, TimeSpan.FromSeconds(3));
+            int? trueUrlTestDelay = null;
+            if (CoreManager.Instance.IsRunning &&
+                string.Equals(AppSession.Instance.ActiveCoreEngine, ShoesConfigBuilder.EngineSingBox, StringComparison.OrdinalIgnoreCase) &&
+                !AppSession.Instance.IsActiveNodeCustom &&
+                AppSession.Instance.CanHotSwitchTo(item.Id))
+            {
+                trueUrlTestDelay = await SingboxApiClient.Instance.ProbeOutboundDelayAsync(item.Id, 3500);
+            }
+
+            LatencyProbeResult result;
+            if (trueUrlTestDelay.HasValue)
+            {
+                result = trueUrlTestDelay.Value > 0
+                    ? new LatencyProbeResult { Status = LatencyProbeStatus.Success, Milliseconds = trueUrlTestDelay.Value }
+                    : new LatencyProbeResult { Status = LatencyProbeStatus.Timeout };
+            }
+            else
+            {
+                result = await _latencyProbeService.ProbeAsync(item.Protocol, item.Host, item.Port, TimeSpan.FromSeconds(3));
+            }
 
             _dispatcherQueue.TryEnqueue(() =>
             {
@@ -322,9 +429,8 @@ namespace AnywhereWinUI.ViewModels
                 {
                     item.LatencyMs = -1;
                     item.PingText = result.Status == LatencyProbeStatus.Timeout ? L.Servers_PingTimeout : L.Servers_PingFailed;
-                    item.PingColor = new SolidColorBrush(Colors.Red);
+                    item.PingColor = ResolveSemanticPingBrush("SystemFillColorCriticalBrush", Colors.Red);
 
-                    // Also update selected server property if this is the selected one, so UI bound to it can update
                     if (SelectedServer == item)
                     {
                         OnPropertyChanged(nameof(SelectedServer));
@@ -335,11 +441,11 @@ namespace AnywhereWinUI.ViewModels
                     int delay = result.Milliseconds ?? 0;
                     item.LatencyMs = delay;
                     item.PingText = $"{delay} ms";
-                    
-                    SolidColorBrush colorBrush;
-                    if (delay < 100) colorBrush = new SolidColorBrush(Colors.Green);
-                    else if (delay < 300) colorBrush = new SolidColorBrush(Colors.Orange);
-                    else colorBrush = new SolidColorBrush(Colors.Red);
+
+                    Brush colorBrush;
+                    if (delay < 150) colorBrush = ResolveSemanticPingBrush("SystemFillColorSuccessBrush", Colors.Green);
+                    else if (delay < 350) colorBrush = ResolveSemanticPingBrush("SystemFillColorCautionBrush", Colors.Orange);
+                    else colorBrush = ResolveSemanticPingBrush("SystemFillColorCriticalBrush", Colors.Red);
 
                     item.PingColor = colorBrush;
 
@@ -349,7 +455,7 @@ namespace AnywhereWinUI.ViewModels
                     }
                 }
 
-                if (SortMode == ServerSortMode.Latency)
+                if (!_isBatchPinging && SortMode == ServerSortMode.Latency)
                 {
                     ApplyFilters();
                 }
@@ -362,71 +468,64 @@ namespace AnywhereWinUI.ViewModels
             if (server == null) return;
 
             string previousActiveId = NodesManager.Instance.SelectedNodeId;
+            bool wasAuto = AppSession.Instance.IsAutoNodeSelect;
             bool isRunning = CoreManager.Instance.IsRunning;
+
+            var node = NodesManager.Instance.Nodes.Find(n => n.Id == server.Id);
+            if (node != null && isRunning && CustomConfigService.RequiresTunAdmin(node))
+            {
+                var xamlRoot = MainWindow.Instance?.Content?.XamlRoot;
+                if (xamlRoot != null)
+                {
+                    var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                    {
+                        Title = L.Tun_AdminRequiredTitle,
+                        Content = L.Tun_AdminRequiredMsg,
+                        PrimaryButtonText = L.Tun_AdminConfirmBtn,
+                        CloseButtonText = L.Dialog_Cancel,
+                        XamlRoot = xamlRoot
+                    };
+                    var res = await dialog.WithAppTheme().ShowAsync();
+                    if (res == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+                    {
+                        NodesManager.Instance.SelectedNodeId = server.Id;
+                        NodesManager.Instance.Save();
+                        await CoreManager.Instance.StopAsync();
+                        Helpers.AdminHelper.RestartAsAdmin("--auto-start-proxy");
+                    }
+                }
+                return;
+            }
+
+            AppSession.Instance.IsAutoNodeSelect = false;
+            Helpers.LocalSettingsHelper.SetValue("isAutoNodeSelect", false);
 
             // Set as active selected node in NodesManager
             NodesManager.Instance.SelectedNodeId = server.Id;
             SelectedNodeId = server.Id;
             NodesManager.Instance.Save();
 
-            // Reload active indicators
-            foreach (var s in AllServers)
-            {
-                s.ActiveIndicatorVisibility = (s.Id == server.Id && isRunning) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-            }
-
-            if (SortMode == ServerSortMode.Active)
-            {
-                ApplyFilters();
-            }
+            SyncActiveNodeIndicators();
 
             // Sync with AppSession active properties
             AppSession.Instance.SelectedNodeName = server.Name;
             AppSession.Instance.SelectedNodeProtocol = server.Protocol;
             AppSession.Instance.SelectedNodeHost = server.HostPortDisplay;
 
-            // If the engine is already running and the selected node is exactly the previous active node,
-            // we don't need to trigger a redundant restart.
-            if (isRunning && previousActiveId == server.Id)
+            if (isRunning && !wasAuto && previousActiveId == server.Id)
             {
                 return;
             }
 
-            // Trigger proxy config update if running and node has changed
-            var node = NodesManager.Instance.Nodes.Find(n => n.Id == server.Id);
             if (node != null && isRunning)
             {
-                if (CustomConfigService.RequiresTunAdmin(node))
-                {
-                    var xamlRoot = MainWindow.Instance?.Content?.XamlRoot;
-                    if (xamlRoot != null)
-                    {
-                        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
-                        {
-                            Title = L.Tun_AdminRequiredTitle,
-                            Content = L.Tun_AdminRequiredMsg,
-                            PrimaryButtonText = L.Tun_AdminConfirmBtn,
-                            CloseButtonText = L.Dialog_Cancel,
-                            XamlRoot = xamlRoot
-                        };
-                        var res = await dialog.WithAppTheme().ShowAsync();
-                        if (res == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
-                        {
-                            await CoreManager.Instance.StopAsync();
-                            Helpers.AdminHelper.RestartAsAdmin("--auto-start-proxy");
-                        }
-                    }
-                    return;
-                }
-
                 try
                 {
-                    string realConfig = await ConfigBuilder.BuildAsync(node);
-                    await CoreManager.Instance.StartAsync(realConfig);
+                    await CoreManager.Instance.SwitchToNodeAsync(node);
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error starting core on node switch: {ex}");
+                    System.Diagnostics.Debug.WriteLine($"Error switching node: {ex}");
                 }
             }
         }

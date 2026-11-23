@@ -17,9 +17,54 @@ namespace AnywhereWinUI.Views
 {
     public sealed partial class CustomRulesDialog : ContentDialog
     {
+        // Pre-allocated Fluent 2 Light/Dark adaptive tinted semantic badge brushes (zero per-row allocation)
+        private static readonly SolidColorBrush LightBlueBg   = new(Color.FromArgb(28,   0,  95, 184));
+        private static readonly SolidColorBrush LightBlueFg   = new(Color.FromArgb(255,  0,  95, 184));
+        private static readonly SolidColorBrush DarkBlueBg    = new(Color.FromArgb(38,  96, 205, 255));
+        private static readonly SolidColorBrush DarkBlueFg    = new(Color.FromArgb(255, 96, 205, 255));
+
+        private static readonly SolidColorBrush LightPurpleBg = new(Color.FromArgb(28, 109,  40, 217));
+        private static readonly SolidColorBrush LightPurpleFg = new(Color.FromArgb(255,109,  40, 217));
+        private static readonly SolidColorBrush DarkPurpleBg  = new(Color.FromArgb(38, 139,  92, 246));
+        private static readonly SolidColorBrush DarkPurpleFg  = new(Color.FromArgb(255,196, 181, 253));
+
+        private static readonly SolidColorBrush LightAmberBg  = new(Color.FromArgb(30, 157,  93,   0));
+        private static readonly SolidColorBrush LightAmberFg  = new(Color.FromArgb(255,157,  93,   0));
+        private static readonly SolidColorBrush DarkAmberBg   = new(Color.FromArgb(36, 252, 225,   0));
+        private static readonly SolidColorBrush DarkAmberFg   = new(Color.FromArgb(255,252, 225,   0));
+
+        private static readonly SolidColorBrush LightGreenBg  = new(Color.FromArgb(28,  15, 123,  15));
+        private static readonly SolidColorBrush LightGreenFg  = new(Color.FromArgb(255, 15, 123,  15));
+        private static readonly SolidColorBrush DarkGreenBg   = new(Color.FromArgb(38, 108, 203,  95));
+        private static readonly SolidColorBrush DarkGreenFg   = new(Color.FromArgb(255,108, 203,  95));
+
+        private static readonly SolidColorBrush LightRedBg    = new(Color.FromArgb(28, 196,  43,  28));
+        private static readonly SolidColorBrush LightRedFg    = new(Color.FromArgb(255,196,  43,  28));
+        private static readonly SolidColorBrush DarkRedBg     = new(Color.FromArgb(38, 255, 153, 164));
+        private static readonly SolidColorBrush DarkRedFg     = new(Color.FromArgb(255,255, 153, 164));
+
+        private sealed class CustomRuleRowHolder
+        {
+            public required Grid Root { get; init; }
+            public required ToggleSwitch Toggle { get; init; }
+            public required Border TypeBadge { get; init; }
+            public required TextBlock TypeText { get; init; }
+            public required StackPanel TextPanel { get; init; }
+            public required TextBlock RemarkText { get; init; }
+            public required TextBlock MatchText { get; init; }
+            public required Border OutBadge { get; init; }
+            public required TextBlock OutText { get; init; }
+            public required Button EditBtn { get; init; }
+            public required Button DeleteBtn { get; init; }
+            public required FontIcon DeleteIcon { get; init; }
+            public CustomRule? CurrentRule { get; set; }
+            public bool SuppressToggle { get; set; }
+        }
+
         // ─── State ───────────────────────────────────────────────────────
         private readonly ObservableCollection<CustomRule> _rules = new();
         private readonly ObservableCollection<CustomRule> _filteredRules = new();
+        private readonly System.Collections.Generic.Dictionary<string, string> _nodeNameMap = new(StringComparer.Ordinal);
 
         private static RuleTemplate[] GetRuleTemplates() => new RuleTemplate[]
         {
@@ -67,27 +112,33 @@ namespace AnywhereWinUI.Views
                 NonSmartModeBanner.IsOpen = true;
             }
 
+            var nodes = NodesManager.Instance.GetNodesSnapshot();
+            _nodeNameMap.Clear();
+            foreach (var n in nodes)
+            {
+                _nodeNameMap[n.Id] = string.IsNullOrWhiteSpace(n.Name) ? L.CustomRules_NodeFallback : n.Name;
+            }
+
             RefreshListView();
-            PopulateOutbounds();
+            PopulateOutbounds(nodes);
             PopulateTemplates();
 
             this.PrimaryButtonClick += CustomRulesDialog_PrimaryButtonClick;
         }
 
-        private void PopulateOutbounds()
+        private void PopulateOutbounds(System.Collections.Generic.List<PersistedNode> nodes)
         {
-            PopulateOutboundComboBox(FormOutboundComboBox);
-            PopulateOutboundComboBox(TemplateOutboundComboBox);
+            PopulateOutboundComboBox(FormOutboundComboBox, nodes);
+            PopulateOutboundComboBox(TemplateOutboundComboBox, nodes);
         }
 
-        private static void PopulateOutboundComboBox(ComboBox comboBox)
+        private static void PopulateOutboundComboBox(ComboBox comboBox, System.Collections.Generic.List<PersistedNode> nodes)
         {
             comboBox.Items.Clear();
             comboBox.Items.Add(new ComboBoxItem { Content = L.Routing_ActionProxy,  Tag = "proxy" });
             comboBox.Items.Add(new ComboBoxItem { Content = L.Routing_ActionDirect, Tag = "direct" });
             comboBox.Items.Add(new ComboBoxItem { Content = L.Routing_ActionBlock,  Tag = "block" });
 
-            var nodes = NodesManager.Instance.Nodes;
             if (nodes.Count > 0)
             {
                 var sep = new ComboBoxItem { Content = "──────────", IsEnabled = false };
@@ -143,7 +194,7 @@ namespace AnywhereWinUI.Views
                 : string.Format(L.CustomRules_CountFilteredFmt, _rules.Count, _filteredRules.Count);
         }
 
-        private static bool RuleMatchesSearch(CustomRule rule, string query)
+        private bool RuleMatchesSearch(CustomRule rule, string query)
         {
             return Contains(rule.Remark, query) ||
                    Contains(rule.Match, query) ||
@@ -210,13 +261,61 @@ namespace AnywhereWinUI.Views
             SelectComboBoxItemByTag(TemplateOutboundComboBox, template.DefaultOutboundTag);
         }
 
-        // Build each ListView row purely in code-behind (no DataTemplate / Converter needed)
         private void RulesListView_ContainerContentChanging(
             ListViewBase sender, ContainerContentChangingEventArgs args)
         {
-            if (args.InRecycleQueue) return;
+            if (args.InRecycleQueue)
+            {
+                if (args.ItemContainer.Content is Grid rg && rg.Tag is CustomRuleRowHolder rh)
+                    rh.CurrentRule = null;
+                return;
+            }
             if (args.Item is not CustomRule rule) return;
 
+            CustomRuleRowHolder holder;
+            if (args.ItemContainer.Content is Grid existingGrid && existingGrid.Tag is CustomRuleRowHolder existingHolder)
+            {
+                holder = existingHolder;
+            }
+            else
+            {
+                holder = CreateCustomRuleRowHolder();
+                args.ItemContainer.ContentTemplate = null;
+                args.ItemContainer.Content = holder.Root;
+            }
+
+            bool isDark = ContentDialogExtensions.IsElementDark(this);
+
+            holder.CurrentRule = rule;
+            holder.SuppressToggle = true;
+            holder.Toggle.IsOn = rule.IsEnabled;
+            holder.SuppressToggle = false;
+
+            var (typeBg, typeFg) = TypeBadgeBrushes(rule.Type, isDark);
+            holder.TypeBadge.Background = typeBg;
+            holder.TypeText.Foreground = typeFg;
+            holder.TypeText.Text = FormatTypeLabel(rule.Type);
+
+            holder.RemarkText.Text = string.IsNullOrWhiteSpace(rule.Remark) ? L.CustomRules_Unnamed : rule.Remark;
+            holder.MatchText.Text = rule.Match;
+            holder.MatchText.Foreground = isDark
+                ? LookupThemedBrush("TextFillColorSecondaryBrush", true, Colors.Gray)
+                : LookupThemedBrush("TextFillColorSecondaryBrush", false, Colors.DimGray);
+            ToolTipService.SetToolTip(holder.TextPanel, rule.Match);
+
+            var (outBg, outFg) = OutboundBadgeBrushes(rule.OutboundTag, isDark);
+            holder.OutBadge.Background = outBg;
+            holder.OutText.Foreground = outFg;
+            holder.OutText.Text = FormatOutboundLabel(rule.OutboundTag);
+
+            holder.DeleteIcon.Foreground = isDark ? DarkRedFg : LightRedFg;
+            holder.EditBtn.Tag = rule;
+            holder.DeleteBtn.Tag = rule;
+            args.Handled = true;
+        }
+
+        private CustomRuleRowHolder CreateCustomRuleRowHolder()
+        {
             var grid = new Grid { Padding = new Thickness(10, 8, 10, 8), ColumnSpacing = 8 };
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -225,17 +324,14 @@ namespace AnywhereWinUI.Views
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            // Enable toggle
             var toggle = new ToggleSwitch
             {
-                IsOn       = rule.IsEnabled,
                 OffContent = string.Empty,
                 OnContent  = string.Empty,
                 MinWidth   = 0,
                 Width      = 42,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            toggle.Toggled += (s, _) => rule.IsEnabled = ((ToggleSwitch)s).IsOn;
             var toggleHost = new Grid
             {
                 Width = 50,
@@ -245,9 +341,20 @@ namespace AnywhereWinUI.Views
             toggleHost.Children.Add(toggle);
             Grid.SetColumn(toggleHost, 0);
 
-            var typeBadge = MakeBadge(FormatTypeLabel(rule.Type), TypeBadgeColor(rule.Type));
+            var (typeBadge, typeText) = CreateReusableBadge();
             Grid.SetColumn(typeBadge, 1);
 
+            var remarkText = new TextBlock
+            {
+                FontSize     = 13,
+                FontWeight   = Microsoft.UI.Text.FontWeights.SemiBold,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            var matchText = new TextBlock
+            {
+                FontSize     = 12,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
             var textPanel = new StackPanel
             {
                 Spacing             = 2,
@@ -255,56 +362,42 @@ namespace AnywhereWinUI.Views
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 MinWidth            = 0
             };
-            textPanel.Children.Add(new TextBlock
-            {
-                Text            = string.IsNullOrWhiteSpace(rule.Remark) ? L.CustomRules_Unnamed : rule.Remark,
-                FontSize        = 13,
-                FontWeight      = Microsoft.UI.Text.FontWeights.SemiBold,
-                TextTrimming    = TextTrimming.CharacterEllipsis
-            });
-            textPanel.Children.Add(new TextBlock
-            {
-                Text         = rule.Match,
-                FontSize     = 12,
-                Opacity      = 0.65,
-                TextTrimming = TextTrimming.CharacterEllipsis
-            });
-            ToolTipService.SetToolTip(textPanel, rule.Match);
+            textPanel.Children.Add(remarkText);
+            textPanel.Children.Add(matchText);
             Grid.SetColumn(textPanel, 2);
 
-            // Outbound badge
-            var outBadge = MakeBadge(FormatOutboundLabel(rule.OutboundTag), OutboundBadgeColor(rule.OutboundTag), 120);
+            var (outBadge, outText) = CreateReusableBadge(128);
             Grid.SetColumn(outBadge, 3);
 
-            // Edit button
+            Style? subtleBtnStyle = Application.Current.Resources.TryGetValue("SubtleButtonStyle", out var sObj) ? sObj as Style : null;
+
             var editBtn = new Button
             {
-                Tag               = rule,
-                Width             = 36,
+                Width             = 32,
                 Height            = 32,
                 Padding           = new Thickness(0),
                 VerticalAlignment = VerticalAlignment.Center,
                 Content           = new FontIcon { Glyph = "\uE70F", FontSize = 13 }
             };
+            if (subtleBtnStyle != null) editBtn.Style = subtleBtnStyle;
             ToolTipService.SetToolTip(editBtn, L.CustomRules_EditTooltip);
             editBtn.Click += EditRuleButton_Click;
             Grid.SetColumn(editBtn, 4);
 
-            // Delete button
+            var deleteIcon = new FontIcon
+            {
+                Glyph    = "\uE74D",
+                FontSize = 13
+            };
             var deleteBtn = new Button
             {
-                Tag               = rule,
-                Width             = 36,
+                Width             = 32,
                 Height            = 32,
                 Padding           = new Thickness(0),
                 VerticalAlignment = VerticalAlignment.Center,
-                Content           = new FontIcon
-                {
-                    Glyph      = "\uE74D",
-                    FontSize   = 13,
-                    Foreground = new SolidColorBrush(Color.FromArgb(255, 196, 43, 28))
-                }
+                Content           = deleteIcon
             };
+            if (subtleBtnStyle != null) deleteBtn.Style = subtleBtnStyle;
             ToolTipService.SetToolTip(deleteBtn, L.CustomRules_DelTooltip);
             deleteBtn.Click += DeleteRuleButton_Click;
             Grid.SetColumn(deleteBtn, 5);
@@ -316,49 +409,70 @@ namespace AnywhereWinUI.Views
             grid.Children.Add(editBtn);
             grid.Children.Add(deleteBtn);
 
-            args.ItemContainer.ContentTemplate = null;
-            args.ItemContainer.Content         = grid;
-            args.Handled                       = true;
+            var holder = new CustomRuleRowHolder
+            {
+                Root = grid,
+                Toggle = toggle,
+                TypeBadge = typeBadge,
+                TypeText = typeText,
+                TextPanel = textPanel,
+                RemarkText = remarkText,
+                MatchText = matchText,
+                OutBadge = outBadge,
+                OutText = outText,
+                EditBtn = editBtn,
+                DeleteBtn = deleteBtn,
+                DeleteIcon = deleteIcon
+            };
+
+            toggle.Toggled += (s, _) =>
+            {
+                if (!holder.SuppressToggle && holder.CurrentRule != null)
+                    holder.CurrentRule.IsEnabled = ((ToggleSwitch)s).IsOn;
+            };
+
+            grid.Tag = holder;
+            return holder;
         }
 
-        private static Border MakeBadge(string text, Color color, double maxWidth = 0)
+        private static (Border Badge, TextBlock Label) CreateReusableBadge(double maxWidth = 0)
         {
+            var label = new TextBlock
+            {
+                FontSize     = 11,
+                FontWeight   = Microsoft.UI.Text.FontWeights.SemiBold,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
             var border = new Border
             {
                 CornerRadius      = new CornerRadius(4),
-                Padding           = new Thickness(6, 2, 6, 2),
+                Padding           = new Thickness(7, 2, 7, 2),
                 VerticalAlignment = VerticalAlignment.Center,
-                Background        = new SolidColorBrush(color),
-                Child             = new TextBlock
-                {
-                    Text         = text,
-                    FontSize     = 11,
-                    FontWeight   = Microsoft.UI.Text.FontWeights.SemiBold,
-                    Foreground   = new SolidColorBrush(Colors.White),
-                    TextTrimming = TextTrimming.CharacterEllipsis
-                }
+                Child             = label
             };
-
             if (maxWidth > 0)
                 border.MaxWidth = maxWidth;
 
-            return border;
+            return (border, label);
         }
 
-        private static Color TypeBadgeColor(string type) => type switch
+        private static (SolidColorBrush Bg, SolidColorBrush Fg) TypeBadgeBrushes(string type, bool isDark) => type switch
         {
-            "ip"      => Color.FromArgb(255, 0,   120, 215),
-            "process" => Color.FromArgb(255, 107, 79,  187),
-            "mixed"   => Color.FromArgb(255, 96,  74,  123),
-            _         => Color.FromArgb(255, 16,  124, 16)
+            "ip"      => isDark ? (DarkBlueBg, DarkBlueFg)     : (LightBlueBg, LightBlueFg),
+            "process" => isDark ? (DarkPurpleBg, DarkPurpleFg) : (LightPurpleBg, LightPurpleFg),
+            "mixed"   => isDark ? (DarkAmberBg, DarkAmberFg)   : (LightAmberBg, LightAmberFg),
+            _         => isDark ? (DarkGreenBg, DarkGreenFg)   : (LightGreenBg, LightGreenFg)
         };
 
-        private static Color OutboundBadgeColor(string outbound) => outbound switch
+        private static (SolidColorBrush Bg, SolidColorBrush Fg) OutboundBadgeBrushes(string outbound, bool isDark) => outbound switch
         {
-            "direct" => Color.FromArgb(255, 0,   153, 92),
-            "block"  => Color.FromArgb(255, 196, 43,  28),
-            _        => Color.FromArgb(255, 0,   103, 192)
+            "direct" => isDark ? (DarkGreenBg, DarkGreenFg) : (LightGreenBg, LightGreenFg),
+            "block"  => isDark ? (DarkRedBg, DarkRedFg)     : (LightRedBg, LightRedFg),
+            _        => isDark ? (DarkBlueBg, DarkBlueFg)   : (LightBlueBg, LightBlueFg)
         };
+
+        private static Brush LookupThemedBrush(string key, bool wantDark, Color fallback)
+            => ContentDialogExtensions.LookupThemeBrush(key, wantDark, fallback);
 
         private static string FormatTypeLabel(string type) => type switch
         {
@@ -368,7 +482,7 @@ namespace AnywhereWinUI.Views
             _         => L.Routing_TypeDomain
         };
 
-        private static string FormatOutboundLabel(string outbound) => outbound switch
+        private string FormatOutboundLabel(string outbound) => outbound switch
         {
             "direct"  => L.Routing_ActionDirect,
             "block"   => L.Routing_ActionBlock,
@@ -377,21 +491,20 @@ namespace AnywhereWinUI.Views
             _         => L.Routing_BadgeProxy
         };
 
-        private static bool TryResolveNodeName(string outbound, out string nodeName)
+        private bool TryResolveNodeName(string outbound, out string nodeName)
         {
             var nodeId = outbound.StartsWith("node:", StringComparison.OrdinalIgnoreCase)
                 ? outbound.Substring(5)
                 : outbound;
 
-            var node = NodesManager.Instance.Nodes.Find(n => n.Id == nodeId);
-            if (node == null)
+            if (_nodeNameMap.TryGetValue(nodeId, out var resolved))
             {
-                nodeName = string.Empty;
-                return false;
+                nodeName = resolved;
+                return true;
             }
 
-            nodeName = string.IsNullOrWhiteSpace(node.Name) ? L.CustomRules_NodeFallback : node.Name;
-            return true;
+            nodeName = string.Empty;
+            return false;
         }
 
         // ─── List Actions ────────────────────────────────────────────────
@@ -787,20 +900,17 @@ namespace AnywhereWinUI.Views
         {
             try
             {
-                var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(MainWindow.Instance!.AppWindow.Id)
-                {
-                    SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.ComputerFolder
-                };
-                picker.FileTypeFilter.Add(".exe");
-                picker.FileTypeFilter.Add("*");
-
-                var file = await picker.PickSingleFileAsync();
-                if (file == null) return;
+                if (MainWindow.Instance == null) return;
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
+                var selectedPath = await Helpers.Win32FilePickerHelper.PickSingleFileAsync(
+                    hwnd,
+                    filters: [("Executable (*.exe)", "*.exe"), (L.FilePicker_AllFiles, "*.*")]);
+                if (string.IsNullOrWhiteSpace(selectedPath)) return;
 
                 bool useFullPath = (FormBrowseFormatComboBox.SelectedItem as ComboBoxItem)
                                    ?.Tag?.ToString() == "path";
 
-                string value    = useFullPath ? file.Path : Path.GetFileName(file.Path);
+                string value    = useFullPath ? selectedPath : Path.GetFileName(selectedPath);
                 string existing = FormMatchTextBox.Text.Trim();
                 FormMatchTextBox.Text = string.IsNullOrEmpty(existing)
                     ? value

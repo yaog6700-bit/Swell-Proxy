@@ -87,9 +87,21 @@ namespace AnywhereWinUI.ViewModels
             _queue?.TryEnqueue(() =>
             {
                 UpdateTimerState();
-                if (isVisible && _isPageActive && _dirty)
+                if (!isVisible)
                 {
-                    OnFlushTick(_flushTimer, EventArgs.Empty);
+                    LogEntries.Clear();
+                    _prevBufferCount = 0;
+                }
+                else
+                {
+                    UpdateStatus();
+                    if (_isPageActive)
+                    {
+                        System.Threading.Interlocked.Exchange(ref _linesReceivedSinceFlush, 0);
+                        _dirty = false;
+                        RebuildAllEntries();
+                        LogFlushed?.Invoke(this, (_prevBufferCount, 0, _prevBufferCount));
+                    }
                 }
             });
         }
@@ -116,6 +128,7 @@ namespace AnywhereWinUI.ViewModels
 
         private void OnRunningChanged(object? sender, bool running)
         {
+            if (!MainWindow.IsVisibleToUser) return;
             _queue.TryEnqueue(UpdateStatus);
         }
 

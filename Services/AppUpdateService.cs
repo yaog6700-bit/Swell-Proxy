@@ -55,13 +55,25 @@ namespace AnywhereWinUI.Services
                 return;
 
             var staging = PendingStaging;
-            if (CoreManager.Instance.IsRunning)
+            bool wasRunning = CoreManager.Instance.IsRunning;
+            string launchArgs = string.Empty;
+            if (wasRunning)
             {
+                launchArgs = AppSession.Instance.ProxyModeIndex switch
+                {
+                    3 => "--tun-system-start",
+                    1 => "--tun-start",
+                    _ => "--auto-start-proxy"
+                };
                 await CoreManager.Instance.StopAsync();
             }
 
-            new AppUpdateService().LaunchUpdater(staging);
-            Microsoft.UI.Xaml.Application.Current.Exit();
+            try { await Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnShutdown); } catch { }
+            try { MainWindow.Instance?.DisposeTrayForRestart(); } catch { }
+            try { App.ReleaseSingleInstanceMutex(); } catch { }
+
+            new AppUpdateService().LaunchUpdater(staging, launchArgs);
+            Environment.Exit(0);
         }
 
         private static string UpdatesDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SwellProxy", "Updates");
@@ -210,7 +222,7 @@ namespace AnywhereWinUI.Services
             return new UpdateStaging(extractDir, stagedRunner, installDir, info.NewVersion);
         }
 
-        public void LaunchUpdater(UpdateStaging staging)
+        public void LaunchUpdater(UpdateStaging staging, string? launchArgs = null)
         {
             var psi = new ProcessStartInfo
             {
@@ -222,8 +234,12 @@ namespace AnywhereWinUI.Services
             psi.ArgumentList.Add($"--extracted-dir={staging.ExtractedDir}");
             psi.ArgumentList.Add($"--install-dir={staging.InstallDir}");
             psi.ArgumentList.Add($"--launch-after={AppExeName}");
+            if (!string.IsNullOrWhiteSpace(launchArgs))
+            {
+                psi.ArgumentList.Add($"--launch-args={launchArgs}");
+            }
 
-            Process.Start(psi);
+            using var started = Process.Start(psi);
         }
 
         public void CleanupOldStagingDirs()

@@ -10,14 +10,25 @@ namespace AnywhereWinUI.Helpers
     {
         public static ServerEntry ToServerEntry(PersistedNode node)
         {
-            // Parse host:port from PersistedNode.Host
-            string host = node.Host ?? string.Empty;
+            // Parse host:port from PersistedNode.Host safely (IPv6 bracket-aware)
+            string host = string.Empty;
             int port = 443;
-            var colonIdx = host.LastIndexOf(':');
-            if (colonIdx > 0 && int.TryParse(host.AsSpan(colonIdx + 1), out int p))
+            if (CustomConfigService.IsCustomNode(node))
             {
-                port = p;
-                host = host[..colonIdx];
+                host = node.Host ?? string.Empty;
+                port = 0;
+            }
+            else if (!string.IsNullOrWhiteSpace(node.Host))
+            {
+                if (NodeLinkParser.TrySplitHostPort(node.Host, out var parsedHost, out var parsedPort))
+                {
+                    host = parsedHost;
+                    port = parsedPort > 0 ? parsedPort : 443;
+                }
+                else
+                {
+                    host = node.Host;
+                }
             }
 
             return new ServerEntry
@@ -47,6 +58,7 @@ namespace AnywhereWinUI.Helpers
                 ShortId          = node.ShortId ?? string.Empty,
                 SpiderX          = node.SpiderX ?? string.Empty,
                 Flow             = node.Flow ?? string.Empty,
+                Spec             = node.Spec ?? string.Empty,
                 ObfsType         = node.ObfsType ?? "none",
                 ObfsPassword     = node.ObfsPassword ?? string.Empty,
                 IsShadowTls      = node.IsShadowTls,
@@ -56,20 +68,29 @@ namespace AnywhereWinUI.Helpers
                 WgLocalAddress   = node.WgLocalAddress ?? string.Empty,
                 WgPreSharedKey   = node.WgPreSharedKey ?? string.Empty,
                 WgMtu            = node.WgMtu,
+                SnellVersion     = node.SnellVersion,
+                SnellMode        = node.SnellMode ?? string.Empty,
                 ProxyChainId     = node.ProxyChainId ?? string.Empty,
+                CustomConfigFile = node.CustomConfigFile ?? string.Empty,
+                CustomBridgeGui  = node.CustomBridgeGui,
+                CustomHasTun     = node.CustomHasTun,
                 IsFavorite       = node.IsFavorite,
             };
         }
 
         public static PersistedNode ToPersistedNode(ServerEntry entry)
         {
+            string formattedHost = CustomConfigService.IsCustomProtocol(entry.Protocol)
+                ? entry.Host
+                : NodeLinkParser.FormatHostPortPublic(entry.Host, entry.Port);
+
             return new PersistedNode
             {
                 Id               = entry.Id,
                 SubscriptionId   = entry.SubscriptionId,
                 Name             = entry.Name,
                 Protocol         = entry.Protocol,
-                Host             = $"{entry.Host}:{entry.Port}",
+                Host             = formattedHost,
                 Uuid             = entry.Uuid,
                 Password         = entry.Password,
                 Username         = entry.Username,
@@ -89,6 +110,7 @@ namespace AnywhereWinUI.Helpers
                 ShortId          = entry.ShortId,
                 SpiderX          = entry.SpiderX,
                 Flow             = entry.Flow,
+                Spec             = entry.Spec,
                 ObfsType         = entry.ObfsType,
                 ObfsPassword     = entry.ObfsPassword,
                 IsShadowTls      = entry.IsShadowTls,
@@ -98,7 +120,12 @@ namespace AnywhereWinUI.Helpers
                 WgLocalAddress   = entry.WgLocalAddress,
                 WgPreSharedKey   = entry.WgPreSharedKey,
                 WgMtu            = entry.WgMtu,
+                SnellVersion     = entry.SnellVersion,
+                SnellMode        = entry.SnellMode,
                 ProxyChainId     = entry.ProxyChainId,
+                CustomConfigFile = entry.CustomConfigFile,
+                CustomBridgeGui  = entry.CustomBridgeGui,
+                CustomHasTun     = entry.CustomHasTun,
                 IsFavorite       = entry.IsFavorite,
             };
         }
@@ -128,6 +155,9 @@ namespace AnywhereWinUI.Helpers
                 "https"                => "http",
                 "wireguard"            => "wireguard",
                 "wg"                   => "wireguard",
+                "snell"                => "snell",
+                "nowhere"              => "nowhere",
+                "custom"               => "custom",
                 var x                  => x
             };
         }

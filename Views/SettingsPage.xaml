@@ -323,7 +323,7 @@
                     </StackPanel>
 
                     <!-- Panel: Tailscale 组网 -->
-                    <StackPanel x:Name="TailscalePanel" Spacing="12" Visibility="Collapsed">
+                    <StackPanel x:Name="TailscalePanel" x:Load="False" Spacing="12" Visibility="Collapsed">
                         <StackPanel.ChildrenTransitions>
                             <TransitionCollection>
                                 <EntranceThemeTransition FromVerticalOffset="28" />
@@ -464,7 +464,7 @@
                     </StackPanel>
 
                     <!-- Panel: 路由分流 (Routing) -->
-                    <StackPanel x:Name="RoutingPanel" Spacing="12" Visibility="Collapsed">
+                    <StackPanel x:Name="RoutingPanel" x:Load="False" Spacing="12" Visibility="Collapsed">
                         <StackPanel.ChildrenTransitions>
                             <TransitionCollection>
                                 <EntranceThemeTransition FromVerticalOffset="28" />
@@ -514,7 +514,7 @@
                     </StackPanel>
 
                     <!-- Panel: DNS 与解析 (DnsSettings) -->
-                    <StackPanel x:Name="DnsSettingsPanel" Spacing="12" Visibility="Collapsed">
+                    <StackPanel x:Name="DnsSettingsPanel" x:Load="False" Spacing="12" Visibility="Collapsed">
                         <StackPanel.ChildrenTransitions>
                             <TransitionCollection>
                                 <EntranceThemeTransition FromVerticalOffset="28" />
@@ -785,7 +785,7 @@
                     </StackPanel>
 
                     <!-- Panel 3: 开机与启动 -->
-                    <StackPanel x:Name="AutostartPanel" Spacing="12" Visibility="Collapsed">
+                    <StackPanel x:Name="AutostartPanel" x:Load="False" Spacing="12" Visibility="Collapsed">
                         <StackPanel.ChildrenTransitions>
                             <TransitionCollection>
                                 <EntranceThemeTransition FromVerticalOffset="28" />
@@ -859,7 +859,7 @@
                     </StackPanel>
 
                     <!-- Panel 4: 备份与恢复 -->
-                    <StackPanel x:Name="BackupPanel" Spacing="12" Visibility="Collapsed">
+                    <StackPanel x:Name="BackupPanel" x:Load="False" Spacing="12" Visibility="Collapsed">
                         <StackPanel.ChildrenTransitions>
                             <TransitionCollection>
                                 <EntranceThemeTransition FromVerticalOffset="28" />
@@ -895,7 +895,7 @@
                     </StackPanel>
 
                     <!-- Panel 5: 关于与内核 -->
-                    <StackPanel x:Name="AboutPanel" Spacing="16" Visibility="Collapsed">
+                    <StackPanel x:Name="AboutPanel" x:Load="False" Spacing="16" Visibility="Collapsed">
                         <StackPanel.ChildrenTransitions>
                             <TransitionCollection>
                                 <EntranceThemeTransition FromVerticalOffset="28" />

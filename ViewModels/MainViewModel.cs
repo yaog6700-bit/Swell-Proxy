@@ -15,6 +15,8 @@ namespace AnywhereWinUI.ViewModels
         public event EventHandler? PrivacyLocked;
 
         private readonly DispatcherQueue? _dispatcherQueue;
+        private int _failedUnlockAttempts;
+        private DateTime _unlockCooldownUntilUtc = DateTime.MinValue;
 
         [ObservableProperty]
         private bool _isPrivacyLocked;
@@ -43,7 +45,7 @@ namespace AnywhereWinUI.ViewModels
                                ?? MainWindow.Instance?.DispatcherQueue;
 
             var session = AppSession.Instance;
-            if (session.IsPrivacyModeActive && !string.IsNullOrEmpty(session.PrivacyPassword))
+            if (session.IsPrivacyModeActive && !string.IsNullOrWhiteSpace(session.PrivacyPassword))
             {
                 IsPrivacyLocked = true;
             }
@@ -100,17 +102,21 @@ namespace AnywhereWinUI.ViewModels
                 return;
             }
 
-            if (string.IsNullOrEmpty(session.PrivacyPassword))
+            if (string.IsNullOrWhiteSpace(session.PrivacyPassword))
             {
                 // The MainWindow handles the dialog since there's no DialogService
                 if (MainWindow.Instance != null)
                 {
                     var newPwd = await MainWindow.Instance.ShowSetPasswordDialogAsync();
-                    if (string.IsNullOrEmpty(newPwd)) return;
+                    if (string.IsNullOrWhiteSpace(newPwd)) return;
 
                     var hashed = PrivacyPasswordHelper.Hash(newPwd);
                     session.PrivacyPassword = hashed;
                     LocalSettingsHelper.SetValue("privacyPassword", hashed);
+                }
+                else
+                {
+                    return;
                 }
             }
 
@@ -122,9 +128,15 @@ namespace AnywhereWinUI.ViewModels
 
         public bool Unlock(string password)
         {
+            if (DateTime.UtcNow < _unlockCooldownUntilUtc)
+                return false;
+
             var session = AppSession.Instance;
             if (PrivacyPasswordHelper.Verify(password, session.PrivacyPassword))
             {
+                _failedUnlockAttempts = 0;
+                _unlockCooldownUntilUtc = DateTime.MinValue;
+
                 // If still legacy plaintext (edge case), migrate on successful unlock
                 if (!PrivacyPasswordHelper.IsHashed(session.PrivacyPassword))
                 {
@@ -135,6 +147,13 @@ namespace AnywhereWinUI.ViewModels
 
                 IsPrivacyLocked = false;
                 return true;
+            }
+
+            _failedUnlockAttempts++;
+            if (_failedUnlockAttempts >= 5)
+            {
+                _unlockCooldownUntilUtc = DateTime.UtcNow.AddSeconds(15);
+                _failedUnlockAttempts = 0;
             }
             return false;
         }

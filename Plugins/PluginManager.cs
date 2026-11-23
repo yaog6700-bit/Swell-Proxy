@@ -26,9 +26,33 @@ namespace AnywhereWinUI.Plugins
         private static readonly string ManifestsPath = Path.Combine(DataDir, "plugins.json");
 
         // ── State ────────────────────────────────────────────────────
+        private readonly object _sync = new();
         private readonly Dictionary<string, PluginRuntime> _runtimes = [];
 
         public List<PluginManifest> Manifests { get; private set; } = [];
+
+        private List<PluginRuntime> SnapshotRuntimes()
+        {
+            lock (_sync)
+            {
+                return new List<PluginRuntime>(_runtimes.Values);
+            }
+        }
+
+        private static bool TryResolveSafePluginPath(string? relativePath, out string fullPath)
+        {
+            fullPath = string.Empty;
+            if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
+                return false;
+
+            string fullBase = Path.GetFullPath(PluginsDir).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string candidate = Path.GetFullPath(Path.Combine(DataDir, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+            if (!candidate.StartsWith(fullBase, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            fullPath = candidate;
+            return true;
+        }
 
         private PluginManager() { }
 
@@ -137,51 +161,128 @@ namespace AnywhereWinUI.Plugins
             var triggers = new List<string>();
             var knownTriggers = Enum.GetNames(typeof(PluginTrigger));
 
+            // Strip /* ... */ block comments and // line comments so commented-out functions aren't matched
+            string stripped = System.Text.RegularExpressions.Regex.Replace(
+                jsCode ?? string.Empty,
+                @"/\*[\s\S]*?\*/|//[^\r\n]*",
+                string.Empty);
+
             foreach (var name in knownTriggers)
             {
-                // Match patterns like: function OnManual( or function OnManual (
                 if (System.Text.RegularExpressions.Regex.IsMatch(
-                    jsCode, $@"\bfunction\s+{name}\s*\("))
+                    stripped, $@"\bfunction\s+{name}\s*\("))
                 {
                     triggers.Add(name);
                 }
             }
 
-            // Ensure OnManual is always included if no triggers found
             if (triggers.Count == 0)
                 triggers.Add("OnManual");
 
             return triggers;
         }
 
-
-        /// <summary>Saves the current manifest list to disk.</summary>
-        public async Task SaveAsync()
+        /// <summary>
+        /// Scans JavaScript source code for Plugin.GetConfig("key") calls so the visual settings
+        /// dialog can automatically surface every script parameter even if plugins.json omitted it.
+        /// </summary>
+        public static List<string> DetectConfigKeysFromCode(string jsCode)
         {
+            var keys = new List<string>();
+            if (string.IsNullOrWhiteSpace(jsCode)) return keys;
+
+            string stripped = System.Text.RegularExpressions.Regex.Replace(
+                jsCode,
+                @"/\*[\s\S]*?\*/|//[^\r\n]*",
+                string.Empty);
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var matches = System.Text.RegularExpressions.Regex.Matches(
+                stripped,
+                @"Plugin\s*\.\s*GetConfig\s*\(\s*[""']([^""']+)[""']\s*\)");
+
+            foreach (System.Text.RegularExpressions.Match m in matches)
+            {
+                string key = m.Groups[1].Value.Trim();
+                if (!string.IsNullOrEmpty(key) && seen.Add(key))
+                {
+                    keys.Add(key);
+                }
+            }
+
+            return keys;
+        }
+
+        public async Task<List<string>> GetDetectedConfigKeysAsync(PluginManifest manifest)
+        {
+            if (manifest == null || !TryResolveSafePluginPath(manifest.Path, out var fullPath) || !File.Exists(fullPath))
+                return [];
+
+            try
+            {
+                var code = await File.ReadAllTextAsync(fullPath);
+                return DetectConfigKeysFromCode(code);
+            }
+            catch
+            {
+                return [];
+            }
+        }
+
+        public async Task UpdateConfigurationAsync(string id, List<PluginConfigItem> items)
+        {
+            PluginManifest? manifest;
+            lock (_sync)
+            {
+                manifest = Manifests.Find(m => m.Id == id);
+                if (manifest == null) return;
+                manifest.Configuration = items ?? [];
+            }
+
+            if (!manifest.Disabled)
+            {
+                await LoadPluginAsync(manifest);
+            }
+
+            await SaveAsync();
+        }
+
+        public Task SaveAsync()
+        {
+            List<PluginManifest> snapshot;
+            lock (_sync)
+            {
+                snapshot = new List<PluginManifest>(Manifests);
+            }
             var ctx = new AnywhereWinUI.Models.AppJsonContext(
                 new JsonSerializerOptions { WriteIndented = true });
-            var json = JsonSerializer.Serialize(Manifests, ctx.ListPluginManifest);
-            await File.WriteAllTextAsync(ManifestsPath, json);
+            var json = JsonSerializer.Serialize(snapshot, ctx.ListPluginManifest);
+            Helpers.LocalSettingsHelper.WriteAllTextAtomic(ManifestsPath, json);
+            return Task.CompletedTask;
         }
 
         // ── CRUD ─────────────────────────────────────────────────────
 
-        /// <summary>Add a new plugin and load it immediately if enabled.</summary>
         public async Task AddPluginAsync(PluginManifest manifest)
         {
-            Manifests.Add(manifest);
+            lock (_sync)
+            {
+                Manifests.Add(manifest);
+            }
             if (!manifest.Disabled)
                 await LoadPluginAsync(manifest);
             await SaveAsync();
         }
 
-        /// <summary>Enable or disable a plugin (hot-toggle).</summary>
         public async Task SetEnabledAsync(string id, bool enabled)
         {
-            var manifest = Manifests.Find(m => m.Id == id);
-            if (manifest == null) return;
-
-            manifest.Disabled = !enabled;
+            PluginManifest? manifest;
+            lock (_sync)
+            {
+                manifest = Manifests.Find(m => m.Id == id);
+                if (manifest == null) return;
+                manifest.Disabled = !enabled;
+            }
 
             if (enabled)
                 await LoadPluginAsync(manifest);
@@ -191,46 +292,49 @@ namespace AnywhereWinUI.Plugins
             await SaveAsync();
         }
 
-        /// <summary>Remove a plugin, unloading it first.</summary>
         public async Task RemovePluginAsync(string id)
         {
             UnloadPlugin(id);
 
-            // Save the manifest reference BEFORE removing it from the list,
-            // otherwise the Find below will always return null.
-            var manifest = Manifests.Find(m => m.Id == id);
-            Manifests.RemoveAll(m => m.Id == id);
-
-            // Optionally delete the js file if it lives in our plugins dir
-            if (manifest != null && manifest.Path.StartsWith("plugins/"))
+            PluginManifest? manifest;
+            lock (_sync)
             {
-                var fullPath = Path.Combine(DataDir, manifest.Path.Replace('/', Path.DirectorySeparatorChar));
+                manifest = Manifests.Find(m => m.Id == id);
+                Manifests.RemoveAll(m => m.Id == id);
+            }
+
+            if (manifest != null && TryResolveSafePluginPath(manifest.Path, out var fullPath))
+            {
                 try { if (File.Exists(fullPath)) File.Delete(fullPath); } catch { }
             }
 
             await SaveAsync();
         }
 
-        /// <summary>
-        /// Download/refresh the plugin code from its URL (Type == "Http").
-        /// Then hot-reload the runtime.
-        /// </summary>
         public async Task UpdatePluginAsync(string id)
         {
-            var manifest = Manifests.Find(m => m.Id == id);
+            PluginManifest? manifest;
+            lock (_sync)
+            {
+                manifest = Manifests.Find(m => m.Id == id);
+            }
             if (manifest == null || manifest.Type != "Http" || string.IsNullOrEmpty(manifest.Url))
                 return;
+
+            if (!TryResolveSafePluginPath(manifest.Path, out var fullPath))
+            {
+                manifest.LastError = "Invalid plugin file path.";
+                return;
+            }
 
             manifest.IsUpdating = true;
             try
             {
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30), MaxResponseContentBufferSize = 4 * 1024 * 1024 };
                 var code = await http.GetStringAsync(manifest.Url);
-                var fullPath = Path.Combine(DataDir, manifest.Path.Replace('/', Path.DirectorySeparatorChar));
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-                await File.WriteAllTextAsync(fullPath, code);
+                Helpers.LocalSettingsHelper.WriteAllTextAtomic(fullPath, code);
 
-                // Hot-reload
                 UnloadPlugin(id);
                 if (!manifest.Disabled)
                     await LoadPluginAsync(manifest);
@@ -243,14 +347,13 @@ namespace AnywhereWinUI.Plugins
 
         // ── Trigger Dispatch ─────────────────────────────────────────
 
-        /// <summary>
-        /// Fire a simple trigger for all subscribed plugins.
-        /// Any plugin errors are caught and logged, not re-thrown.
-        /// </summary>
         public async Task FireAsync(PluginTrigger trigger)
         {
+            if (!Services.AppSession.Instance.EnablePlugins)
+                return;
+
             var fnName = trigger.ToString();
-            foreach (var (id, runtime) in _runtimes)
+            foreach (var runtime in SnapshotRuntimes())
             {
                 if (!runtime.IsEnabled) continue;
                 if (!runtime.Manifest.Triggers.Contains(fnName)) continue;
@@ -267,15 +370,13 @@ namespace AnywhereWinUI.Plugins
             }
         }
 
-        /// <summary>
-        /// OnBeforeCoreStart trigger: plugins receive the JSON config and may return
-        /// a modified JSON string. If a plugin returns null/undefined, the previous
-        /// config is kept.
-        /// </summary>
         public async Task<string> FireBeforeCoreStartAsync(string configJson)
         {
+            if (!Services.AppSession.Instance.EnablePlugins)
+                return configJson;
+
             const string fnName = "OnBeforeCoreStart";
-            foreach (var (_, runtime) in _runtimes)
+            foreach (var runtime in SnapshotRuntimes())
             {
                 if (!runtime.IsEnabled) continue;
                 if (!runtime.Manifest.Triggers.Contains(fnName)) continue;
@@ -283,10 +384,10 @@ namespace AnywhereWinUI.Plugins
                 try
                 {
                     var result = await runtime.CallAsync(fnName, configJson);
-                    if (result != null && result.Type != Jint.Runtime.Types.Null && result.Type != Jint.Runtime.Types.Undefined)
+                    if (result != null && result.Type == Jint.Runtime.Types.String)
                     {
                         var returned = result.ToString();
-                        if (!string.IsNullOrWhiteSpace(returned))
+                        if (!string.IsNullOrWhiteSpace(returned) && IsValidJsonObject(returned))
                             configJson = returned;
                     }
                 }
@@ -299,14 +400,13 @@ namespace AnywhereWinUI.Plugins
             return configJson;
         }
 
-        /// <summary>
-        /// OnSubscribe trigger: plugins receive serialised node array (JSON string)
-        /// and may return a filtered/modified JSON string.
-        /// </summary>
         public async Task<string> FireSubscribeAsync(string nodesJson, string subscriptionName)
         {
+            if (!Services.AppSession.Instance.EnablePlugins)
+                return nodesJson;
+
             const string fnName = "OnSubscribe";
-            foreach (var (_, runtime) in _runtimes)
+            foreach (var runtime in SnapshotRuntimes())
             {
                 if (!runtime.IsEnabled) continue;
                 if (!runtime.Manifest.Triggers.Contains(fnName)) continue;
@@ -314,7 +414,7 @@ namespace AnywhereWinUI.Plugins
                 try
                 {
                     var result = await runtime.CallAsync(fnName, nodesJson, subscriptionName);
-                    if (result != null && result.Type != Jint.Runtime.Types.Null && result.Type != Jint.Runtime.Types.Undefined)
+                    if (result != null && result.Type == Jint.Runtime.Types.String)
                     {
                         var returned = result.ToString();
                         if (!string.IsNullOrWhiteSpace(returned))
@@ -330,12 +430,14 @@ namespace AnywhereWinUI.Plugins
             return nodesJson;
         }
 
-        /// <summary>
-        /// Manually trigger a specific plugin's OnManual function.
-        /// </summary>
         public async Task ManualTriggerAsync(string id)
         {
-            if (!_runtimes.TryGetValue(id, out var runtime))
+            PluginRuntime? runtime;
+            lock (_sync)
+            {
+                _runtimes.TryGetValue(id, out runtime);
+            }
+            if (runtime == null)
             {
                 Log($"Plugin {id} is not loaded.");
                 return;
@@ -351,16 +453,26 @@ namespace AnywhereWinUI.Plugins
             }
         }
 
-        // ── Internal Helpers ─────────────────────────────────────────
+        private static bool IsValidJsonObject(string candidate)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(candidate);
+                return doc.RootElement.ValueKind == JsonValueKind.Object;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         private async Task LoadPluginAsync(PluginManifest manifest)
         {
             try
             {
-                var fullPath = Path.Combine(DataDir, manifest.Path.Replace('/', Path.DirectorySeparatorChar));
-                if (!File.Exists(fullPath))
+                if (!TryResolveSafePluginPath(manifest.Path, out var fullPath) || !File.Exists(fullPath))
                 {
-                    Log($"Plugin file not found: {fullPath}");
+                    Log($"Plugin file not found or invalid path: {manifest.Path}");
                     manifest.LastError = "Plugin file not found.";
                     return;
                 }
@@ -369,7 +481,14 @@ namespace AnywhereWinUI.Plugins
                 var runtime = new PluginRuntime(manifest);
                 await runtime.InitAsync(code);
 
-                _runtimes[manifest.Id] = runtime;
+                PluginRuntime? previous = null;
+                lock (_sync)
+                {
+                    _runtimes.TryGetValue(manifest.Id, out previous);
+                    _runtimes[manifest.Id] = runtime;
+                }
+                previous?.Dispose();
+
                 manifest.LastError = null;
                 Log($"Loaded plugin: {manifest.Name} {manifest.Version}");
             }
@@ -382,11 +501,15 @@ namespace AnywhereWinUI.Plugins
 
         private void UnloadPlugin(string id)
         {
-            if (_runtimes.TryGetValue(id, out var runtime))
+            PluginRuntime? runtime = null;
+            lock (_sync)
             {
-                runtime.Dispose();
-                _runtimes.Remove(id);
+                if (_runtimes.TryGetValue(id, out runtime))
+                {
+                    _runtimes.Remove(id);
+                }
             }
+            runtime?.Dispose();
         }
 
         private static void Log(string message) =>

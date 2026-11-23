@@ -58,7 +58,10 @@ namespace AnywhereWinUI.Services
         {
             var list = rules.Select(r => r.Clone()).ToList();
             var json = JsonSerializer.Serialize(list, AppJsonContext.Default.ListRoutingRuleItem);
-            LocalSettingsHelper.SetValue(StorageKey, json);
+            var batch = new List<KeyValuePair<string, object>>(10)
+            {
+                new(StorageKey, json)
+            };
 
             foreach (var rule in list.Where(r => r.IsBuiltIn))
             {
@@ -66,31 +69,31 @@ namespace AnywhereWinUI.Services
                 {
                     case "builtin:youtube":
                         AppSession.Instance.RuleYouTubeAction = rule.OutboundTag;
-                        LocalSettingsHelper.SetValue("ruleYouTubeAction", rule.OutboundTag);
+                        batch.Add(new("ruleYouTubeAction", rule.OutboundTag));
                         break;
                     case "builtin:google":
                         AppSession.Instance.RuleGoogleAction = rule.OutboundTag;
-                        LocalSettingsHelper.SetValue("ruleGoogleAction", rule.OutboundTag);
+                        batch.Add(new("ruleGoogleAction", rule.OutboundTag));
                         break;
                     case "builtin:telegram":
                         AppSession.Instance.RuleTelegramAction = rule.OutboundTag;
-                        LocalSettingsHelper.SetValue("ruleTelegramAction", rule.OutboundTag);
+                        batch.Add(new("ruleTelegramAction", rule.OutboundTag));
                         break;
                     case "builtin:netflix":
                         AppSession.Instance.RuleNetflixAction = rule.OutboundTag;
-                        LocalSettingsHelper.SetValue("ruleNetflixAction", rule.OutboundTag);
+                        batch.Add(new("ruleNetflixAction", rule.OutboundTag));
                         break;
                     case "builtin:tiktok":
                         AppSession.Instance.RuleTikTokAction = rule.OutboundTag;
-                        LocalSettingsHelper.SetValue("ruleTikTokAction", rule.OutboundTag);
+                        batch.Add(new("ruleTikTokAction", rule.OutboundTag));
                         break;
                     case "builtin:chatgpt":
                         AppSession.Instance.RuleChatGPTAction = rule.OutboundTag;
-                        LocalSettingsHelper.SetValue("ruleChatGPTAction", rule.OutboundTag);
+                        batch.Add(new("ruleChatGPTAction", rule.OutboundTag));
                         break;
                     case "builtin:claude":
                         AppSession.Instance.RuleClaudeAction = rule.OutboundTag;
-                        LocalSettingsHelper.SetValue("ruleClaudeAction", rule.OutboundTag);
+                        batch.Add(new("ruleClaudeAction", rule.OutboundTag));
                         break;
                 }
             }
@@ -109,7 +112,8 @@ namespace AnywhereWinUI.Services
 
             AppSession.Instance.CustomRules = customRules;
             var customJson = JsonSerializer.Serialize(customRules, AppJsonContext.Default.ListCustomRule);
-            LocalSettingsHelper.SetValue("customRules", customJson);
+            batch.Add(new("customRules", customJson));
+            LocalSettingsHelper.SetValues(batch);
         }
 
         public static List<RoutingRuleItem> CreateDefaultRules()
@@ -255,8 +259,7 @@ namespace AnywhereWinUI.Services
         }
 
         private static bool RequiresBuiltInMatchUpgrade(string id)
-            => id.Equals("builtin:youtube", StringComparison.OrdinalIgnoreCase) ||
-               id.Equals("builtin:google", StringComparison.OrdinalIgnoreCase);
+            => id.StartsWith("builtin:", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// Inserts or updates a user-defined routing rule from ConnectionsPage quick actions,
@@ -330,7 +333,8 @@ namespace AnywhereWinUI.Services
             if (CoreManager.Instance.IsRunning)
             {
                 CoreManager.Instance.AppendLog($"[快捷分流] 已更新规则 {displayName} ({match}) -> {actionLabel}，正在重载代理引擎...");
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                var selectedId = NodesManager.Instance.SelectedNodeId;
+                var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == selectedId);
                 string realConfig = node != null ? await ConfigBuilder.BuildAsync(node) : await ConfigBuilder.BuildAsync();
                 await CoreManager.Instance.StopAsync();
                 await CoreManager.Instance.StartAsync(realConfig);

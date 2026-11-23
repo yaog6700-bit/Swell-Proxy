@@ -2696,4 +2696,184 @@ URL: {1}
   <data name="Settings_AppDownloadingBtnFmt" xml:space="preserve">
     <value>后台下载中 {0}%…</value>
   </data>
+  <data name="Shoes_ReasonAutoSelect" xml:space="preserve">
+    <value>自动选点与故障转移需借用 sing-box 内核</value>
+  </data>
+  <data name="TrayPanel_StatusNormal" xml:space="preserve">
+    <value>正常</value>
+  </data>
+  <data name="TrayPanel_StatusStopped" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="TrayPanel_StatusStarting" xml:space="preserve">
+    <value>启动中…</value>
+  </data>
+  <data name="TrayPanel_StatusSwitching" xml:space="preserve">
+    <value>切换中…</value>
+  </data>
+  <data name="TrayPanel_ProxyTamperedShort" xml:space="preserve">
+    <value>系统代理已被外部修改</value>
+  </data>
+  <data name="TrayPanel_UpdateReadyFmt" xml:space="preserve">
+    <value>新版本 {0} 已就绪</value>
+  </data>
+  <data name="TrayPanel_UpdateAvailFmt" xml:space="preserve">
+    <value>发现新版本 {0}</value>
+  </data>
+  <data name="TrayPanel_UpdateViewBtn" xml:space="preserve">
+    <value>查看</value>
+  </data>
+  <data name="TrayPanel_TodayFmt" xml:space="preserve">
+    <value>今日 {0}</value>
+  </data>
+  <data name="TrayPanel_NodesHeader" xml:space="preserve">
+    <value>节点</value>
+  </data>
+  <data name="TrayPanel_PingBtn" xml:space="preserve">
+    <value>测速</value>
+  </data>
+  <data name="TrayPanel_Pinging" xml:space="preserve">
+    <value>测速中…</value>
+  </data>
+  <data name="TrayPanel_AutoTitle" xml:space="preserve">
+    <value>自动</value>
+  </data>
+  <data name="TrayPanel_AutoSubtitle" xml:space="preserve">
+    <value>最快 + 故障转移</value>
+  </data>
+  <data name="TrayPanel_CurrentBadge" xml:space="preserve">
+    <value>当前</value>
+  </data>
+  <data name="TrayPanel_AllNodes" xml:space="preserve">
+    <value>全部节点...</value>
+  </data>
+  <data name="TrayPanel_NodeCountFmt" xml:space="preserve">
+    <value>{0} 个</value>
+  </data>
+  <data name="TrayPanel_EmptyNodes" xml:space="preserve">
+    <value>暂无可用节点，点击前往导入</value>
+  </data>
+  <data name="TrayPanel_ModeLabel" xml:space="preserve">
+    <value>模式</value>
+  </data>
+  <data name="TrayPanel_ModeRuleShort" xml:space="preserve">
+    <value>规则</value>
+  </data>
+  <data name="TrayPanel_ModeGlobalShort" xml:space="preserve">
+    <value>全局</value>
+  </data>
+  <data name="TrayPanel_ModeDirectShort" xml:space="preserve">
+    <value>直连</value>
+  </data>
+  <data name="TrayMenu_EnableProxy" xml:space="preserve">
+    <value>启用代理</value>
+  </data>
+  <data name="TrayMenu_SystemProxy" xml:space="preserve">
+    <value>系统代理</value>
+  </data>
+  <data name="TrayMenu_TunMode" xml:space="preserve">
+    <value>TUN 模式</value>
+  </data>
+  <data name="TrayMenu_NodesSubmenu" xml:space="preserve">
+    <value>节点</value>
+  </data>
+  <data name="TrayMenu_AutoNodeItem" xml:space="preserve">
+    <value>自动（最快 + 故障转移）</value>
+  </data>
+  <data name="TrayMenu_AllNodesFmt" xml:space="preserve">
+    <value>全部 {0} 个节点…</value>
+  </data>
+  <data name="TrayMenu_SubsSubmenu" xml:space="preserve">
+    <value>订阅分组</value>
+  </data>
+  <data name="TrayMenu_UpdateAllSubs" xml:space="preserve">
+    <value>立即更新全部订阅</value>
+  </data>
+  <data name="TrayMenu_Settings" xml:space="preserve">
+    <value>设置…</value>
+  </data>
+  <data name="RouteSim_HeaderTitle" xml:space="preserve">
+    <value>分流命中模拟测试</value>
+  </data>
+  <data name="RouteSim_InputPlaceholder" xml:space="preserve">
+    <value>输入域名、URL、IP 或进程名测试分流走向（如 claude.ai、91.108.4.1、Telegram.exe）</value>
+  </data>
+  <data name="RouteSim_ClearTooltip" xml:space="preserve">
+    <value>清空输入</value>
+  </data>
+  <data name="RouteSim_MatchedRuleFmt" xml:space="preserve">
+    <value>命中：{0}</value>
+  </data>
+  <data name="RouteSim_DnsFmt" xml:space="preserve">
+    <value>DNS：{0}</value>
+  </data>
+  <data name="RouteSim_RuleGlobalMode" xml:space="preserve">
+    <value>全局代理模式（全部公网流量走代理）</value>
+  </data>
+  <data name="RouteSim_RuleDirectMode" xml:space="preserve">
+    <value>全局直连模式（全部流量不经过代理）</value>
+  </data>
+  <data name="RouteSim_RulePrivateIp" xml:space="preserve">
+    <value>内置私有/局域网地址保护 (ip_is_private)</value>
+  </data>
+  <data name="RouteSim_RuleTailscale" xml:space="preserve">
+    <value>内置 Tailscale 组网路由</value>
+  </data>
+  <data name="RouteSim_RuleIntranet" xml:space="preserve">
+    <value>企业内网/VPN 直连路由</value>
+  </data>
+  <data name="RouteSim_RuleAdBlock" xml:space="preserve">
+    <value>内置广告域名拦截 (geosite-category-ads-all)</value>
+  </data>
+  <data name="RouteSim_RuleGoogleCn" xml:space="preserve">
+    <value>Google 中国下载域名防走直连保护</value>
+  </data>
+  <data name="RouteSim_RuleChinaDirect" xml:space="preserve">
+    <value>绕过中国大陆规则集 (geosite-cn / geoip-cn)</value>
+  </data>
+  <data name="RouteSim_RuleFinalProxy" xml:space="preserve">
+    <value>默认兜底策略 (final → 代理)</value>
+  </data>
+  <data name="RouteSim_DnsLocalFmt" xml:space="preserve">
+    <value>本地直连 ({0})</value>
+  </data>
+  <data name="RouteSim_DnsRemoteFmt" xml:space="preserve">
+    <value>远程代理 ({0})</value>
+  </data>
+  <data name="RouteSim_DnsBlocked" xml:space="preserve">
+    <value>已阻断解析</value>
+  </data>
+  <data name="RouteSim_DnsDirectSkipped" xml:space="preserve">
+    <value>无需 DNS（纯 IP 连接）</value>
+  </data>
+  <data name="Plugins_ConfigTip" xml:space="preserve">
+    <value>配置插件参数</value>
+  </data>
+  <data name="Plugins_ConfigDialogTitleFmt" xml:space="preserve">
+    <value>插件参数配置 · {0}</value>
+  </data>
+  <data name="Plugins_ConfigDesc" xml:space="preserve">
+    <value>设置键值对参数供脚本通过 Plugin.GetConfig(key) 读取，保存后立即生效。</value>
+  </data>
+  <data name="Plugins_ConfigEmptyHint" xml:space="preserve">
+    <value>当前插件未声明预设参数，可点击下方按钮手动添加键值对。</value>
+  </data>
+  <data name="Plugins_ConfigAddParamBtn" xml:space="preserve">
+    <value>添加参数项</value>
+  </data>
+  <data name="Plugins_ConfigKeyPlaceholder" xml:space="preserve">
+    <value>参数键名 (Key)</value>
+  </data>
+  <data name="Plugins_ConfigValuePlaceholder" xml:space="preserve">
+    <value>参数值 (Value，留空使用脚本默认值)</value>
+  </data>
+  <data name="Plugins_ConfigAutoDetected" xml:space="preserve">
+    <value>脚本内置参数</value>
+  </data>
+  <data name="Plugins_ConfigSavedTitle" xml:space="preserve">
+    <value>参数已保存</value>
+  </data>
+  <data name="Plugins_ConfigSavedFmt" xml:space="preserve">
+    <value>插件「{0}」的参数配置已更新并重新加载。</value>
+  </data>
 </root>

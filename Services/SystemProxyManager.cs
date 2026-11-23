@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using AnywhereWinUI.Helpers;
 using Microsoft.Win32;
 
 namespace AnywhereWinUI.Services
@@ -42,11 +43,13 @@ namespace AnywhereWinUI.Services
         public static bool IsExpectedActive => _expectedActive;
         public static string ExpectedServer => _expectedServer;
 
-        private sealed class ProxySnapshot
+        public sealed class ProxySnapshot
         {
             public int ProxyEnable { get; set; }
             public string? ProxyServer { get; set; }
             public string? ProxyOverride { get; set; }
+            public bool HadProxyServer { get; set; }
+            public bool HadProxyOverride { get; set; }
         }
 
         [DllImport("wininet.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -55,11 +58,6 @@ namespace AnywhereWinUI.Services
         private const int INTERNET_OPTION_SETTINGS_CHANGED = 39;
         private const int INTERNET_OPTION_REFRESH = 37;
 
-        /// <summary>
-        /// Enable Windows System Proxy pointing to the specified mixed inbound host and port.
-        /// Captures a pre-takeover snapshot of the user's original proxy settings (if not already captured)
-        /// so DisableProxy can cleanly restore them without touching AutoConfigURL (PAC).
-        /// </summary>
         public static bool EnableProxy(string host, int port)
         {
             lock (_sync)
@@ -75,7 +73,6 @@ namespace AnywhereWinUI.Services
 
                         key.SetValue("ProxyEnable", 1, RegistryValueKind.DWord);
                         key.SetValue("ProxyServer", targetServer, RegistryValueKind.String);
-                        // Standard bypass rules for local subnetworks; intentionally leaves AutoConfigURL untouched
                         key.SetValue("ProxyOverride", DefaultProxyOverride, RegistryValueKind.String);
                     }
 
@@ -94,9 +91,6 @@ namespace AnywhereWinUI.Services
             }
         }
 
-        /// <summary>
-        /// Re-applies the expected system proxy without overwriting the original pre-takeover backup snapshot.
-        /// </summary>
         public static bool RetakeProxy()
         {
             if (!_expectedActive || string.IsNullOrWhiteSpace(_expectedHost) || _expectedPort <= 0)
@@ -106,9 +100,71 @@ namespace AnywhereWinUI.Services
         }
 
         /// <summary>
-        /// Disable Windows System Proxy cleanly, restoring the user's original pre-takeover proxy snapshot
-        /// unless that original proxy points to a dead local port.
+        /// Only disables/restores the system proxy if Swell Proxy previously took ownership
+        /// (preventing Local-Only or TUN-Only mode from wiping a user's external/corporate proxy).
         /// </summary>
+        public static bool DisableProxyIfOwned()
+        {
+            lock (_sync)
+            {
+                if (_expectedActive || File.Exists(BackupFilePath))
+                    return DisableProxy();
+
+                try
+                {
+                    using RegistryKey? key = Registry.CurrentUser.OpenSubKey(InternetSettingsKeyPath, writable: false);
+                    if (key != null)
+                    {
+                        int enabled = Convert.ToInt32(key.GetValue("ProxyEnable", 0));
+                        string actual = (key.GetValue("ProxyServer") as string ?? string.Empty).Trim();
+                        if (enabled != 0 &&
+                            (string.Equals(actual, _expectedServer, StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(actual, $"127.0.0.1:{AppSession.Instance.MixedPort}", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            return DisableProxy();
+                        }
+                    }
+                }
+                catch { }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Cleans up leftover system proxy settings if a previous session crashed or was killed on shutdown.
+        /// </summary>
+        public static void RecoverCrashLeftoversOnStartup()
+        {
+            lock (_sync)
+            {
+                if (File.Exists(BackupFilePath))
+                {
+                    DisableProxy();
+                    return;
+                }
+
+                try
+                {
+                    using RegistryKey? key = Registry.CurrentUser.OpenSubKey(InternetSettingsKeyPath, writable: true);
+                    if (key == null) return;
+
+                    int enabled = Convert.ToInt32(key.GetValue("ProxyEnable", 0));
+                    string actual = (key.GetValue("ProxyServer") as string ?? string.Empty).Trim();
+                    string ownServer = $"127.0.0.1:{AppSession.Instance.MixedPort}";
+
+                    if (enabled != 0 &&
+                        string.Equals(actual, ownServer, StringComparison.OrdinalIgnoreCase) &&
+                        IsDeadLocalProxy(actual))
+                    {
+                        key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
+                        NotifySystemOfProxyChange();
+                    }
+                }
+                catch { }
+            }
+        }
+
         public static bool DisableProxy()
         {
             lock (_sync)
@@ -128,13 +184,23 @@ namespace AnywhereWinUI.Services
                                 key.SetValue("ProxyServer", snapshot.ProxyServer, RegistryValueKind.String);
                             if (snapshot.ProxyOverride != null)
                                 key.SetValue("ProxyOverride", snapshot.ProxyOverride, RegistryValueKind.String);
+                            else if (snapshot.HadProxyOverride == false)
+                                key.DeleteValue("ProxyOverride", throwOnMissingValue: false);
                         }
                         else
                         {
                             key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
-                            if (snapshot?.ProxyOverride != null)
+                            if (snapshot != null)
                             {
-                                key.SetValue("ProxyOverride", snapshot.ProxyOverride, RegistryValueKind.String);
+                                if (snapshot.HadProxyServer && snapshot.ProxyServer != null && !IsDeadLocalProxy(snapshot.ProxyServer))
+                                    key.SetValue("ProxyServer", snapshot.ProxyServer, RegistryValueKind.String);
+                                else if (!snapshot.HadProxyServer)
+                                    key.DeleteValue("ProxyServer", throwOnMissingValue: false);
+
+                                if (snapshot.HadProxyOverride && snapshot.ProxyOverride != null)
+                                    key.SetValue("ProxyOverride", snapshot.ProxyOverride, RegistryValueKind.String);
+                                else if (!snapshot.HadProxyOverride)
+                                    key.DeleteValue("ProxyOverride", throwOnMissingValue: false);
                             }
                         }
                     }
@@ -149,10 +215,6 @@ namespace AnywhereWinUI.Services
             }
         }
 
-        /// <summary>
-        /// Inspects live Windows Internet Settings to detect whether an external program
-        /// (e.g., game booster, VPN, or another proxy) disabled or overwrote our system proxy.
-        /// </summary>
         public static SystemProxyTamperResult CheckSystemProxyIntegrity()
         {
             if (!_expectedActive)
@@ -199,10 +261,11 @@ namespace AnywhereWinUI.Services
             try
             {
                 int currentEnable = Convert.ToInt32(key.GetValue("ProxyEnable", 0));
-                string? currentServer = key.GetValue("ProxyServer") as string;
-                string? currentOverride = key.GetValue("ProxyOverride") as string;
+                object? rawServer = key.GetValue("ProxyServer");
+                object? rawOverride = key.GetValue("ProxyOverride");
+                string? currentServer = rawServer as string;
+                string? currentOverride = rawOverride as string;
 
-                // Don't snapshot our own proxy server as the "original" setting.
                 if (currentEnable != 0 &&
                     string.Equals(currentServer?.Trim(), targetServer, StringComparison.OrdinalIgnoreCase))
                 {
@@ -213,12 +276,13 @@ namespace AnywhereWinUI.Services
                 {
                     ProxyEnable = currentEnable,
                     ProxyServer = currentServer,
-                    ProxyOverride = currentOverride
+                    ProxyOverride = currentOverride,
+                    HadProxyServer = rawServer != null,
+                    HadProxyOverride = rawOverride != null
                 };
 
-                string? dir = Path.GetDirectoryName(BackupFilePath);
-                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-                File.WriteAllText(BackupFilePath, JsonSerializer.Serialize(snapshot));
+                string json = JsonSerializer.Serialize(snapshot, AnywhereWinUI.Models.AppJsonContext.Default.ProxySnapshot);
+                LocalSettingsHelper.WriteAllTextAtomic(BackupFilePath, json);
             }
             catch
             {
@@ -235,7 +299,7 @@ namespace AnywhereWinUI.Services
             {
                 string json = File.ReadAllText(BackupFilePath);
                 File.Delete(BackupFilePath);
-                return JsonSerializer.Deserialize<ProxySnapshot>(json);
+                return JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.ProxySnapshot);
             }
             catch
             {
@@ -245,70 +309,100 @@ namespace AnywhereWinUI.Services
         }
 
         /// <summary>
-        /// Returns true if proxyServer points to a loopback address (127.0.0.1 / localhost)
-        /// whose TCP port has no active listener (e.g., leftover from a crashed proxy).
+        /// Returns true if proxyServer points solely to loopback port(s) (127.0.0.1 / localhost / [::1],
+        /// including scheme prefixes and multi-protocol "http=...;https=..." strings) with no active TCP listener.
         /// </summary>
         private static bool IsDeadLocalProxy(string? proxyServer)
         {
             if (string.IsNullOrWhiteSpace(proxyServer))
                 return true;
 
-            string trimmed = proxyServer.Trim();
-            // Handle simple "host:port" form
-            int colon = trimmed.LastIndexOf(':');
-            if (colon <= 0 || colon >= trimmed.Length - 1)
-                return false;
+            var segments = proxyServer.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (segments.Length == 0)
+                return true;
 
-            string host = trimmed[..colon].Trim();
-            if (!string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase))
+            System.Net.IPEndPoint[]? listeners = null;
+            bool checkedAnyLoopback = false;
+
+            foreach (var rawSeg in segments)
             {
-                return false;
-            }
+                string seg = rawSeg;
+                int eqIdx = seg.IndexOf('=');
+                if (eqIdx > 0)
+                    seg = seg[(eqIdx + 1)..].Trim();
 
-            if (!int.TryParse(trimmed[(colon + 1)..], out int port) || port <= 0 || port > 65535)
-                return false;
+                int schemeIdx = seg.IndexOf("://", StringComparison.Ordinal);
+                if (schemeIdx >= 0)
+                    seg = seg[(schemeIdx + 3)..].Trim();
 
-            try
-            {
-                var listeners = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
-                foreach (var ep in listeners)
+                int slashIdx = seg.IndexOf('/');
+                if (slashIdx >= 0)
+                    seg = seg[..slashIdx].Trim();
+
+                string host;
+                string portPart;
+                if (seg.StartsWith('['))
                 {
-                    if (ep.Port == port)
-                        return false; // Alive
+                    int closeBracket = seg.IndexOf(']');
+                    if (closeBracket <= 0 || closeBracket + 2 > seg.Length || seg[closeBracket + 1] != ':')
+                        return false;
+                    host = seg[1..closeBracket];
+                    portPart = seg[(closeBracket + 2)..];
                 }
-                return true; // Dead local port
+                else
+                {
+                    int colon = seg.LastIndexOf(':');
+                    if (colon <= 0 || colon >= seg.Length - 1)
+                        return false;
+                    host = seg[..colon].Trim();
+                    portPart = seg[(colon + 1)..].Trim();
+                }
+
+                bool isLoopback =
+                    string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase);
+
+                if (!isLoopback)
+                    return false;
+
+                if (!int.TryParse(portPart, out int port) || port <= 0 || port > 65535)
+                    return false;
+
+                checkedAnyLoopback = true;
+                try
+                {
+                    listeners ??= IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
+                    foreach (var ep in listeners)
+                    {
+                        if (ep.Port == port)
+                            return false; // At least one loopback endpoint is alive
+                    }
+                }
+                catch
+                {
+                    return false;
+                }
             }
-            catch
-            {
-                return false;
-            }
+
+            return checkedAnyLoopback;
         }
 
         [DllImport("dnsapi.dll", EntryPoint = "DnsFlushResolverCache", SetLastError = true)]
         private static extern void DnsFlushResolverCache();
 
-        /// <summary>
-        /// Notify active applications and browsers that the internet configuration has been updated.
-        /// </summary>
         private static void NotifySystemOfProxyChange()
         {
-            // Send settings changed option
             InternetSetOption(IntPtr.Zero, INTERNET_OPTION_SETTINGS_CHANGED, IntPtr.Zero, 0);
-            // Refresh internet options cache
             InternetSetOption(IntPtr.Zero, INTERNET_OPTION_REFRESH, IntPtr.Zero, 0);
 
-            // Flush DNS Cache natively (if enabled in settings) to prevent DNS leak / stale entries
             if (AppSession.Instance.FlushDNS)
             {
                 try
                 {
                     DnsFlushResolverCache();
                 }
-                catch
-                {
-                    // Ignore P/Invoke exceptions on unsupported platforms
-                }
+                catch { }
             }
         }
     }

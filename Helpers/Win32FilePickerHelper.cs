@@ -52,8 +52,13 @@ namespace AnywhereWinUI.Helpers
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetOpenFileNameW(ref OPENFILENAME lpofn);
 
+        [DllImport("comdlg32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetSaveFileNameW(ref OPENFILENAME lpofn);
+
         // ── Flags ─────────────────────────────────────────────────────────────
 
+        private const int OFN_OVERWRITEPROMPT = 0x00000002;
         private const int OFN_FILEMUSTEXIST = 0x00001000;
         private const int OFN_PATHMUSTEXIST = 0x00000800;
         private const int OFN_NOCHANGEDIR   = 0x00000008;
@@ -145,6 +150,93 @@ namespace AnywhereWinUI.Helpers
                 if (filterPtr  != IntPtr.Zero) Marshal.FreeHGlobal(filterPtr);
                 if (fileBuffer != IntPtr.Zero) Marshal.FreeHGlobal(fileBuffer);
                 if (titlePtr   != IntPtr.Zero) Marshal.FreeHGlobal(titlePtr);
+            }
+        }
+
+        /// <summary>
+        /// 弹出文件保存对话框（兼容普通进程与管理员 TUN 模式进程）。
+        /// </summary>
+        public static Task<string?> PickSaveFileAsync(
+            IntPtr hwnd,
+            string? suggestedFileName = null,
+            string? defaultExtension = null,
+            IReadOnlyList<(string Name, string Spec)>? filters = null,
+            string? title = null)
+        {
+            IntPtr filterPtr  = IntPtr.Zero;
+            IntPtr fileBuffer = IntPtr.Zero;
+            IntPtr titlePtr   = IntPtr.Zero;
+            IntPtr defExtPtr  = IntPtr.Zero;
+
+            try
+            {
+                var sb = new StringBuilder();
+                if (filters != null && filters.Count > 0)
+                {
+                    foreach (var (name, spec) in filters)
+                        sb.Append(name).Append('\0').Append(spec).Append('\0');
+                }
+                else
+                {
+                    sb.Append(L.FilePicker_AllFiles).Append('\0').Append("*.*").Append('\0');
+                }
+                sb.Append('\0');
+
+                char[] filterChars = sb.ToString().ToCharArray();
+                filterPtr = Marshal.AllocHGlobal(filterChars.Length * 2);
+                Marshal.Copy(filterChars, 0, filterPtr, filterChars.Length);
+
+                int bufferBytes = MAX_PATH_CHARS * 2;
+                fileBuffer = Marshal.AllocHGlobal(bufferBytes);
+                for (int i = 0; i < bufferBytes; i += 2)
+                    Marshal.WriteInt16(fileBuffer, i, 0);
+
+                if (!string.IsNullOrWhiteSpace(suggestedFileName))
+                {
+                    char[] initialChars = suggestedFileName.ToCharArray();
+                    int copyLen = Math.Min(initialChars.Length, MAX_PATH_CHARS - 2);
+                    Marshal.Copy(initialChars, 0, fileBuffer, copyLen);
+                }
+
+                if (title != null)
+                    titlePtr = Marshal.StringToHGlobalUni(title);
+
+                if (!string.IsNullOrWhiteSpace(defaultExtension))
+                    defExtPtr = Marshal.StringToHGlobalUni(defaultExtension.TrimStart('.'));
+
+                var ofn = new OPENFILENAME
+                {
+                    lStructSize  = Marshal.SizeOf<OPENFILENAME>(),
+                    hwndOwner    = hwnd,
+                    lpstrFilter  = filterPtr,
+                    nFilterIndex = 1,
+                    lpstrFile    = fileBuffer,
+                    nMaxFile     = MAX_PATH_CHARS,
+                    lpstrTitle   = titlePtr,
+                    lpstrDefExt  = defExtPtr,
+                    Flags        = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER,
+                };
+
+                bool ok = GetSaveFileNameW(ref ofn);
+                if (!ok)
+                {
+                    return Task.FromResult<string?>(null);
+                }
+
+                string path = Marshal.PtrToStringUni(fileBuffer) ?? string.Empty;
+                return Task.FromResult<string?>(string.IsNullOrEmpty(path) ? null : path);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Win32FilePickerHelper] Save 异常: {ex}");
+                return Task.FromResult<string?>(null);
+            }
+            finally
+            {
+                if (filterPtr  != IntPtr.Zero) Marshal.FreeHGlobal(filterPtr);
+                if (fileBuffer != IntPtr.Zero) Marshal.FreeHGlobal(fileBuffer);
+                if (titlePtr   != IntPtr.Zero) Marshal.FreeHGlobal(titlePtr);
+                if (defExtPtr  != IntPtr.Zero) Marshal.FreeHGlobal(defExtPtr);
             }
         }
 

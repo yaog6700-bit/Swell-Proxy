@@ -19,12 +19,13 @@ namespace AnywhereWinUI.Helpers
         private const uint ERROR_INSUFFICIENT_BUFFER = 122;
         private const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
         private const long SnapshotTtlMs = 450;
+        private const long PidCacheTtlMs = 30_000;
         private const int MaxPidCacheEntries = 512;
 
         private static readonly object _sync = new();
         private static readonly Dictionary<ushort, uint> _tcpPortToPid = new(256);
         private static readonly Dictionary<ushort, uint> _udpPortToPid = new(128);
-        private static readonly Dictionary<uint, string> _pidToProcessName = new(256);
+        private static readonly Dictionary<uint, (string Name, long ExpiresAtTick)> _pidToProcessName = new(256);
 
         private static byte[] _nativeBuffer = new byte[16 * 1024];
         private static long _lastTcpRefreshTick;
@@ -269,9 +270,10 @@ namespace AnywhereWinUI.Helpers
 
         private static string GetProcessNameByPidLocked(uint pid)
         {
-            if (_pidToProcessName.TryGetValue(pid, out var cached))
+            long now = Environment.TickCount64;
+            if (_pidToProcessName.TryGetValue(pid, out var cached) && now < cached.ExpiresAtTick)
             {
-                return cached;
+                return cached.Name;
             }
 
             if (_pidToProcessName.Count >= MaxPidCacheEntries)
@@ -282,7 +284,7 @@ namespace AnywhereWinUI.Helpers
             string resolved = QueryProcessFileName(pid);
             if (!string.IsNullOrEmpty(resolved))
             {
-                _pidToProcessName[pid] = resolved;
+                _pidToProcessName[pid] = (resolved, now + PidCacheTtlMs);
             }
             return resolved;
         }
@@ -295,8 +297,8 @@ namespace AnywhereWinUI.Helpers
 
             try
             {
-                char* buffer = stackalloc char[260];
-                uint capacity = 260;
+                char* buffer = stackalloc char[1024];
+                uint capacity = 1024;
                 if (QueryFullProcessImageNameW(hProcess, 0, buffer, ref capacity) && capacity > 0)
                 {
                     ReadOnlySpan<char> fullPath = new ReadOnlySpan<char>(buffer, (int)capacity);
@@ -509,8 +511,8 @@ namespace AnywhereWinUI.Helpers
 
             try
             {
-                char* buffer = stackalloc char[512];
-                uint capacity = 512;
+                char* buffer = stackalloc char[1024];
+                uint capacity = 1024;
                 if (QueryFullProcessImageNameW(hProcess, 0, buffer, ref capacity) && capacity > 0)
                 {
                     return new string(buffer, 0, (int)capacity);

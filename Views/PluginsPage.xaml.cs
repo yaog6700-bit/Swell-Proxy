@@ -1,10 +1,14 @@
 using AnywhereWinUI.Helpers;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Windows.UI;
 using AnywhereWinUI.Plugins;
 
 namespace AnywhereWinUI.Views
@@ -16,12 +20,14 @@ namespace AnywhereWinUI.Views
             NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Disabled;
             InitializeComponent();
             Loaded += PluginsPage_Loaded;
+            ActualThemeChanged += PluginsPage_ActualThemeChanged;
         }
 
         protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
             Loaded -= PluginsPage_Loaded;
+            ActualThemeChanged -= PluginsPage_ActualThemeChanged;
 
             for (int i = PluginListPanel.Children.Count - 1; i >= 0; i--)
             {
@@ -31,6 +37,11 @@ namespace AnywhereWinUI.Views
         }
 
         private void PluginsPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            RefreshList();
+        }
+
+        private void PluginsPage_ActualThemeChanged(FrameworkElement sender, object args)
         {
             RefreshList();
         }
@@ -55,16 +66,27 @@ namespace AnywhereWinUI.Views
 
         private UIElement BuildPluginCard(PluginManifest manifest)
         {
+            bool isDark = ContentDialogExtensions.IsElementDark(this);
+
+            Brush cardStroke = LookupThemedBrush("CardStrokeColorDefaultBrush", isDark, Color.FromArgb(36, 128, 128, 128));
+            Brush primaryFg = LookupThemedBrush("TextFillColorPrimaryBrush", isDark, isDark ? Colors.White : Colors.Black);
+            Brush secondaryFg = LookupThemedBrush("TextFillColorSecondaryBrush", isDark, Colors.Gray);
+            Brush tertiaryFg = LookupThemedBrush("TextFillColorTertiaryBrush", isDark, Colors.Gray);
+            Brush accentFg = LookupThemedBrush("AccentTextFillColorPrimaryBrush", isDark, Color.FromArgb(255, 96, 165, 250));
+            Brush criticalFg = LookupThemedBrush("SystemFillColorCriticalBrush", isDark, Color.FromArgb(255, 196, 43, 28));
+            Style? subtleBtnStyle = Application.Current.Resources.TryGetValue("SubtleButtonStyle", out var sbObj) ? sbObj as Style : null;
+            Style captionStyle = (Style)Application.Current.Resources["CaptionTextBlockStyle"];
+
             var card = new Border
             {
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(16),
-                Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent),
-                BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                Background = new SolidColorBrush(Colors.Transparent),
+                BorderBrush = cardStroke,
                 BorderThickness = new Thickness(1),
             };
 
-            var root = new Grid();
+            var root = new Grid { ColumnSpacing = 12 };
             root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
@@ -76,17 +98,18 @@ namespace AnywhereWinUI.Views
             nameRow.Children.Add(new TextBlock
             {
                 Text = manifest.Name,
+                Foreground = primaryFg,
                 Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
                 VerticalAlignment = VerticalAlignment.Center
             });
             nameRow.Children.Add(new TextBlock
             {
                 Text = manifest.Version,
-                Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
-                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                Foreground = tertiaryFg,
+                Style = captionStyle,
                 VerticalAlignment = VerticalAlignment.Center
             });
-            // Error badge
+
             if (!string.IsNullOrEmpty(manifest.LastError))
             {
                 var errBadge = new InfoBadge
@@ -99,38 +122,37 @@ namespace AnywhereWinUI.Views
             }
             infoStack.Children.Add(nameRow);
 
-            // Row 2: Author + type (caption, secondary color)
+            // Row 2: Author + type
             var metaRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
             if (!string.IsNullOrEmpty(manifest.Author))
             {
                 metaRow.Children.Add(new TextBlock
                 {
                     Text = manifest.Author,
-                    Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                    Foreground = secondaryFg,
+                    Style = captionStyle,
                     VerticalAlignment = VerticalAlignment.Center
                 });
                 metaRow.Children.Add(new TextBlock
                 {
                     Text = "·",
-                    Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                    Foreground = tertiaryFg,
+                    Style = captionStyle,
                     VerticalAlignment = VerticalAlignment.Center
                 });
             }
-            // Type indicator: icon + label
             metaRow.Children.Add(new FontIcon
             {
-                Glyph = manifest.Type == "Http" ? "\uE774" : "\uE8B7", // Globe : Folder
+                Glyph = manifest.Type == "Http" ? "\uE774" : "\uE8B7",
                 FontSize = 11,
-                Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
+                Foreground = tertiaryFg,
                 VerticalAlignment = VerticalAlignment.Center
             });
             metaRow.Children.Add(new TextBlock
             {
                 Text = manifest.Type == "Http" ? L.Plugins_TypeNetwork : L.Plugins_TypeLocal,
-                Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
-                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                Foreground = tertiaryFg,
+                Style = captionStyle,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(2, 0, 0, 0)
             });
@@ -142,21 +164,21 @@ namespace AnywhereWinUI.Views
                 infoStack.Children.Add(new TextBlock
                 {
                     Text = manifest.Description,
-                    Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                    Foreground = secondaryFg,
+                    Style = captionStyle,
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(0, 2, 0, 0)
                 });
             }
 
-            // Row 4: Triggers as simple caption
+            // Row 4: Triggers
             if (manifest.Triggers.Count > 0)
             {
                 infoStack.Children.Add(new TextBlock
                 {
                     Text = string.Join("  ·  ", manifest.Triggers),
-                    Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                    Foreground = accentFg,
+                    Style = captionStyle,
                     Margin = new Thickness(0, 2, 0, 0)
                 });
             }
@@ -167,8 +189,8 @@ namespace AnywhereWinUI.Views
                 infoStack.Children.Add(new TextBlock
                 {
                     Text = manifest.LastError,
-                    Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],
-                    Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                    Foreground = criticalFg,
+                    Style = captionStyle,
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(0, 2, 0, 0)
                 });
@@ -177,7 +199,7 @@ namespace AnywhereWinUI.Views
             Grid.SetColumn(infoStack, 0);
             root.Children.Add(infoStack);
 
-            // ── Right: controls ───────────────────────────────────────
+            // ── Right: Fluent 2 action controls ───────────────────────
             var controls = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -196,11 +218,18 @@ namespace AnywhereWinUI.Views
                     Height = 16,
                     Visibility = Visibility.Collapsed
                 };
-                var runContent = new Grid();
+                var runContent = new Grid { Width = 16, Height = 16 };
                 runContent.Children.Add(runIcon);
                 runContent.Children.Add(runRing);
 
-                var runBtn = new Button { Content = runContent };
+                var runBtn = new Button
+                {
+                    Width = 34,
+                    Height = 32,
+                    Padding = new Thickness(0),
+                    Content = runContent
+                };
+                if (subtleBtnStyle != null) runBtn.Style = subtleBtnStyle;
                 ToolTipService.SetToolTip(runBtn, L.Plugins_RunManualTip);
                 runBtn.Click += async (_, _) =>
                 {
@@ -219,13 +248,27 @@ namespace AnywhereWinUI.Views
                 controls.Children.Add(runBtn);
             }
 
+            // Feature N7: Visual Parameter Configuration Gear Button
+            var configBtn = new Button
+            {
+                Width = 34,
+                Height = 32,
+                Padding = new Thickness(0),
+                Content = new FontIcon { Glyph = "\uE713", FontSize = 14 }
+            };
+            if (subtleBtnStyle != null) configBtn.Style = subtleBtnStyle;
+            ToolTipService.SetToolTip(configBtn, L.Plugins_ConfigTip);
+            configBtn.Click += async (_, _) => await ShowPluginConfigDialogAsync(manifest);
+            controls.Children.Add(configBtn);
+
             // Enable toggle
             var toggle = new ToggleSwitch
             {
                 IsOn = !manifest.Disabled,
                 OnContent = "",
                 OffContent = "",
-                MinWidth = 0
+                MinWidth = 0,
+                Margin = new Thickness(4, 0, -6, 0)
             };
             toggle.Toggled += async (_, _) => await TogglePluginAsync(manifest.Id, toggle.IsOn);
             controls.Children.Add(toggle);
@@ -233,8 +276,17 @@ namespace AnywhereWinUI.Views
             // Delete button
             var delBtn = new Button
             {
-                Content = new FontIcon { Glyph = "\uE74D", FontSize = 14 }
+                Width = 34,
+                Height = 32,
+                Padding = new Thickness(0),
+                Content = new FontIcon
+                {
+                    Glyph = "\uE74D",
+                    FontSize = 14,
+                    Foreground = criticalFg
+                }
             };
+            if (subtleBtnStyle != null) delBtn.Style = subtleBtnStyle;
             ToolTipService.SetToolTip(delBtn, L.Plugins_DelTip);
             delBtn.Click += async (_, _) => await DeletePluginAsync(manifest.Id, manifest.Name);
             controls.Children.Add(delBtn);
@@ -246,11 +298,218 @@ namespace AnywhereWinUI.Views
             return card;
         }
 
+        // ── Feature N7: Visual Plugin Configuration ContentDialog (Fluent 2) ──
+
+        private sealed class EditableConfigRow
+        {
+            public required Grid RowRoot { get; init; }
+            public required TextBox KeyBox { get; init; }
+            public required TextBox ValueBox { get; init; }
+            public string Label { get; init; } = string.Empty;
+            public bool IsPresetKey { get; init; }
+        }
+
+        private async Task ShowPluginConfigDialogAsync(PluginManifest manifest)
+        {
+            bool isDark = ContentDialogExtensions.IsElementDark(this);
+            Brush secondaryFg = LookupThemedBrush("TextFillColorSecondaryBrush", isDark, Colors.Gray);
+            Brush tertiaryFg = LookupThemedBrush("TextFillColorTertiaryBrush", isDark, Colors.Gray);
+            Brush criticalFg = LookupThemedBrush("SystemFillColorCriticalBrush", isDark, Color.FromArgb(255, 196, 43, 28));
+            Style? subtleBtnStyle = Application.Current.Resources.TryGetValue("SubtleButtonStyle", out var sbObj) ? sbObj as Style : null;
+            Style captionStyle = (Style)Application.Current.Resources["CaptionTextBlockStyle"];
+
+            var detectedKeys = await PluginManager.Instance.GetDetectedConfigKeysAsync(manifest);
+            var initialEntries = new List<(string Key, string Label, string Value, bool IsPreset)>();
+            var addedKeys = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var item in manifest.Configuration)
+            {
+                if (string.IsNullOrWhiteSpace(item.Key)) continue;
+                if (addedKeys.Add(item.Key))
+                {
+                    bool isPreset = detectedKeys.Contains(item.Key, StringComparer.Ordinal);
+                    initialEntries.Add((item.Key, item.Label, item.Value ?? string.Empty, isPreset));
+                }
+            }
+
+            foreach (var detectedKey in detectedKeys)
+            {
+                if (addedKeys.Add(detectedKey))
+                {
+                    initialEntries.Add((detectedKey, string.Empty, string.Empty, true));
+                }
+            }
+
+            var rows = new List<EditableConfigRow>();
+            var rowsPanel = new StackPanel { Spacing = 10 };
+            var emptyHint = new TextBlock
+            {
+                Text = L.Plugins_ConfigEmptyHint,
+                Style = captionStyle,
+                Foreground = tertiaryFg,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 8, 0, 8),
+                Visibility = initialEntries.Count == 0 ? Visibility.Visible : Visibility.Collapsed
+            };
+
+            void AddRowUI(string key, string label, string val, bool isPreset)
+            {
+                emptyHint.Visibility = Visibility.Collapsed;
+
+                var rowGrid = new Grid { ColumnSpacing = 8 };
+                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var keyBox = new TextBox
+                {
+                    Text = key,
+                    PlaceholderText = L.Plugins_ConfigKeyPlaceholder,
+                    IsReadOnly = isPreset,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                if (!string.IsNullOrWhiteSpace(label) && !string.Equals(label, key, StringComparison.Ordinal))
+                {
+                    ToolTipService.SetToolTip(keyBox, label);
+                }
+                else if (isPreset)
+                {
+                    ToolTipService.SetToolTip(keyBox, L.Plugins_ConfigAutoDetected);
+                }
+                Grid.SetColumn(keyBox, 0);
+
+                var valueBox = new TextBox
+                {
+                    Text = val,
+                    PlaceholderText = !string.IsNullOrWhiteSpace(label) && !string.Equals(label, key, StringComparison.Ordinal)
+                        ? label
+                        : L.Plugins_ConfigValuePlaceholder,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                Grid.SetColumn(valueBox, 1);
+
+                rowGrid.Children.Add(keyBox);
+                rowGrid.Children.Add(valueBox);
+
+                EditableConfigRow? rowRef = null;
+                if (!isPreset)
+                {
+                    var removeBtn = new Button
+                    {
+                        Width = 32,
+                        Height = 32,
+                        Padding = new Thickness(0),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Content = new FontIcon { Glyph = "\uE74D", FontSize = 13, Foreground = criticalFg }
+                    };
+                    if (subtleBtnStyle != null) removeBtn.Style = subtleBtnStyle;
+                    removeBtn.Click += (_, _) =>
+                    {
+                        if (rowRef != null)
+                        {
+                            rows.Remove(rowRef);
+                            rowsPanel.Children.Remove(rowGrid);
+                            emptyHint.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+                        }
+                    };
+                    Grid.SetColumn(removeBtn, 2);
+                    rowGrid.Children.Add(removeBtn);
+                }
+
+                rowRef = new EditableConfigRow
+                {
+                    RowRoot = rowGrid,
+                    KeyBox = keyBox,
+                    ValueBox = valueBox,
+                    Label = label,
+                    IsPresetKey = isPreset
+                };
+
+                rows.Add(rowRef);
+                rowsPanel.Children.Add(rowGrid);
+            }
+
+            foreach (var entry in initialEntries)
+            {
+                AddRowUI(entry.Key, entry.Label, entry.Value, entry.IsPreset);
+            }
+
+            var addParamBtn = new Button
+            {
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Padding = new Thickness(10, 5, 12, 5),
+                Content = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 6,
+                    Children =
+                    {
+                        new FontIcon { Glyph = "\uE710", FontSize = 12 },
+                        new TextBlock { Text = L.Plugins_ConfigAddParamBtn, FontSize = 12.5 }
+                    }
+                }
+            };
+            addParamBtn.Click += (_, _) => AddRowUI(string.Empty, string.Empty, string.Empty, isPreset: false);
+
+            var bodyStack = new StackPanel { Spacing = 12, MinWidth = 420 };
+            bodyStack.Children.Add(new TextBlock
+            {
+                Text = L.Plugins_ConfigDesc,
+                Style = captionStyle,
+                Foreground = secondaryFg,
+                TextWrapping = TextWrapping.Wrap
+            });
+            bodyStack.Children.Add(emptyHint);
+            bodyStack.Children.Add(new ScrollViewer
+            {
+                MaxHeight = 320,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = rowsPanel
+            });
+            bodyStack.Children.Add(addParamBtn);
+
+            var dialog = new ContentDialog
+            {
+                Title = string.Format(L.Plugins_ConfigDialogTitleFmt, manifest.Name),
+                Content = bodyStack,
+                PrimaryButtonText = L.CustomRules_SaveBtn,
+                CloseButtonText = L.Dialog_Cancel,
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = XamlRoot
+            };
+
+            if (await dialog.WithAppTheme().ShowAsync() != ContentDialogResult.Primary)
+                return;
+
+            var updatedItems = new List<PluginConfigItem>();
+            var dedup = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var r in rows)
+            {
+                string k = r.KeyBox.Text?.Trim() ?? string.Empty;
+                if (string.IsNullOrEmpty(k) || !dedup.Add(k))
+                    continue;
+
+                updatedItems.Add(new PluginConfigItem
+                {
+                    Key = k,
+                    Label = string.IsNullOrWhiteSpace(r.Label) ? k : r.Label,
+                    Value = r.ValueBox.Text ?? string.Empty
+                });
+            }
+
+            await PluginManager.Instance.UpdateConfigurationAsync(manifest.Id, updatedItems);
+            ShowInfo(
+                L.Plugins_ConfigSavedTitle,
+                string.Format(L.Plugins_ConfigSavedFmt, manifest.Name),
+                InfoBarSeverity.Success);
+            RefreshList();
+        }
+
         // ── Actions ──────────────────────────────────────────────────
 
         private async void BtnAddPlugin_Click(object sender, RoutedEventArgs e)
         {
-            // Two-option dialog: local file or URL
             var urlBox = new TextBox
             {
                 PlaceholderText = "https://raw.githubusercontent.com/.../plugin.js",
@@ -293,25 +552,22 @@ namespace AnywhereWinUI.Views
 
         private async Task AddFromFileAsync()
         {
-            var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(MainWindow.Instance!.AppWindow.Id)
-            {
-                SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary
-            };
-            picker.FileTypeFilter.Add(".js");
-
-            var file = await picker.PickSingleFileAsync();
-            if (file == null) return;
+            if (MainWindow.Instance == null) return;
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
+            var selectedFile = await Win32FilePickerHelper.PickSingleFileAsync(
+                hwnd,
+                filters: [("JavaScript (*.js)", "*.js"), (L.FilePicker_AllFiles, "*.*")]);
+            if (string.IsNullOrWhiteSpace(selectedFile)) return;
 
             var pluginsDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "SwellProxy", "plugins");
             Directory.CreateDirectory(pluginsDir);
 
-            var destName = Path.GetFileName(file.Path);
+            var destName = Path.GetFileName(selectedFile);
             var destPath = Path.Combine(pluginsDir, destName);
-            File.Copy(file.Path, destPath, overwrite: true);
+            File.Copy(selectedFile, destPath, overwrite: true);
 
-            // Auto-detect triggers from the JS source code
             var code = await File.ReadAllTextAsync(destPath);
             var triggers = PluginManager.DetectTriggersFromCode(code);
 
@@ -344,7 +600,7 @@ namespace AnywhereWinUI.Views
                 Type = "Http",
                 Path = $"plugins/{filename}",
                 Url = url,
-                Triggers = ["OnManual"],  // Temporary; will be updated after download
+                Triggers = ["OnManual"],
                 Disabled = false
             };
 
@@ -354,7 +610,6 @@ namespace AnywhereWinUI.Views
                 await PluginManager.Instance.AddPluginAsync(manifest);
                 await PluginManager.Instance.UpdatePluginAsync(manifest.Id);
 
-                // Re-detect triggers from the downloaded code
                 var pluginPath = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "SwellProxy", manifest.Path.Replace('/', Path.DirectorySeparatorChar));
@@ -426,5 +681,8 @@ namespace AnywhereWinUI.Views
             InfoBarMain.Severity = severity;
             InfoBarMain.IsOpen = true;
         }
+
+        private static Brush LookupThemedBrush(string key, bool wantDark, Color fallback)
+            => ContentDialogExtensions.LookupThemeBrush(key, wantDark, fallback);
     }
 }

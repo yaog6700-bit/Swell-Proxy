@@ -20,15 +20,31 @@ namespace AnywhereWinUI.Views
         private readonly Action _onDataChanged;
         private bool _initialized;
         private bool _isLoadingAutoRefreshSwitch;
+        private bool _isAddingSubscription;
 
         public ManageSubscriptionsDialog(Action onDataChanged)
         {
             this.InitializeComponent();
             _onDataChanged = onDataChanged;
+            DialogErrorBar.Closed += (_, _) => DialogErrorBar.Visibility = Visibility.Collapsed;
             _initialized = true;
 
             // Default to Add page
             ApplyAddPage();
+        }
+
+        private void ShowInlineError(string title, string message)
+        {
+            DialogErrorBar.Title = title;
+            DialogErrorBar.Message = message;
+            DialogErrorBar.Visibility = Visibility.Visible;
+            DialogErrorBar.IsOpen = true;
+        }
+
+        private void HideInlineError()
+        {
+            DialogErrorBar.IsOpen = false;
+            DialogErrorBar.Visibility = Visibility.Collapsed;
         }
 
         // ── Page switching ────────────────────────────────────────────────────
@@ -36,6 +52,7 @@ namespace AnywhereWinUI.Views
         private void PageSegmented_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (!_initialized) return;
+            HideInlineError();
 
             if (PageSegmented.SelectedIndex == 0)
                 ApplyAddPage();
@@ -50,7 +67,7 @@ namespace AnywhereWinUI.Views
             ManagePagePanel.Visibility = Visibility.Collapsed;
             PrimaryButtonText          = L.SubDialog_AddBtn;
             CloseButtonText            = L.Dialog_Cancel;
-            IsPrimaryButtonEnabled     = !string.IsNullOrWhiteSpace(UrlInput?.Text);
+            IsPrimaryButtonEnabled     = !_isAddingSubscription && !string.IsNullOrWhiteSpace(UrlInput?.Text);
         }
 
         private void ApplyManagePage()
@@ -82,13 +99,15 @@ namespace AnywhereWinUI.Views
         {
             if (!_initialized) return;
             if (AddPagePanel.Visibility == Visibility.Visible)
-                IsPrimaryButtonEnabled = !string.IsNullOrWhiteSpace(UrlInput.Text);
+                IsPrimaryButtonEnabled = !_isAddingSubscription && !string.IsNullOrWhiteSpace(UrlInput.Text);
         }
 
         // ── Add subscription (called from ServersPage PrimaryButtonClick) ──────
 
         internal async Task<bool> TryAddSubscriptionAsync()
         {
+            if (_isAddingSubscription) return false;
+
             string url  = (UrlInput?.Text ?? string.Empty).Trim();
             string name = (NameInput?.Text ?? string.Empty).Trim();
             if (string.IsNullOrEmpty(url)) return false;
@@ -101,26 +120,23 @@ namespace AnywhereWinUI.Views
                 if (string.IsNullOrWhiteSpace(name)) name = L.Servers_UnnamedSub;
             }
 
+            _isAddingSubscription = true;
+            IsPrimaryButtonEnabled = false;
+            HideInlineError();
+
             try
             {
                 NodesManager.Instance.AddSubscription(name, url);
-                var subs = NodesManager.Instance.Subscriptions;
+                var subs = NodesManager.Instance.GetSubscriptionsSnapshot();
                 if (subs.Count > 0)
                 {
-                    string? err = await NodesManager.Instance.UpdateSubscriptionAsync(subs[^1].Id);
+                    string subId = subs[^1].Id;
+                    string? err = await NodesManager.Instance.UpdateSubscriptionAsync(subId);
                     if (err != null)
                     {
                         // Remove the added sub if first update fails completely
-                        NodesManager.Instance.DeleteSubscription(subs[^1].Id);
-                        
-                        var errDialog = new ContentDialog
-                        {
-                            Title = L.SubDialog_AddFailTitle,
-                            Content = err,
-                            CloseButtonText = L.Dialog_OK,
-                            XamlRoot = this.XamlRoot
-                        };
-                        try { await errDialog.WithAppTheme().ShowAsync(); } catch { }
+                        NodesManager.Instance.DeleteSubscription(subId);
+                        ShowInlineError(L.SubDialog_AddFailTitle, err);
                         return false;
                     }
                 }
@@ -128,6 +144,14 @@ namespace AnywhereWinUI.Views
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[ManageSubDialog] Add failed: {ex.Message}");
+                ShowInlineError(L.SubDialog_AddFailTitle, ex.Message);
+                return false;
+            }
+            finally
+            {
+                _isAddingSubscription = false;
+                if (AddPagePanel.Visibility == Visibility.Visible)
+                    IsPrimaryButtonEnabled = !string.IsNullOrWhiteSpace(UrlInput?.Text);
             }
 
             _onDataChanged?.Invoke();
@@ -141,7 +165,7 @@ namespace AnywhereWinUI.Views
             try
             {
                 SubsListPanel.Children.Clear();
-                var subs = NodesManager.Instance.Subscriptions;
+                var subs = NodesManager.Instance.GetSubscriptionsSnapshot();
 
                 if (subs.Count == 0)
                 {
@@ -166,32 +190,38 @@ namespace AnywhereWinUI.Views
 
         private UIElement BuildSubscriptionCard(PersistedSubscription sub)
         {
+            bool isDark = ContentDialogExtensions.IsElementDark(this);
+            Brush primaryFg = LookupDialogThemeBrush("TextFillColorPrimaryBrush", isDark, isDark ? Colors.White : Colors.Black);
+            Brush secondaryFg = LookupDialogThemeBrush("TextFillColorSecondaryBrush", isDark, Colors.Gray);
+            Brush tertiaryFg = LookupDialogThemeBrush("TextFillColorTertiaryBrush", isDark, Colors.Gray);
+
             // ── Left info ────────────────────────────────────────────────────
             var nameBlock = new TextBlock
             {
                 Text         = sub.Name,
                 FontSize     = 14,
                 FontWeight   = FontWeights.SemiBold,
+                Foreground   = primaryFg,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
             var urlBlock = new TextBlock
             {
                 Text         = sub.Url,
                 FontSize     = 12,
-                Opacity      = 0.65,
+                Foreground   = tertiaryFg,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
             var updatedBlock = new TextBlock
             {
-                Text     = Loc.Format("SubDialog_LastSyncFmt", sub.LastUpdated),
-                FontSize = 12,
-                Opacity  = 0.7
+                Text       = Loc.Format("SubDialog_LastSyncFmt", sub.LastUpdated),
+                FontSize   = 12,
+                Foreground = secondaryFg
             };
             var nextUpdateBlock = new TextBlock
             {
-                Text     = GetAutoRefreshStatusText(sub),
-                FontSize = 12,
-                Opacity  = 0.7
+                Text       = GetAutoRefreshStatusText(sub),
+                FontSize   = 12,
+                Foreground = secondaryFg
             };
             var infoPanel = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
             infoPanel.Children.Add(nameBlock);
@@ -212,13 +242,16 @@ namespace AnywhereWinUI.Views
             iconGrid.Children.Add(refreshIcon);
             iconGrid.Children.Add(busyRing);
 
+            Style? subtleBtnStyle = Application.Current.Resources.TryGetValue("SubtleButtonStyle", out var sbObj) ? sbObj as Style : null;
+
             var refreshBtn = new Button
             {
-                Padding         = new Thickness(6),
-                Background      = new SolidColorBrush(Colors.Transparent),
-                BorderThickness = new Thickness(0),
-                Content         = iconGrid
+                Width   = 32,
+                Height  = 32,
+                Padding = new Thickness(0),
+                Content = iconGrid
             };
+            if (subtleBtnStyle != null) refreshBtn.Style = subtleBtnStyle;
             ToolTipService.SetToolTip(refreshBtn, L.SubDialog_RefreshTooltip);
 
             refreshBtn.Click += async (_, _) =>
@@ -226,24 +259,18 @@ namespace AnywhereWinUI.Views
                 refreshBtn.IsEnabled      = false;
                 refreshIcon.Visibility    = Visibility.Collapsed;
                 busyRing.Visibility       = Visibility.Visible;
+                HideInlineError();
                 try
                 {
                     string? err = await NodesManager.Instance.UpdateSubscriptionAsync(sub.Id);
                     if (err != null)
                     {
-                        var errDialog = new ContentDialog
-                        {
-                            Title = L.SubDialog_UpdateFailTitle,
-                            Content = err,
-                            CloseButtonText = L.Dialog_OK,
-                            XamlRoot = this.XamlRoot
-                        };
-                        try { await errDialog.WithAppTheme().ShowAsync(); } catch { }
+                        ShowInlineError(L.SubDialog_UpdateFailTitle, err);
                     }
                     else
                     {
                         // Refresh the updated-time label
-                        var latest = NodesManager.Instance.Subscriptions.Find(s => s.Id == sub.Id);
+                        var latest = NodesManager.Instance.GetSubscriptionsSnapshot().Find(s => s.Id == sub.Id);
                         if (latest != null)
                         {
                             updatedBlock.Text = Loc.Format("SubDialog_LastSyncFmt", latest.LastUpdated);
@@ -255,6 +282,7 @@ namespace AnywhereWinUI.Views
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[ManageSubDialog] Refresh failed: {ex.Message}");
+                    ShowInlineError(L.SubDialog_UpdateFailTitle, ex.Message);
                 }
                 busyRing.Visibility    = Visibility.Collapsed;
                 refreshIcon.Visibility = Visibility.Visible;
@@ -302,14 +330,21 @@ namespace AnywhereWinUI.Views
                 Content   = flyoutPanel
             };
 
+            var deleteIcon = new FontIcon
+            {
+                Glyph      = "\uE74D",
+                FontSize   = 14,
+                Foreground = LookupDialogThemeBrush("SystemFillColorCriticalBrush", isDark, Microsoft.UI.ColorHelper.FromArgb(255, 196, 43, 28))
+            };
             var deleteBtn = new Button
             {
-                Padding         = new Thickness(6),
-                Background      = new SolidColorBrush(Colors.Transparent),
-                BorderThickness = new Thickness(0),
-                Content         = new FontIcon { Glyph = "\uE74D", FontSize = 14 },
-                Flyout          = flyout
+                Width   = 32,
+                Height  = 32,
+                Padding = new Thickness(0),
+                Content = deleteIcon,
+                Flyout  = flyout
             };
+            if (subtleBtnStyle != null) deleteBtn.Style = subtleBtnStyle;
             ToolTipService.SetToolTip(deleteBtn, L.SubDialog_DelTooltip);
 
             confirmDeleteBtn.Click += (_, _) =>
@@ -336,22 +371,19 @@ namespace AnywhereWinUI.Views
             cardGrid.Children.Add(refreshBtn);
             cardGrid.Children.Add(deleteBtn);
 
-            // ── Themed card border ────────────────────────────────────────────
-            Brush cardBg, cardBorder;
-            try
-            {
-                cardBg     = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
-                cardBorder = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
-            }
-            catch
-            {
-                cardBg     = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(30, 128, 128, 128));
-                cardBorder = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(40, 128, 128, 128));
-            }
+            // ── Themed card border (resolves active Light/Dark dictionary) ──
+            Brush cardBg = LookupDialogThemeBrush(
+                "CardBackgroundFillColorDefaultBrush",
+                isDark,
+                Microsoft.UI.ColorHelper.FromArgb(20, 128, 128, 128));
+            Brush cardBorder = LookupDialogThemeBrush(
+                "CardStrokeColorDefaultBrush",
+                isDark,
+                Microsoft.UI.ColorHelper.FromArgb(36, 128, 128, 128));
 
             return new Border
             {
-                CornerRadius    = new CornerRadius(6),
+                CornerRadius    = new CornerRadius(8),
                 Background      = cardBg,
                 BorderBrush     = cardBorder,
                 BorderThickness = new Thickness(1),
@@ -360,6 +392,9 @@ namespace AnywhereWinUI.Views
                 Child           = cardGrid
             };
         }
+
+        private static Brush LookupDialogThemeBrush(string key, bool wantDark, Windows.UI.Color fallback)
+            => ContentDialogExtensions.LookupThemeBrush(key, wantDark, fallback);
 
         private static string GetAutoRefreshStatusText(PersistedSubscription sub)
         {

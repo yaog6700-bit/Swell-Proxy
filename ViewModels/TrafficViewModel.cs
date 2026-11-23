@@ -59,8 +59,12 @@ namespace AnywhereWinUI.ViewModels
 
     public partial class TrafficViewModel : ObservableObject, IDisposable
     {
+        private readonly object _recordsLock = new();
         private List<DailyTraffic> _dailyRecords = new();
+        private DailyTraffic? _cachedTodayRecord;
         private string _currentDateStr = string.Empty;
+        private bool _hasUnsavedTraffic = false;
+        private DateTime _lastDiskSaveUtc = DateTime.UtcNow;
 
         // 当前会话净增量（仅代理出站；由 CoreManager 的 ProxyTrafficTracker 累计）
         private long _sessionUpload = 0;
@@ -133,11 +137,31 @@ namespace AnywhereWinUI.ViewModels
         private string _maxStreakText = string.Format(L.Traffic_DaysFmt, 0);
 
         public ObservableCollection<TrafficChartViewModel> ChartItems { get; } = new();
-        public ObservableCollection<HeatmapCellViewModel> HeatmapCells { get; } = new();
-        public ObservableCollection<string> MonthLabels { get; } = new();
+        public IReadOnlyList<HeatmapCellViewModel> HeatmapCellList { get; private set; } = Array.Empty<HeatmapCellViewModel>();
+        public IReadOnlyList<string> MonthLabelList { get; private set; } = Array.Empty<string>();
+        public event EventHandler? HeatmapUpdated;
 
         private HeatmapViewMode _heatmapViewMode = HeatmapViewMode.Daily;
         public HeatmapViewMode CurrentHeatmapMode => _heatmapViewMode;
+
+        /// <summary>
+        /// Thread-safe snapshot of today's cumulative proxy upload + download bytes.
+        /// </summary>
+        public long GetTodayTotalBytes()
+        {
+            lock (_recordsLock)
+            {
+                string todayStr = DateTime.Now.ToString("yyyy-MM-dd");
+                if (string.Equals(_currentDateStr, todayStr, StringComparison.Ordinal))
+                {
+                    return Math.Max(0, _todayBaseUpload + _sessionUpload)
+                         + Math.Max(0, _todayBaseDownload + _sessionDownload);
+                }
+
+                var rec = _dailyRecords.FirstOrDefault(r => r.Date == todayStr);
+                return rec?.Total ?? 0;
+            }
+        }
 
         public TrafficViewModel()
         {
@@ -163,14 +187,19 @@ namespace AnywhereWinUI.ViewModels
                 if (!isVisible)
                 {
                     ChartItems.Clear();
-                    HeatmapCells.Clear();
-                    MonthLabels.Clear();
+                    HeatmapCellList = Array.Empty<HeatmapCellViewModel>();
+                    MonthLabelList = Array.Empty<string>();
                 }
-                else if (_isPageActive)
+                else
                 {
-                    RefreshSessionStrings(0, 0, includeSpeed: false);
-                    UpdateMonthAndChartUI();
-                    UpdateHeatmapUI();
+                    UpdateStatusUI(CoreManager.Instance.IsRunning);
+                    if (_isPageActive)
+                    {
+                        var latest = CoreManager.Instance.LatestTrafficStats;
+                        RefreshSessionStrings(latest.DownSpeed, latest.UpSpeed, includeSpeed: CoreManager.Instance.IsRunning);
+                        UpdateMonthAndChartUI();
+                        UpdateHeatmapUI();
+                    }
                 }
             });
         }
@@ -188,51 +217,113 @@ namespace AnywhereWinUI.ViewModels
 
         private void ResetSessionState()
         {
-            _sessionUpload = 0;
-            _sessionDownload = 0;
-            _currentDateStr = DateTime.Now.ToString("yyyy-MM-dd");
+            lock (_recordsLock)
+            {
+                _sessionUpload = 0;
+                _sessionDownload = 0;
+                _currentDateStr = DateTime.Now.ToString("yyyy-MM-dd");
 
-            var todayRecord = _dailyRecords.FirstOrDefault(r => r.Date == _currentDateStr);
-            _todayBaseUpload = todayRecord?.ProxyUpload ?? 0;
-            _todayBaseDownload = todayRecord?.ProxyDownload ?? 0;
+                _cachedTodayRecord = _dailyRecords.FirstOrDefault(r => r.Date == _currentDateStr);
+                _todayBaseUpload = _cachedTodayRecord?.ProxyUpload ?? 0;
+                _todayBaseDownload = _cachedTodayRecord?.ProxyDownload ?? 0;
 
-            _lastTotalDown = -1;
-            _lastTotalUp = -1;
+                _lastTotalDown = -1;
+                _lastTotalUp = -1;
+                _hasUnsavedTraffic = false;
+            }
         }
 
         private void OnTrafficUpdated(object? sender, (long Down, long Up, long DownSpeed, long UpSpeed) e)
         {
-            // e.Down/Up = absolute proxy-outbound session totals (direct/block excluded).
-            if (_lastTotalDown == -1 || _lastTotalUp == -1)
+            // Accumulate session & daily counters directly on the background thread (0 UI thread wakeups when hidden!)
+            long sessionUpSnapshot;
+            long sessionDownSnapshot;
+
+            lock (_recordsLock)
             {
+                if (_lastTotalDown == -1 || _lastTotalUp == -1)
+                {
+                    _lastTotalDown = e.Down;
+                    _lastTotalUp = e.Up;
+                    return;
+                }
+
+                long deltaDown = e.Down - _lastTotalDown;
+                long deltaUp   = e.Up - _lastTotalUp;
+                if (deltaDown < 0) deltaDown = 0;
+                if (deltaUp < 0) deltaUp = 0;
+
                 _lastTotalDown = e.Down;
                 _lastTotalUp = e.Up;
-                return; // 第一次仅初始化基准，无增量
+
+                _sessionUpload   += deltaUp;
+                _sessionDownload += deltaDown;
+                sessionUpSnapshot = _sessionUpload;
+                sessionDownSnapshot = _sessionDownload;
+
+                if (deltaDown > 0 || deltaUp > 0)
+                {
+                    _hasUnsavedTraffic = true;
+                }
+
+                var nowLocal = DateTime.Now;
+                // Fast day rollover check: only format string if day-of-month doesn't match last 2 chars of _currentDateStr
+                int day = nowLocal.Day;
+                bool sameDay = _currentDateStr.Length == 10 &&
+                               (_currentDateStr[8] - '0') * 10 + (_currentDateStr[9] - '0') == day &&
+                               (_currentDateStr[5] - '0') * 10 + (_currentDateStr[6] - '0') == nowLocal.Month;
+
+                if (!sameDay)
+                {
+                    PersistTodayInMemoryLocked(sessionUpSnapshot, sessionDownSnapshot);
+                    SaveRecordsLocked();
+                    _currentDateStr = nowLocal.ToString("yyyy-MM-dd");
+                    _cachedTodayRecord = null;
+                    _todayBaseUpload = 0;
+                    _todayBaseDownload = 0;
+                    _sessionUpload = 0;
+                    _sessionDownload = 0;
+                    sessionUpSnapshot = 0;
+                    sessionDownSnapshot = 0;
+                    _hasUnsavedTraffic = false;
+                    _lastDiskSaveUtc = DateTime.UtcNow;
+                }
+                else if (deltaDown > 0 || deltaUp > 0)
+                {
+                    PersistTodayInMemoryLocked(sessionUpSnapshot, sessionDownSnapshot);
+                }
+
+                // Throttle disk writes: 60s when visible, 300s (5 min) when hibernating in tray, and ONLY if traffic actually flowed
+                if (_hasUnsavedTraffic)
+                {
+                    double saveIntervalSec = MainWindow.IsVisibleToUser ? 60.0 : 300.0;
+                    if ((DateTime.UtcNow - _lastDiskSaveUtc).TotalSeconds >= saveIntervalSec)
+                    {
+                        SaveRecordsLocked();
+                        _hasUnsavedTraffic = false;
+                        _lastDiskSaveUtc = DateTime.UtcNow;
+                    }
+                }
             }
 
-            long deltaDown = e.Down - _lastTotalDown;
-            long deltaUp   = e.Up - _lastTotalUp;
-
-            // Core restart or counter reset
-            if (deltaDown < 0) deltaDown = 0;
-            if (deltaUp < 0) deltaUp = 0;
-
-            _lastTotalDown = e.Down;
-            _lastTotalUp = e.Up;
+            // ZERO DispatcherQueue.TryEnqueue when hidden to tray or viewing another page!
+            if (!_isPageActive || !MainWindow.IsVisibleToUser)
+                return;
 
             _dispatcherQueue?.TryEnqueue(() =>
             {
                 try
                 {
-                    _sessionUpload   += deltaUp;
-                    _sessionDownload += deltaDown;
+                    if (!_isPageActive || !MainWindow.IsVisibleToUser) return;
+                    RefreshSessionStrings(e.DownSpeed, e.UpSpeed, includeSpeed: true);
+                    UpdateMonthAndChartUI();
 
-                    if (_isPageActive && MainWindow.IsVisibleToUser)
+                    _heatmapThrottleCount++;
+                    if (_heatmapThrottleCount >= HeatmapThrottleInterval)
                     {
-                        RefreshSessionStrings(e.DownSpeed, e.UpSpeed, includeSpeed: true);
+                        _heatmapThrottleCount = 0;
+                        UpdateHeatmapUI();
                     }
-
-                    ProcessDailyTraffic(_sessionUpload, _sessionDownload);
                 }
                 catch (Exception ex)
                 {
@@ -243,15 +334,28 @@ namespace AnywhereWinUI.ViewModels
 
         private void OnRunningChanged(object? sender, bool isRunning)
         {
+            if (!isRunning)
+            {
+                lock (_recordsLock)
+                {
+                    if (_hasUnsavedTraffic || _sessionUpload > 0 || _sessionDownload > 0)
+                    {
+                        PersistTodayInMemoryLocked(_sessionUpload, _sessionDownload);
+                        SaveRecordsLocked();
+                    }
+                    _saveThrottleCount = 0;
+                    ResetSessionState();
+                }
+            }
+
+            if (!MainWindow.IsVisibleToUser)
+                return;
+
             _dispatcherQueue?.TryEnqueue(() =>
             {
                 UpdateStatusUI(isRunning);
                 if (!isRunning)
                 {
-                    PersistToday(_sessionUpload, _sessionDownload);
-                    SaveRecords(); // flush on core stop regardless of throttle counter
-                    _saveThrottleCount = 0;
-                    ResetSessionState();
                     SessionUploadText     = "0.0 B";
                     SessionDownloadText   = "0.0 B";
                     SessionTotalText      = "0.0 B";
@@ -287,115 +391,67 @@ namespace AnywhereWinUI.ViewModels
         {
             _isPageActive = false;
             ChartItems.Clear();
-            HeatmapCells.Clear();
-            MonthLabels.Clear();
+            HeatmapCellList = Array.Empty<HeatmapCellViewModel>();
+            MonthLabelList = Array.Empty<string>();
         }
 
-        private void ProcessDailyTraffic(long sessionUpload, long sessionDownload)
-        {
-            string today = DateTime.Now.ToString("yyyy-MM-dd");
-            if (today != _currentDateStr)
-            {
-                // Day rolled over — flush to disk before resetting base counters.
-                PersistToday(sessionUpload, sessionDownload);
-                SaveRecords();
-                _currentDateStr = today;
-                _todayBaseUpload = 0;
-                _todayBaseDownload = 0;
-                _saveThrottleCount = 0;
-            }
-
-            // Update in-memory record every tick; disk write is throttled below.
-            PersistTodayInMemory(sessionUpload, sessionDownload);
-
-            // Flush to disk at most once every SaveThrottleInterval ticks (~60 s).
-            // The record is also flushed on core stop via OnRunningChanged.
-            _saveThrottleCount++;
-            if (_saveThrottleCount >= SaveThrottleInterval)
-            {
-                _saveThrottleCount = 0;
-                SaveRecords();
-            }
-
-            // Only push chart/heatmap updates while the Traffic page is open and visible.
-            // When hidden, skip the O(N) collection updates — the page/window will
-            // force a refresh when it becomes visible.
-            if (!_isPageActive || !MainWindow.IsVisibleToUser) return;
-
-            UpdateMonthAndChartUI();
-
-            // Heatmap iterates 365 cells; throttle to avoid running every second.
-            _heatmapThrottleCount++;
-            if (_heatmapThrottleCount >= HeatmapThrottleInterval)
-            {
-                _heatmapThrottleCount = 0;
-                UpdateHeatmapUI();
-            }
-        }
-
-        /// <summary>
-        /// Updates the in-memory daily record without touching disk.
-        /// Called every traffic tick. <see cref="SaveRecords"/> is called on a
-        /// throttled schedule (once per minute) and on core stop.
-        /// </summary>
-        private void PersistTodayInMemory(long sessionUpload, long sessionDownload)
+        private void PersistTodayInMemoryLocked(long sessionUpload, long sessionDownload)
         {
             long todayUp   = _todayBaseUpload   + sessionUpload;
             long todayDown = _todayBaseDownload + sessionDownload;
 
-            var existingRecord = _dailyRecords.FirstOrDefault(r => r.Date == _currentDateStr);
-            if (existingRecord != null)
+            if (_cachedTodayRecord == null || _cachedTodayRecord.Date != _currentDateStr)
             {
-                existingRecord.ProxyUpload   = todayUp;
-                existingRecord.ProxyDownload = todayDown;
+                _cachedTodayRecord = _dailyRecords.FirstOrDefault(r => r.Date == _currentDateStr);
+            }
+
+            if (_cachedTodayRecord != null)
+            {
+                _cachedTodayRecord.ProxyUpload   = todayUp;
+                _cachedTodayRecord.ProxyDownload = todayDown;
             }
             else
             {
-                _dailyRecords.Add(new DailyTraffic
+                _cachedTodayRecord = new DailyTraffic
                 {
                     Date          = _currentDateStr,
                     ProxyUpload   = todayUp,
                     ProxyDownload = todayDown
-                });
+                };
+                _dailyRecords.Add(_cachedTodayRecord);
             }
 
             if (_dailyRecords.Count > 400)
                 _dailyRecords = _dailyRecords.OrderByDescending(r => r.Date).Take(400).ToList();
         }
 
-        private void PersistToday(long sessionUpload, long sessionDownload)
+        private void SaveRecordsLocked()
         {
-            long todayUp = _todayBaseUpload + sessionUpload;
-            long todayDown = _todayBaseDownload + sessionDownload;
-
-            var existingRecord = _dailyRecords.FirstOrDefault(r => r.Date == _currentDateStr);
-            if (existingRecord != null)
+            try
             {
-                existingRecord.ProxyUpload = todayUp;
-                existingRecord.ProxyDownload = todayDown;
+                Helpers.LocalSettingsHelper.SetValue(DailyTrafficKey,
+                    JsonSerializer.Serialize(_dailyRecords, AnywhereWinUI.Models.AppJsonContext.Default.ListDailyTraffic));
             }
-            else
+            catch (Exception ex)
             {
-                _dailyRecords.Add(new DailyTraffic
-                {
-                    Date = _currentDateStr,
-                    ProxyUpload = todayUp,
-                    ProxyDownload = todayDown
-                });
+                Debug.WriteLine($"Failed to save records: {ex.Message}");
             }
-
-            if (_dailyRecords.Count > 400)
-                _dailyRecords = _dailyRecords.OrderByDescending(r => r.Date).Take(400).ToList();
         }
 
         private void UpdateMonthAndChartUI()
         {
+            List<DailyTraffic> snapshot;
+            lock (_recordsLock)
+            {
+                snapshot = _dailyRecords.ToList();
+            }
+
             string monthPrefix = DateTime.Now.ToString("yyyy-MM");
             long monthUp = 0;
             long monthDown = 0;
-            for (int i = 0; i < _dailyRecords.Count; i++)
+            for (int i = 0; i < snapshot.Count; i++)
             {
-                var r = _dailyRecords[i];
+                var r = snapshot[i];
                 if (r.Date.StartsWith(monthPrefix, StringComparison.Ordinal))
                 {
                     monthUp += r.ProxyUpload;
@@ -407,14 +463,14 @@ namespace AnywhereWinUI.ViewModels
             MonthDownloadText = FormatBytes(monthDown);
             MonthTotalText = FormatBytes(monthUp + monthDown);
 
-            if (_dailyRecords.Count == 0)
+            if (snapshot.Count == 0)
             {
                 ChartItems.Clear();
                 return;
             }
 
             // Bug #3 fix: show only the most recent 30 days matching the card header ("近 30 天")
-            var recentRecords = _dailyRecords.OrderBy(r => r.Date).TakeLast(30).ToList();
+            var recentRecords = snapshot.OrderBy(r => r.Date).TakeLast(30).ToList();
 
             long maxVal = recentRecords.Max(r => Math.Max(r.ProxyUpload, r.ProxyDownload));
             if (maxVal == 0) maxVal = 1;
@@ -477,6 +533,12 @@ namespace AnywhereWinUI.ViewModels
 
         private void UpdateHeatmapUI()
         {
+            List<DailyTraffic> snapshot;
+            lock (_recordsLock)
+            {
+                snapshot = _dailyRecords.ToList();
+            }
+
             // 构建过去 365 天的日期序列（从最早到今天）
             var today = DateTime.Today;
             var startDay = today.AddDays(-364);
@@ -487,7 +549,7 @@ namespace AnywhereWinUI.ViewModels
             var gridStart = startDay.AddDays(-startDow); // 对齐到该周周日
 
             // 建立日期→记录快速查找
-            var recordMap = _dailyRecords.ToDictionary(r => r.Date, r => r);
+            var recordMap = snapshot.ToDictionary(r => r.Date, r => r);
 
             // 按周计算周汇总（供 Weekly 模式使用）
             Dictionary<int, long> weekTotals = new();
@@ -522,7 +584,7 @@ namespace AnywhereWinUI.ViewModels
             // 计算颜色最大值（用于分档）
             long maxVal = 1;
             if (_heatmapViewMode == HeatmapViewMode.Daily)
-                maxVal = _dailyRecords.Count > 0 ? _dailyRecords.Max(r => r.Total) : 1;
+                maxVal = snapshot.Count > 0 ? snapshot.Max(r => r.Total) : 1;
             else if (_heatmapViewMode == HeatmapViewMode.Weekly)
                 maxVal = weekTotals.Count > 0 ? weekTotals.Values.Max() : 1;
             else // Cumulative
@@ -608,10 +670,10 @@ namespace AnywhereWinUI.ViewModels
             }
 
             // 更新统计卡
-            long grandTotal = _dailyRecords.Sum(r => r.Total);
+            long grandTotal = snapshot.Sum(r => r.Total);
             TotalTrafficText = FormatBytes(grandTotal);
 
-            var peakRec = _dailyRecords.OrderByDescending(r => r.Total).FirstOrDefault();
+            var peakRec = snapshot.OrderByDescending(r => r.Total).FirstOrDefault();
             if (peakRec != null)
             {
                 if (DateTime.TryParseExact(peakRec.Date, "yyyy-MM-dd",
@@ -653,12 +715,10 @@ namespace AnywhereWinUI.ViewModels
             CurrentStreakText = string.Format(L.Traffic_DaysFmt, currentStreak);
             MaxStreakText = string.Format(L.Traffic_DaysFmt, maxStreak);
 
-            // 刷新集合
-            HeatmapCells.Clear();
-            foreach (var cell in cells) HeatmapCells.Add(cell);
-
-            MonthLabels.Clear();
-            foreach (var label in monthLabelList) MonthLabels.Add(label);
+            // 更新轻量只读快照并通知矢量画布一次性合并渲染（0 ObservableCollection 逐项开销）
+            HeatmapCellList = cells;
+            MonthLabelList = monthLabelList;
+            HeatmapUpdated?.Invoke(this, EventArgs.Empty);
         }
 
         private static string FormatBytes(long bytes)
@@ -692,21 +752,22 @@ namespace AnywhereWinUI.ViewModels
             }
         }
 
-        private void SaveRecords()
+        public void FlushPendingToDisk()
         {
-            try
+            lock (_recordsLock)
             {
-                Helpers.LocalSettingsHelper.SetValue(DailyTrafficKey,
-                    JsonSerializer.Serialize(_dailyRecords, AnywhereWinUI.Models.AppJsonContext.Default.ListDailyTraffic));
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Failed to save records: {ex.Message}");
+                if (_hasUnsavedTraffic)
+                {
+                    PersistTodayInMemoryLocked(_sessionUpload, _sessionDownload);
+                    SaveRecordsLocked();
+                    _hasUnsavedTraffic = false;
+                }
             }
         }
 
         public void Dispose()
         {
+            FlushPendingToDisk();
             CoreManager.Instance.TrafficUpdated -= OnTrafficUpdated;
             CoreManager.Instance.RunningChanged -= OnRunningChanged;
             MainWindow.VisibilityToUserChanged -= OnWindowVisibilityChanged;

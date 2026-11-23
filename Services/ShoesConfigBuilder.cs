@@ -46,7 +46,8 @@ namespace AnywhereWinUI.Services
                     {
                         var srcInfo = new FileInfo(file);
                         var dstInfo = new FileInfo(destFile);
-                        if (!dstInfo.Exists || dstInfo.Length != srcInfo.Length)
+                        // Only seed bundled rule-sets if missing or empty — never overwrite user-updated .srs files!
+                        if (!dstInfo.Exists || dstInfo.Length == 0)
                         {
                             File.Copy(file, destFile, overwrite: true);
                         }
@@ -82,6 +83,12 @@ namespace AnywhereWinUI.Services
             if (session.EnableTunMode)
             {
                 fallbackReason = L.Shoes_ReasonTunMode;
+                return false;
+            }
+
+            if (session.IsAutoNodeSelect)
+            {
+                fallbackReason = L.Shoes_ReasonAutoSelect;
                 return false;
             }
 
@@ -236,12 +243,16 @@ namespace AnywhereWinUI.Services
             {
                 sb.AppendLine("    - masks: \"0.0.0.0/0\"");
                 sb.AppendLine("      client_chain: \"proxy\"");
+                sb.AppendLine("    - masks: \"::/0\"");
+                sb.AppendLine("      client_chain: \"proxy\"");
                 return;
             }
 
             if (session.RoutingMode == "direct")
             {
                 sb.AppendLine("    - masks: \"0.0.0.0/0\"");
+                sb.AppendLine("      client_chain: \"direct\"");
+                sb.AppendLine("    - masks: \"::/0\"");
                 sb.AppendLine("      client_chain: \"direct\"");
                 return;
             }
@@ -275,6 +286,15 @@ namespace AnywhereWinUI.Services
 
             if (session.BypassChina)
             {
+                // Keep Google Play / googleapis.cn routed via proxy before geosite-cn / .cn captures them
+                sb.AppendLine("    - masks:");
+                sb.AppendLine("        any:");
+                sb.AppendLine("          - domain_suffix:");
+                sb.AppendLine("              - \"googleapis.cn\"");
+                sb.AppendLine("              - \"xn--ngstr-lra8j.com\"");
+                sb.AppendLine("              - \"play.googleapis.com\"");
+                sb.AppendLine("      client_chain: \"proxy\"");
+
                 string geositeCn = Path.Combine(ruleDir, "geosite-cn.srs");
                 string geoipCn = Path.Combine(ruleDir, "geoip-cn.srs");
 
@@ -294,6 +314,8 @@ namespace AnywhereWinUI.Services
             }
 
             sb.AppendLine("    - masks: \"0.0.0.0/0\"");
+            sb.AppendLine("      client_chain: \"proxy\"");
+            sb.AppendLine("    - masks: \"::/0\"");
             sb.AppendLine("      client_chain: \"proxy\"");
         }
 

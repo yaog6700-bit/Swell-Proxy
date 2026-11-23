@@ -52,16 +52,14 @@ namespace AnywhereWinUI.ViewModels
         private static readonly SolidColorBrush _sourceBrush   = new(ColorHelper.FromArgb(255, 99,  102, 241)); // Indigo-500
         private static readonly SolidColorBrush _middleBrush   = new(ColorHelper.FromArgb(255, 16,  185, 129)); // Emerald-500
         private static readonly SolidColorBrush _outboundBrush = new(ColorHelper.FromArgb(255, 245, 158,  11)); // Amber-500
+        private static readonly LinearGradientBrush _sourceToMidGradient = CreateStaticGradient(_sourceBrush.Color, _middleBrush.Color);
+        private static readonly LinearGradientBrush _midToOutGradient    = CreateStaticGradient(_middleBrush.Color, _outboundBrush.Color);
 
         public TopologyViewModel()
         {
-            // BUG fix: 与 ConnectionsViewModel 保持一致，构造时缓存 DispatcherQueue。
-            // TopologyGraphControl 以属性初始化器直接 new 此 ViewModel，
-            // 该时机可能早于 UI 线程完全就绪，GetForCurrentThread() 可能返回 null，
-            // 导致后续 TryEnqueue 时抛出 NullReferenceException 闪退。
             _dispatcherQueue = DispatcherQueue.GetForCurrentThread()
-                               ?? MainWindow.Instance?.DispatcherQueue;
-            Subscribe();
+                               ?? MainWindow.Instance?.DispatcherQueue!;
+            // Do NOT subscribe in constructor — TopologyGraphControl subscribes only when Loaded & visible!
         }
 
         public void Subscribe()
@@ -125,8 +123,9 @@ namespace AnywhereWinUI.ViewModels
             long totalTraffic = 0;
 
 
-            foreach (var conn in connections)
+            var nodesSnapshot = NodesManager.Instance.GetNodesSnapshot();
 
+            foreach (var conn in connections)
             {
                 long traffic = conn.Upload + conn.Download;
                 if (traffic < 1024) traffic = 1024; // Minimum weight for visibility
@@ -140,14 +139,16 @@ namespace AnywhereWinUI.ViewModels
                 string outbound = chainTag;
                 if (string.IsNullOrEmpty(outbound)) outbound = "Direct";
                 
-                if (chainTag.ToLower() == "proxy" || chainTag.ToLower() == "urltest")
+                if (string.Equals(chainTag, "proxy", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(chainTag, "urltest", StringComparison.OrdinalIgnoreCase))
                 {
                     outbound = AppSession.Instance.SelectedNodeName;
                     if (string.IsNullOrEmpty(outbound)) outbound = "Proxy";
                 }
-                else if (chainTag.ToLower() != "direct" && chainTag.ToLower() != "block")
+                else if (!string.Equals(chainTag, "direct", StringComparison.OrdinalIgnoreCase) &&
+                         !string.Equals(chainTag, "block", StringComparison.OrdinalIgnoreCase))
                 {
-                    var resolvedNode = NodesManager.Instance.Nodes.FirstOrDefault(n => n.Id == chainTag);
+                    var resolvedNode = nodesSnapshot.Find(n => n.Id == chainTag);
                     if (resolvedNode != null)
                     {
                         outbound = resolvedNode.Name;
@@ -339,7 +340,7 @@ namespace AnywhereWinUI.ViewModels
                     TargetId = midNode.Id,
                     Value = m.Value,
                     PathGeometry = (Geometry)XamlBindingHelper.ConvertValue(typeof(Geometry), pathData),
-                    Color = CreateGradient(sourceNode.Color, midNode.Color)
+                    Color = _sourceToMidGradient
                 });
                 sourceCursor += h;
             }
@@ -366,7 +367,7 @@ namespace AnywhereWinUI.ViewModels
                         TargetId = outNode.Id,
                         Value = flow.Value,
                         PathGeometry = (Geometry)XamlBindingHelper.ConvertValue(typeof(Geometry), pathData),
-                        Color = CreateGradient(midNode.Color, outNode.Color)
+                        Color = _midToOutGradient
                     });
 
                     midCursor += midH;
@@ -433,15 +434,15 @@ namespace AnywhereWinUI.ViewModels
             target.PathGeometry = source.PathGeometry;
         }
 
-        private LinearGradientBrush CreateGradient(SolidColorBrush start, SolidColorBrush end)
+        private static LinearGradientBrush CreateStaticGradient(Windows.UI.Color start, Windows.UI.Color end)
         {
             var brush = new LinearGradientBrush
             {
                 StartPoint = new Windows.Foundation.Point(0, 0),
                 EndPoint = new Windows.Foundation.Point(1, 0)
             };
-            if (start != null) brush.GradientStops.Add(new GradientStop { Color = start.Color, Offset = 0.0 });
-            if (end != null) brush.GradientStops.Add(new GradientStop { Color = end.Color, Offset = 1.0 });
+            brush.GradientStops.Add(new GradientStop { Color = start, Offset = 0.0 });
+            brush.GradientStops.Add(new GradientStop { Color = end, Offset = 1.0 });
             return brush;
         }
 

@@ -34,7 +34,8 @@ namespace AnywhereWinUI.Services
         public static string SingboxExePath => ResolveSingboxExePath();
         public static bool HasBundledBackup =>
             (IsNonEmptyFile(SingboxUserExePath) && IsNonEmptyFile(SingboxBundledExePath)) ||
-            File.Exists(BundledBackupExePath);
+            File.Exists(BundledBackupExePath) ||
+            File.Exists(SingboxUserExePath + ".bak");
 
         public static readonly string ShoesUserExePath = Path.Combine(ShoesBinDir, "shoes.exe");
         public static readonly string ShoesBundledExePath = Path.Combine(EngineDir, "shoes.exe");
@@ -76,17 +77,28 @@ namespace AnywhereWinUI.Services
 
             var tag = (release.TagName ?? string.Empty).TrimStart('v');
             var dashIdx = tag.IndexOf('-');
-            var cleanTag = dashIdx > 0 ? tag.Substring(0, dashIdx) : tag;
+            bool remoteIsPrerelease = dashIdx > 0;
+            var cleanTag = remoteIsPrerelease ? tag.Substring(0, dashIdx) : tag;
             if (!Version.TryParse(cleanTag, out var remote)) return null;
 
-            var local = GetLocalSingboxNumericVersion();
-            if (local != null && remote <= local)
+            var localProbe = File.Exists(SingboxExePath) ? ProbeSingboxExecutable(SingboxExePath) : default;
+            var local = localProbe.NumericVersion;
+            bool localIsPrerelease = localProbe.VersionDisplay?.Contains('-') == true;
+            if (local != null)
             {
-                return null;
+                if (remote < local) return null;
+                // Allow 1.15.0-alpha.13 -> 1.15.0 stable upgrade!
+                if (remote == local && (!localIsPrerelease || remoteIsPrerelease)) return null;
             }
 
-            if (!IsX64()) return null;
-            var zipName = $"sing-box-{tag}-windows-amd64.zip";
+            string? singboxArch = RuntimeInformation.ProcessArchitecture switch
+            {
+                Architecture.X64 => "amd64",
+                Architecture.Arm64 => "arm64",
+                _ => null
+            };
+            if (singboxArch is null) return null;
+            var zipName = $"sing-box-{tag}-windows-{singboxArch}.zip";
             var shaName = zipName + ".sha256";
 
             string? zipUrl = null, shaUrl = null;
@@ -229,9 +241,10 @@ namespace AnywhereWinUI.Services
                 progress.Report(L.Update_FetchingChecksum);
                 try
                 {
-                    var checksumText = await client.GetStringAsync(info.ChecksumUrl, ct);
+                    var checksumText = await DownloadStringWithMirrorFallbackAsync(client, info.ChecksumUrl, proxyUrl, ct);
                     expectedHash = ParsePureSha256(checksumText) ?? throw new InvalidDataException(L.Update_InvalidChecksumFmt);
                 }
+                catch (InvalidDataException) { throw; }
                 catch (Exception ex) { throw new InvalidDataException(L.Update_DownloadChecksumErr + ex.Message); }
             }
             else
@@ -239,8 +252,10 @@ namespace AnywhereWinUI.Services
                 progress.Report(L.Core_NoChecksumSkip);
             }
 
+            // Security: only allow third-party reverse-proxy mirrors when we have an official SHA-256 hash to verify!
             var actualHash = await DownloadWithMirrorFallbackAsync(
-                client, info.ZipUrl, zipPath, info.ZipAssetName, proxyUrl, progress, ct);
+                client, info.ZipUrl, zipPath, info.ZipAssetName, proxyUrl, progress, ct,
+                allowMirrors: expectedHash is not null);
 
             if (expectedHash is not null)
             {
@@ -271,17 +286,49 @@ namespace AnywhereWinUI.Services
             Directory.CreateDirectory(ShoesBinDir);
 
             var bakPath = targetPath + ".bak";
-            try { File.Delete(bakPath); } catch { }
+            bool movedOldToBak = false;
+            try { if (File.Exists(bakPath)) File.Delete(bakPath); } catch { }
             if (File.Exists(targetPath))
-                try { File.Move(targetPath, bakPath); } catch { }
+            {
+                try
+                {
+                    File.Move(targetPath, bakPath);
+                    movedOldToBak = true;
+                }
+                catch { }
+            }
 
-            File.Copy(extractedExe, targetPath, overwrite: true);
+            try
+            {
+                File.Copy(extractedExe, targetPath, overwrite: true);
+            }
+            catch
+            {
+                // Roll back .bak if installing the new binary failed
+                if (movedOldToBak && File.Exists(bakPath) && !File.Exists(targetPath))
+                {
+                    try { File.Move(bakPath, targetPath); } catch { }
+                }
+                throw;
+            }
 
             if (isShoes)
             {
                 CopySidecarDlls(Path.GetDirectoryName(extractedExe), ShoesBinDir);
             }
+            else
+            {
+                // Ensure libcronet.dll stays available beside %LocalAppData%\SwellProxy\bin\sing-box.exe so NaiveProxy keeps working!
+                CopySidecarDlls(Path.GetDirectoryName(extractedExe), ShoesBinDir);
+                string dstCronet = Path.Combine(ShoesBinDir, "libcronet.dll");
+                string bundledCronet = Path.Combine(EngineDir, "libcronet.dll");
+                if (!File.Exists(dstCronet) && File.Exists(bundledCronet))
+                {
+                    try { File.Copy(bundledCronet, dstCronet, overwrite: false); } catch { }
+                }
+            }
 
+            InvalidateVersionProbeCache();
             try { Directory.Delete(stageDir, recursive: true); } catch { }
 
             progress.Report(string.Format(L.Core_UpdatedStatusFmt, info.TagName));
@@ -295,7 +342,8 @@ namespace AnywhereWinUI.Services
             {
                 File.Copy(sourceExePath, targetPath, overwrite: true);
             }
-            CopySidecarDlls(Path.GetDirectoryName(sourceExePath), ShoesBinDir);
+            // Security: do NOT copy arbitrary *.dll from user-selected folders (e.g. Downloads\) to prevent DLL hijacking!
+            InvalidateVersionProbeCache();
         }
 
         private static void CopySidecarDlls(string? srcDir, string dstDir)
@@ -328,6 +376,45 @@ namespace AnywhereWinUI.Services
             return await client.GetFromJsonAsync(apiUrl, UpdateJsonSerializerContext.Default.ListGhRelease, ct);
         }
 
+        private static async Task<string> DownloadStringWithMirrorFallbackAsync(
+            HttpClient client,
+            string url,
+            string? proxyUrl,
+            CancellationToken ct)
+        {
+            try
+            {
+                return await client.GetStringAsync(url, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception firstEx) when (
+                string.IsNullOrEmpty(proxyUrl) &&
+                (url.Contains("github.com/", StringComparison.OrdinalIgnoreCase) ||
+                 url.Contains("githubusercontent.com/", StringComparison.OrdinalIgnoreCase)))
+            {
+                string[] mirrors =
+                {
+                    "https://ghfast.top/",
+                    "https://mirror.ghproxy.com/",
+                    "https://ghproxy.net/"
+                };
+                foreach (var mirror in mirrors)
+                {
+                    try
+                    {
+                        return await client.GetStringAsync(mirror + url, ct);
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch { }
+                }
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(firstEx).Throw();
+                throw;
+            }
+        }
+
         private static async Task<string> DownloadWithMirrorFallbackAsync(
             HttpClient client,
             string url,
@@ -335,7 +422,8 @@ namespace AnywhereWinUI.Services
             string displayName,
             string? proxyUrl,
             IProgress<string> progress,
-            CancellationToken ct)
+            CancellationToken ct,
+            bool allowMirrors = true)
         {
             try
             {
@@ -346,6 +434,7 @@ namespace AnywhereWinUI.Services
                 throw;
             }
             catch (Exception firstEx) when (
+                allowMirrors &&
                 string.IsNullOrEmpty(proxyUrl) &&
                 (url.Contains("github.com/", StringComparison.OrdinalIgnoreCase) ||
                  url.Contains("githubusercontent.com/", StringComparison.OrdinalIgnoreCase)))
@@ -466,6 +555,11 @@ namespace AnywhereWinUI.Services
 
         private static bool IsX64() => RuntimeInformation.ProcessArchitecture == Architecture.X64;
 
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime LastWriteUtc, long Length, (bool IsValid, string VersionDisplay, Version? NumericVersion, string RawOutput) Probe)> _probeCache
+            = new(StringComparer.OrdinalIgnoreCase);
+
+        public static void InvalidateVersionProbeCache() => _probeCache.Clear();
+
         public static (bool IsValid, string VersionDisplay, Version? NumericVersion, string RawOutput) ProbeSingboxExecutable(string exePath)
         {
             try
@@ -473,37 +567,31 @@ namespace AnywhereWinUI.Services
                 if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
                     return (false, L.Core_NotInstalled, null, string.Empty);
 
-                var psi = new ProcessStartInfo
+                string fullPath = Path.GetFullPath(exePath);
+                var fi = new FileInfo(fullPath);
+                string cacheKey = "singbox|" + fullPath;
+                if (_probeCache.TryGetValue(cacheKey, out var cached) &&
+                    cached.LastWriteUtc == fi.LastWriteTimeUtc &&
+                    cached.Length == fi.Length)
                 {
-                    FileName = exePath,
-                    Arguments = "version",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
-                using var proc = Process.Start(psi);
-                if (proc != null)
+                    return cached.Probe;
+                }
+
+                string combined = RunVersionProbeOnce(fullPath, "version");
+                var fullMatch = System.Text.RegularExpressions.Regex.Match(
+                    combined,
+                    @"sing-box\s+version\s+v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z\.\-]+)?)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                if (fullMatch.Success)
                 {
-                    var output = proc.StandardOutput.ReadToEnd();
-                    var err = proc.StandardError.ReadToEnd();
-                    proc.WaitForExit(3000);
-                    var combined = string.IsNullOrWhiteSpace(output) ? err : output;
-
-                    // Capture full semver including pre-release tag (e.g. 1.15.0-alpha.13 or 1.14.0)
-                    var fullMatch = System.Text.RegularExpressions.Regex.Match(
-                        combined,
-                        @"sing-box\s+version\s+v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z\.\-]+)?)",
-                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-                    if (fullMatch.Success)
-                    {
-                        var fullVerStr = fullMatch.Groups[1].Value;
-                        var dashIdx = fullVerStr.IndexOf('-');
-                        var numericPart = dashIdx > 0 ? fullVerStr.Substring(0, dashIdx) : fullVerStr;
-                        Version.TryParse(numericPart, out var numericVer);
-                        return (true, $"v{fullVerStr}", numericVer, combined);
-                    }
+                    var fullVerStr = fullMatch.Groups[1].Value;
+                    var dashIdx = fullVerStr.IndexOf('-');
+                    var numericPart = dashIdx > 0 ? fullVerStr.Substring(0, dashIdx) : fullVerStr;
+                    Version.TryParse(numericPart, out var numericVer);
+                    var res = (true, $"v{fullVerStr}", numericVer, combined);
+                    _probeCache[cacheKey] = (fi.LastWriteTimeUtc, fi.Length, res);
+                    return res;
                 }
             }
             catch (Exception ex)
@@ -535,12 +623,22 @@ namespace AnywhereWinUI.Services
                 if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
                     return (false, L.Core_NotInstalled, null, string.Empty);
 
-                string combined = RunVersionProbeOnce(exePath, "version");
+                string fullPath = Path.GetFullPath(exePath);
+                var fi = new FileInfo(fullPath);
+                string cacheKey = "shoes|" + fullPath;
+                if (_probeCache.TryGetValue(cacheKey, out var cached) &&
+                    cached.LastWriteUtc == fi.LastWriteTimeUtc &&
+                    cached.Length == fi.Length)
+                {
+                    return cached.Probe;
+                }
+
+                string combined = RunVersionProbeOnce(fullPath, "version");
                 if (string.IsNullOrWhiteSpace(combined) ||
                     combined.Contains("unrecognized", StringComparison.OrdinalIgnoreCase) ||
                     combined.Contains("unexpected argument", StringComparison.OrdinalIgnoreCase))
                 {
-                    combined = RunVersionProbeOnce(exePath, "--version");
+                    combined = RunVersionProbeOnce(fullPath, "--version");
                 }
 
                 if (combined.Contains("sing-box", StringComparison.OrdinalIgnoreCase))
@@ -554,11 +652,10 @@ namespace AnywhereWinUI.Services
 
                 if (verMatch.Success)
                 {
-                    // Confirm this is actually a shoes binary (either output says "shoes" or --help mentions --no-reload/shoes)
                     bool looksLikeShoes = combined.Contains("shoes", StringComparison.OrdinalIgnoreCase);
                     if (!looksLikeShoes)
                     {
-                        string helpOut = RunVersionProbeOnce(exePath, "--help");
+                        string helpOut = RunVersionProbeOnce(fullPath, "--help");
                         looksLikeShoes = helpOut.Contains("shoes", StringComparison.OrdinalIgnoreCase) ||
                                          helpOut.Contains("no-reload", StringComparison.OrdinalIgnoreCase);
                     }
@@ -569,7 +666,9 @@ namespace AnywhereWinUI.Services
                         var dashIdx = fullVerStr.IndexOf('-');
                         var numericPart = dashIdx > 0 ? fullVerStr[..dashIdx] : fullVerStr;
                         Version.TryParse(numericPart, out var numericVer);
-                        return (true, $"v{fullVerStr}", numericVer, combined);
+                        var res = (true, $"v{fullVerStr}", numericVer, combined);
+                        _probeCache[cacheKey] = (fi.LastWriteTimeUtc, fi.Length, res);
+                        return res;
                     }
                 }
             }
@@ -595,9 +694,17 @@ namespace AnywhereWinUI.Services
             };
             using var proc = Process.Start(psi);
             if (proc == null) return string.Empty;
-            var output = proc.StandardOutput.ReadToEnd();
-            var err = proc.StandardError.ReadToEnd();
-            proc.WaitForExit(3000);
+
+            // Read stdout and stderr concurrently to avoid pipe buffer deadlocks
+            var outTask = proc.StandardOutput.ReadToEndAsync();
+            var errTask = proc.StandardError.ReadToEndAsync();
+            if (!proc.WaitForExit(3000))
+            {
+                try { proc.Kill(); } catch { }
+            }
+            Task.WaitAll(new Task[] { outTask, errTask }, 1000);
+            string output = outTask.IsCompletedSuccessfully ? outTask.Result : string.Empty;
+            string err = errTask.IsCompletedSuccessfully ? errTask.Result : string.Empty;
             return string.IsNullOrWhiteSpace(output) ? err : output;
         }
 

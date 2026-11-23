@@ -13,6 +13,41 @@ namespace AnywhereWinUI.Services
         public string SelectedNodeName { get; set; } = string.Empty;
         public string SelectedNodeProtocol { get; set; } = string.Empty;
         public string SelectedNodeHost { get; set; } = string.Empty;
+        public bool IsAutoNodeSelect { get; set; } = false;
+
+        // Runtime selector hot-switch tags currently loaded in the running sing-box instance
+        private readonly object _hotSwitchLock = new();
+        private readonly HashSet<string> _hotSwitchTags = new(StringComparer.Ordinal);
+
+        public void SetHotSwitchTags(IEnumerable<string> tags)
+        {
+            lock (_hotSwitchLock)
+            {
+                _hotSwitchTags.Clear();
+                foreach (var t in tags)
+                {
+                    if (!string.IsNullOrEmpty(t))
+                        _hotSwitchTags.Add(t);
+                }
+            }
+        }
+
+        public void ClearHotSwitchTags()
+        {
+            lock (_hotSwitchLock)
+            {
+                _hotSwitchTags.Clear();
+            }
+        }
+
+        public bool CanHotSwitchTo(string tag)
+        {
+            if (string.IsNullOrEmpty(tag)) return false;
+            lock (_hotSwitchLock)
+            {
+                return _hotSwitchTags.Contains(tag);
+            }
+        }
 
         // Proxy Mode
         public int ProxyModeIndex { get; set; } = 0; // 0: System Proxy, 1: TUN, 2: Local Only, 3: TUN + System Proxy
@@ -140,6 +175,7 @@ namespace AnywhereWinUI.Services
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("flushDNS", out var fd)) FlushDNS = fd;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableAdvancedRouting", out var ear)) EnableAdvancedRouting = ear;
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("routingMode", out var rm) && !string.IsNullOrEmpty(rm)) RoutingMode = rm;
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>("isAutoNodeSelect", out var autoSel)) IsAutoNodeSelect = autoSel;
 
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("directDns", out var dd) && !string.IsNullOrEmpty(dd)) DirectDns = dd;
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("proxyDns", out var pd) && !string.IsNullOrEmpty(pd)) ProxyDns = pd;

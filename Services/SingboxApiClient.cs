@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
@@ -91,20 +92,224 @@ namespace AnywhereWinUI.Services
         private static readonly Lazy<SingboxApiClient> _instance = new(() => new SingboxApiClient());
         public static SingboxApiClient Instance => _instance.Value;
 
-        public const string ConnectionsUrl = "http://127.0.0.1:9090/connections";
+        public const string DefaultControllerBaseUrl = "http://127.0.0.1:9090";
+        public const string DefaultConnectionsUrl = DefaultControllerBaseUrl + "/connections";
+        private volatile string _controllerBaseUrl = DefaultControllerBaseUrl;
+        private volatile string _connectionsUrl = DefaultConnectionsUrl;
+        public string ControllerBaseUrl => _controllerBaseUrl;
+        public string ConnectionsUrl => _connectionsUrl;
 
-        private static readonly HttpClient _httpClient = new HttpClient
+        private static readonly HttpClient _httpClient = new HttpClient(new SocketsHttpHandler
+        {
+            UseProxy = false,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+        })
         {
             Timeout = TimeSpan.FromSeconds(3)
+        };
+
+        private static readonly HttpClient _delayProbeClient = new HttpClient(new SocketsHttpHandler
+        {
+            UseProxy = false,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+        })
+        {
+            Timeout = TimeSpan.FromSeconds(6)
         };
 
         private CancellationTokenSource? _cts;
         private bool _isRunning = true;
 
         public event EventHandler<ClashConnectionsMessage>? ConnectionsUpdated;
-        public event EventHandler<Exception>? OnError;
+
+        /// <summary>
+        /// True only when the main window is visible AND at least one live connection view
+        /// (ConnectionsPage or TopologyGraphControl) is actively subscribed.
+        /// When false, CoreManager uses zero-allocation streaming Utf8JsonReader instead of
+        /// deserializing full ClashConnectionsMessage graphs.
+        /// </summary>
+        public bool HasActiveVisualConsumers => MainWindow.IsVisibleToUser && ConnectionsUpdated != null;
 
         private SingboxApiClient() { }
+
+        public void UpdateControllerEndpoint(string? externalController)
+        {
+            if (string.IsNullOrWhiteSpace(externalController))
+            {
+                _controllerBaseUrl = DefaultControllerBaseUrl;
+                _connectionsUrl = DefaultConnectionsUrl;
+                return;
+            }
+
+            string trimmed = externalController.Trim();
+            if (trimmed.StartsWith(':'))
+                trimmed = "127.0.0.1" + trimmed;
+            else if (trimmed.StartsWith("0.0.0.0:", StringComparison.Ordinal))
+                trimmed = "127.0.0.1:" + trimmed.Substring("0.0.0.0:".Length);
+            else if (trimmed.StartsWith("[::]:", StringComparison.Ordinal))
+                trimmed = "[::1]:" + trimmed.Substring("[::]:".Length);
+
+            if (!trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                !trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                trimmed = "http://" + trimmed;
+            }
+
+            string baseUrl = trimmed.TrimEnd('/');
+            _controllerBaseUrl = baseUrl;
+            _connectionsUrl = baseUrl + "/connections";
+        }
+
+        /// <summary>
+        /// Zero-drop hot-switches a Clash/sing-box selector group (e.g. "proxy") to <paramref name="outboundTag"/>
+        /// via PUT /proxies/{groupTag}. Trim-safe (uses Utf8JsonWriter with 0 reflection).
+        /// </summary>
+        public async Task<bool> SelectOutboundAsync(string groupTag, string outboundTag, CancellationToken token = default)
+        {
+            if (string.IsNullOrWhiteSpace(groupTag) || string.IsNullOrWhiteSpace(outboundTag))
+                return false;
+
+            try
+            {
+                var writerBuffer = new ArrayBufferWriter<byte>(128);
+                using (var writer = new Utf8JsonWriter(writerBuffer))
+                {
+                    writer.WriteStartObject();
+                    writer.WriteString("name"u8, outboundTag);
+                    writer.WriteEndObject();
+                }
+
+                var payload = writerBuffer.WrittenMemory.ToArray();
+                using var content = new ByteArrayContent(payload);
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Put,
+                    $"{_controllerBaseUrl}/proxies/{Uri.EscapeDataString(groupTag)}")
+                {
+                    Content = content
+                };
+                ApplyAuth(request);
+
+                using var response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Queries GET /proxies/{groupTag} (e.g. "urltest" or "proxy") and returns its active "now" outbound tag.
+        /// Trim-safe via Utf8JsonReader.
+        /// </summary>
+        public async Task<string?> GetGroupSelectedAsync(string groupTag, CancellationToken token = default)
+        {
+            if (string.IsNullOrWhiteSpace(groupTag))
+                return null;
+
+            try
+            {
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"{_controllerBaseUrl}/proxies/{Uri.EscapeDataString(groupTag)}");
+                ApplyAuth(request);
+
+                using var response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                    return null;
+
+                var bytes = await response.Content.ReadAsByteArrayAsync(token).ConfigureAwait(false);
+                var reader = new Utf8JsonReader(bytes);
+                if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+                    return null;
+
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                {
+                    if (reader.TokenType != JsonTokenType.PropertyName)
+                        continue;
+
+                    if (reader.ValueTextEquals("now"u8))
+                    {
+                        if (!reader.Read()) return null;
+                        return reader.TokenType == JsonTokenType.String ? reader.GetString() : null;
+                    }
+
+                    if (!reader.Read()) break;
+                    reader.Skip();
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Performs a true end-to-end protocol URL-Test via sing-box Clash API:
+        /// GET /proxies/{outboundTag}/delay?url=https://www.gstatic.com/generate_204&amp;timeout={timeoutMs}.
+        /// Returns &gt;0 ms on HTTP 204 round-trip success, -1 on proxy/handshake/timeout failure (503/504),
+        /// or null if the local Clash API controller itself was unreachable (allowing fallback to socket probe).
+        /// </summary>
+        public async Task<int?> ProbeOutboundDelayAsync(string outboundTag, int timeoutMs = 3500, CancellationToken token = default)
+        {
+            if (string.IsNullOrWhiteSpace(outboundTag))
+                return null;
+
+            try
+            {
+                string url = $"{_controllerBaseUrl}/proxies/{Uri.EscapeDataString(outboundTag)}/delay?url=https%3A%2F%2Fwww.gstatic.com%2Fgenerate_204&timeout={timeoutMs}";
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                ApplyAuth(request);
+
+                using var response = await _delayProbeClient.SendAsync(request, token).ConfigureAwait(false);
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound ||
+                    response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    return null;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    // 503 / 504 from Clash API means the outbound failed end-to-end handshake or timed out
+                    return -1;
+                }
+
+                var bytes = await response.Content.ReadAsByteArrayAsync(token).ConfigureAwait(false);
+                var reader = new Utf8JsonReader(bytes);
+                if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+                    return -1;
+
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                {
+                    if (reader.TokenType != JsonTokenType.PropertyName)
+                        continue;
+
+                    if (reader.ValueTextEquals("delay"u8))
+                    {
+                        if (!reader.Read()) return -1;
+                        if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int ms) && ms > 0)
+                            return ms;
+                        return -1;
+                    }
+
+                    if (!reader.Read()) break;
+                    reader.Skip();
+                }
+
+                return -1;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                return null;
+            }
+        }
 
         public async Task StartAsync()
         {
@@ -141,7 +346,9 @@ namespace AnywhereWinUI.Services
 
         internal void PublishConnectionsSnapshot(ClashConnectionsMessage message)
         {
-            if (!_isRunning || !MainWindow.IsVisibleToUser || ConnectionsUpdated == null) return;
+            // Deliver snapshot whenever window is visible and there are active subscribers (e.g. TopologyGraphControl),
+            // even if ConnectionsPage paused its own table updates!
+            if (!MainWindow.IsVisibleToUser || ConnectionsUpdated == null) return;
             ConnectionsUpdated.Invoke(this, message);
         }
 
@@ -169,6 +376,60 @@ namespace AnywhereWinUI.Services
             if (message != null)
                 message.Connections ??= new List<ClashConnectionNode>();
             return message;
+        }
+
+        /// <summary>
+        /// Fetches /connections into a pooled ArrayPool&lt;byte&gt; buffer and applies proxy-traffic
+        /// deltas via Utf8JsonReader without allocating ClashConnectionNode / ClashMetadata objects.
+        /// </summary>
+        internal async Task<(long down, long up, long downSpeed, long upSpeed)?> FetchAndApplyTrafficZeroAllocAsync(
+            ProxyTrafficTracker tracker,
+            bool seedOnly,
+            double elapsedSeconds,
+            CancellationToken token = default)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, ConnectionsUrl);
+            ApplyAuth(request);
+
+            using var response = await _httpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                token).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            await using var stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(65536);
+            int totalRead = 0;
+            try
+            {
+                while (true)
+                {
+                    if (totalRead == buffer.Length)
+                    {
+                        if (buffer.Length >= 8 * 1024 * 1024)
+                            return null; // Safety cap against pathological payloads
+
+                        byte[] larger = ArrayPool<byte>.Shared.Rent(buffer.Length * 2);
+                        Buffer.BlockCopy(buffer, 0, larger, 0, totalRead);
+                        ArrayPool<byte>.Shared.Return(buffer);
+                        buffer = larger;
+                    }
+
+                    int read = await stream.ReadAsync(buffer.AsMemory(totalRead, buffer.Length - totalRead), token).ConfigureAwait(false);
+                    if (read == 0) break;
+                    totalRead += read;
+                }
+
+                if (totalRead == 0)
+                    return null;
+
+                return tracker.ApplyUtf8Json(buffer.AsSpan(0, totalRead), seedOnly, elapsedSeconds);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
 
         /// <summary>

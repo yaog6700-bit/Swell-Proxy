@@ -27,14 +27,21 @@ namespace AnywhereWinUI.Helpers
         public const string ShowMainWindowMessageName = "SwellProxy_ShowMainWindow";
 
         private const uint WM_ACTIVATE = 0x0006;
+        private const uint WM_QUERYENDSESSION = 0x0011;
+        private const uint WM_ENDSESSION = 0x0016;
         private const uint WM_SETTINGCHANGE = 0x001A;
         private const uint WM_GETMINMAXINFO = 0x0024;
         private const uint WM_DISPLAYCHANGE = 0x007E;
+        private const uint WM_MOUSEMOVE = 0x0200;
         private const uint WM_LBUTTONUP = 0x0202;
         private const uint WM_LBUTTONDBLCLK = 0x0203;
         private const uint WM_RBUTTONUP = 0x0205;
+        private const uint WM_POWERBROADCAST = 0x0218;
         private const uint WM_DPICHANGED = 0x02E0;
         private const uint WM_TRAYCALLBACK = 0x8000 + 0x42; // WM_APP + 0x42
+
+        private const uint PBT_APMRESUMESUSPEND = 0x0007;
+        private const uint PBT_APMRESUMEAUTOMATIC = 0x0012;
 
         private const uint WS_POPUP = 0x80000000;
         private const uint WS_EX_TOOLWINDOW = 0x00000080;
@@ -65,20 +72,30 @@ namespace AnywhereWinUI.Helpers
         private readonly DispatcherQueue _dispatcherQueue;
         private readonly Action _onOpenRequested;
         private readonly Func<FlyoutBase> _contextMenuFactory;
+        private readonly Func<FlyoutBase>? _leftClickPanelFactory;
+        private readonly Func<string?>? _dynamicTooltipProvider;
+        private readonly Action? _onFlyoutIdleReclaim;
 
         // Pinned delegate reference tied to this manager's lifetime so GC never collects WndProc
         private readonly WndProcDelegate _wndProcDelegate;
         private readonly string _windowClassName;
         private readonly uint _wmTaskbarCreated;
         private readonly uint _wmShowMainWindow;
-        private readonly DispatcherQueueTimer _watchdogTimer;
+        private DispatcherQueueTimer? _bootRetryTimer;
+        private DispatcherQueueTimer? _leftClickTimer;
+        private DispatcherQueueTimer? _idleReclaimTimer;
+        private RECT _pendingLeftClickRect;
+        private long _ignoreNextLButtonUpUntilTick;
+        private long _lastHoverTooltipTick;
+        private long _lastPowerResumeTick;
 
         private IntPtr _hwnd;
         private IntPtr _activeIcon;
         private IntPtr _inactiveIcon;
+        private bool _ownsActiveIcon;
+        private bool _ownsInactiveIcon;
         private int _loadedIconWidth;
         private int _loadedIconHeight;
-        private bool _loadedTaskbarLight;
         private string? _customTooltip;
         private bool _isActive;
         private bool _isAdded;
@@ -95,12 +112,18 @@ namespace AnywhereWinUI.Helpers
             DispatcherQueue dispatcherQueue,
             bool initialActiveState,
             Action onOpenRequested,
-            Func<FlyoutBase> contextMenuFactory)
+            Func<FlyoutBase> contextMenuFactory,
+            Func<string?>? dynamicTooltipProvider = null,
+            Func<FlyoutBase>? leftClickPanelFactory = null,
+            Action? onFlyoutIdleReclaim = null)
         {
             _dispatcherQueue = dispatcherQueue ?? throw new ArgumentNullException(nameof(dispatcherQueue));
             _isActive = initialActiveState;
             _onOpenRequested = onOpenRequested ?? throw new ArgumentNullException(nameof(onOpenRequested));
             _contextMenuFactory = contextMenuFactory ?? throw new ArgumentNullException(nameof(contextMenuFactory));
+            _dynamicTooltipProvider = dynamicTooltipProvider;
+            _leftClickPanelFactory = leftClickPanelFactory;
+            _onFlyoutIdleReclaim = onFlyoutIdleReclaim;
 
             _wndProcDelegate = WndProc;
             _windowClassName = $"SwellProxyTrayWnd_{Environment.ProcessId}";
@@ -110,15 +133,29 @@ namespace AnywhereWinUI.Helpers
             CreateHiddenTopLevelWindow();
             LoadIcons();
             AddOrUpdateTrayIcon();
-            InitializeFlyoutHostWindow();
 
-            // Self-healing watchdog: verifies every 10s that Explorer still holds our tray icon
-            // (covers boot autostart before Explorer tray init, Win10 silent notification area resets, etc.)
-            _watchdogTimer = _dispatcherQueue.CreateTimer();
-            _watchdogTimer.Interval = TimeSpan.FromSeconds(10);
-            _watchdogTimer.IsRepeating = true;
-            _watchdogTimer.Tick += (_, _) => EnsureVisible();
-            _watchdogTimer.Start();
+            // NOTE: _flyoutHostWindow is lazily created on first right-click in ShowWinUIFlyout()
+            // so we never pay the memory cost (~6MB SwapChain/XamlRoot) during boot/tray hibernation!
+
+            // Only run a boot retry timer if Explorer's notification area wasn't ready yet at login;
+            // once _isAdded == true, stop the timer completely (TaskbarCreated handles Explorer restarts)
+            // so zero periodic UI-thread timers wake up the process during tray hibernation!
+            if (!_isAdded)
+            {
+                _bootRetryTimer = _dispatcherQueue.CreateTimer();
+                _bootRetryTimer.Interval = TimeSpan.FromSeconds(3);
+                _bootRetryTimer.IsRepeating = true;
+                _bootRetryTimer.Tick += (_, _) =>
+                {
+                    EnsureVisible();
+                    if (_isAdded && _bootRetryTimer != null)
+                    {
+                        _bootRetryTimer.Stop();
+                        _bootRetryTimer = null;
+                    }
+                };
+                _bootRetryTimer.Start();
+            }
         }
 
         public void SetActiveState(bool isActive)
@@ -299,127 +336,37 @@ namespace AnywhereWinUI.Helpers
             }
         }
 
-        private static bool IsTaskbarLightTheme()
-        {
-            try
-            {
-                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
-                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", writable: false);
-                if (key?.GetValue("SystemUsesLightTheme") is int val)
-                    return val != 0;
-            }
-            catch { }
-            return false;
-        }
-
         private void LoadIcons()
         {
             int cx = Math.Max(16, GetSystemMetrics(SM_CXSMICON));
             int cy = Math.Max(16, GetSystemMetrics(SM_CYSMICON));
-            bool taskbarLight = IsTaskbarLightTheme();
 
-            IntPtr newActive = LoadSingleIcon("output.ico", cx, cy);
-            IntPtr rawInactive = LoadSingleIcon("output_grey.ico", cx, cy);
-            IntPtr newInactive = CreateTaskbarAdaptiveGreyIcon(rawInactive, taskbarLight);
-            if (newInactive != IntPtr.Zero && newInactive != rawInactive)
-            {
-                DestroyIcon(rawInactive);
-            }
-            else
-            {
-                newInactive = rawInactive;
-            }
+            (IntPtr newActive, bool ownsActive) = LoadSingleIcon("output.ico", cx, cy);
+            (IntPtr newInactive, bool ownsInactive) = LoadSingleIcon("output_grey.ico", cx, cy);
 
             IntPtr oldActive = _activeIcon;
             IntPtr oldInactive = _inactiveIcon;
+            bool ownedOldActive = _ownsActiveIcon;
+            bool ownedOldInactive = _ownsInactiveIcon;
 
             _activeIcon = newActive;
             _inactiveIcon = newInactive;
+            _ownsActiveIcon = ownsActive;
+            _ownsInactiveIcon = ownsInactive;
             _loadedIconWidth = cx;
             _loadedIconHeight = cy;
-            _loadedTaskbarLight = taskbarLight;
 
-            if (oldActive != IntPtr.Zero && oldActive != _activeIcon)
+            if (ownedOldActive && oldActive != IntPtr.Zero && oldActive != _activeIcon)
             {
                 DestroyIcon(oldActive);
             }
-            if (oldInactive != IntPtr.Zero && oldInactive != _inactiveIcon)
+            if (ownedOldInactive && oldInactive != IntPtr.Zero && oldInactive != _inactiveIcon)
             {
                 DestroyIcon(oldInactive);
             }
         }
 
-        /// <summary>
-        /// Retints the monochrome disconnected icon so it stays clearly legible on both
-        /// dark Windows taskbars (light silver) and light Windows taskbars (charcoal grey).
-        /// </summary>
-        private static IntPtr CreateTaskbarAdaptiveGreyIcon(IntPtr sourceIcon, bool taskbarLight)
-        {
-            if (sourceIcon == IntPtr.Zero) return IntPtr.Zero;
-
-            if (!GetIconInfo(sourceIcon, out ICONINFO info))
-                return sourceIcon;
-
-            IntPtr hdc = IntPtr.Zero;
-            try
-            {
-                if (info.hbmColor == IntPtr.Zero)
-                    return sourceIcon;
-
-                if (GetObjectW(info.hbmColor, Marshal.SizeOf<BITMAP>(), out BITMAP bm) == 0 ||
-                    bm.bmWidth <= 0 || bm.bmHeight <= 0)
-                    return sourceIcon;
-
-                int w = bm.bmWidth;
-                int h = bm.bmHeight;
-                var bmi = new BITMAPINFOHEADER
-                {
-                    biSize = (uint)Marshal.SizeOf<BITMAPINFOHEADER>(),
-                    biWidth = w,
-                    biHeight = -h,
-                    biPlanes = 1,
-                    biBitCount = 32,
-                    biCompression = 0 // BI_RGB
-                };
-
-                byte[] pixels = new byte[w * h * 4];
-                hdc = GetDC(IntPtr.Zero);
-                if (hdc == IntPtr.Zero) return sourceIcon;
-
-                if (GetDIBits(hdc, info.hbmColor, 0, (uint)h, pixels, ref bmi, 0) == 0)
-                    return sourceIcon;
-
-                byte target = taskbarLight ? (byte)72 : (byte)216;
-                for (int i = 0; i < pixels.Length; i += 4)
-                {
-                    byte a = pixels[i + 3];
-                    if (a == 0) continue;
-                    // Premultiplied BGRA
-                    byte premul = (byte)((target * a) / 255);
-                    pixels[i] = premul;
-                    pixels[i + 1] = premul;
-                    pixels[i + 2] = premul;
-                }
-
-                if (SetDIBits(hdc, info.hbmColor, 0, (uint)h, pixels, ref bmi, 0) == 0)
-                    return sourceIcon;
-
-                IntPtr newIcon = CreateIconIndirect(ref info);
-                return newIcon != IntPtr.Zero ? newIcon : sourceIcon;
-            }
-            catch
-            {
-                return sourceIcon;
-            }
-            finally
-            {
-                if (hdc != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
-                if (info.hbmColor != IntPtr.Zero) DeleteObject(info.hbmColor);
-                if (info.hbmMask != IntPtr.Zero) DeleteObject(info.hbmMask);
-            }
-        }
-
-        private static IntPtr LoadSingleIcon(string fileName, int cx, int cy)
+        private static (IntPtr Handle, bool Owned) LoadSingleIcon(string fileName, int cx, int cy)
         {
             string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", fileName);
             if (File.Exists(iconPath))
@@ -427,19 +374,18 @@ namespace AnywhereWinUI.Helpers
                 IntPtr hIcon = LoadImageW(IntPtr.Zero, iconPath, IMAGE_ICON, cx, cy, LR_LOADFROMFILE);
                 if (hIcon != IntPtr.Zero)
                 {
-                    return hIcon;
+                    return (hIcon, true);
                 }
             }
 
-            return LoadIconW(IntPtr.Zero, (IntPtr)IDI_APPLICATION);
+            return (LoadIconW(IntPtr.Zero, (IntPtr)IDI_APPLICATION), false);
         }
 
         private void ReloadIconsIfMetricsChanged()
         {
             int cx = Math.Max(16, GetSystemMetrics(SM_CXSMICON));
             int cy = Math.Max(16, GetSystemMetrics(SM_CYSMICON));
-            bool taskbarLight = IsTaskbarLightTheme();
-            if (cx != _loadedIconWidth || cy != _loadedIconHeight || taskbarLight != _loadedTaskbarLight ||
+            if (cx != _loadedIconWidth || cy != _loadedIconHeight ||
                 _activeIcon == IntPtr.Zero || _inactiveIcon == IntPtr.Zero)
             {
                 LoadIcons();
@@ -510,18 +456,78 @@ namespace AnywhereWinUI.Helpers
                     uint trayEvent = (uint)(lParam.ToInt64() & 0xFFFF);
                     switch (trayEvent)
                     {
-                        case WM_LBUTTONUP:
+                        case WM_MOUSEMOVE:
+                            if (_dynamicTooltipProvider != null)
+                            {
+                                long nowTick = Environment.TickCount64;
+                                if (nowTick - _lastHoverTooltipTick >= 1000)
+                                {
+                                    _lastHoverTooltipTick = nowTick;
+                                    try { UpdateTooltip(_dynamicTooltipProvider()); } catch { }
+                                }
+                            }
+                            return IntPtr.Zero;
+
                         case WM_LBUTTONDBLCLK:
+                            _ignoreNextLButtonUpUntilTick = Environment.TickCount64 + 360;
                             _dispatcherQueue.TryEnqueue(() =>
                             {
+                                _leftClickTimer?.Stop();
                                 CloseFlyout();
                                 _onOpenRequested();
                             });
                             return IntPtr.Zero;
 
+                        case WM_LBUTTONUP:
+                            if (Environment.TickCount64 < _ignoreNextLButtonUpUntilTick)
+                            {
+                                _ignoreNextLButtonUpUntilTick = 0;
+                                return IntPtr.Zero;
+                            }
+
+                            if (_leftClickPanelFactory == null)
+                            {
+                                _dispatcherQueue.TryEnqueue(() =>
+                                {
+                                    CloseFlyout();
+                                    _onOpenRequested();
+                                });
+                                return IntPtr.Zero;
+                            }
+
+                            var leftTargetRect = GetTrayAnchorRect();
+                            _dispatcherQueue.TryEnqueue(() =>
+                            {
+                                if (_currentFlyout != null && _currentFlyout.IsOpen)
+                                {
+                                    _leftClickTimer?.Stop();
+                                    CloseFlyout();
+                                    return;
+                                }
+
+                                _pendingLeftClickRect = leftTargetRect;
+                                if (_leftClickTimer == null)
+                                {
+                                    _leftClickTimer = _dispatcherQueue.CreateTimer();
+                                    _leftClickTimer.Interval = TimeSpan.FromMilliseconds(180);
+                                    _leftClickTimer.IsRepeating = false;
+                                    _leftClickTimer.Tick += (_, _) =>
+                                    {
+                                        ShowWinUIFlyout(_pendingLeftClickRect, isLeftPanel: true);
+                                    };
+                                }
+                                _leftClickTimer.Stop();
+                                _leftClickTimer.Start();
+                            });
+                            return IntPtr.Zero;
+
                         case WM_RBUTTONUP:
                             var targetRect = GetTrayAnchorRect();
-                            _dispatcherQueue.TryEnqueue(() => ShowWinUIFlyout(targetRect));
+                            _dispatcherQueue.TryEnqueue(() =>
+                            {
+                                _leftClickTimer?.Stop();
+                                ShowWinUIFlyout(targetRect, isLeftPanel: false);
+                            });
                             return IntPtr.Zero;
                     }
                 }
@@ -543,6 +549,30 @@ namespace AnywhereWinUI.Helpers
                 {
                     ReloadIconsIfMetricsChanged();
                     AddOrUpdateTrayIcon();
+                }
+                else if (msg == WM_POWERBROADCAST)
+                {
+                    uint powerEvent = (uint)(wParam.ToInt64() & 0xFFFF);
+                    if (powerEvent == PBT_APMRESUMEAUTOMATIC || powerEvent == PBT_APMRESUMESUSPEND)
+                    {
+                        long nowTick = Environment.TickCount64;
+                        if (nowTick - _lastPowerResumeTick >= 4000)
+                        {
+                            _lastPowerResumeTick = nowTick;
+                            _ = AnywhereWinUI.Services.CoreManager.Instance.HandleSystemResumeAsync();
+                        }
+                    }
+                }
+                else if (msg == WM_QUERYENDSESSION)
+                {
+                    // Clean up owned system proxy settings BEFORE Windows terminates user processes on shutdown/reboot
+                    try { AnywhereWinUI.Services.SystemProxyManager.DisableProxyIfOwned(); } catch { }
+                    return new IntPtr(1);
+                }
+                else if (msg == WM_ENDSESSION && wParam != IntPtr.Zero)
+                {
+                    try { AnywhereWinUI.Services.SystemProxyManager.DisableProxyIfOwned(); } catch { }
+                    return IntPtr.Zero;
                 }
             }
 
@@ -574,9 +604,14 @@ namespace AnywhereWinUI.Helpers
             };
         }
 
-        private void ShowWinUIFlyout(RECT targetRect)
+        private void ShowWinUIFlyout(RECT targetRect, bool isLeftPanel = false)
         {
             if (_disposed) return;
+
+            _idleReclaimTimer?.Stop();
+
+            // Lift GUI EcoQoS briefly while the user interacts with the tray flyout
+            ProcessPowerHelper.SetGuiHibernationMode(false);
 
             if (_flyoutHostWindow == null || _flyoutHostRoot == null)
             {
@@ -584,18 +619,23 @@ namespace AnywhereWinUI.Helpers
                 if (_flyoutHostWindow == null || _flyoutHostRoot == null) return;
             }
 
-            CloseFlyout();
+            CloseFlyout(scheduleReclaim: false);
 
-            var flyout = _contextMenuFactory();
+            var flyout = isLeftPanel
+                ? _leftClickPanelFactory?.Invoke()
+                : _contextMenuFactory();
             if (flyout == null) return;
 
-            // Sync WinUI 3 MenuFlyout theme with main window (Light / Dark / System)
+            // Sync WinUI 3 Flyout theme with main window (Light / Dark / System)
             var activeTheme = MainWindow.Instance?.GetActiveTheme() ?? ElementTheme.Default;
             _flyoutHostRoot.RequestedTheme = activeTheme;
 
             flyout.ShouldConstrainToRootBounds = false;
             _currentFlyout = flyout;
-            _flyoutHostRoot.ContextFlyout = flyout;
+            if (!isLeftPanel)
+            {
+                _flyoutHostRoot.ContextFlyout = flyout;
+            }
 
             var displayArea = DisplayArea.GetFromPoint(
                 new PointInt32(targetRect.Left, targetRect.Top),
@@ -623,11 +663,16 @@ namespace AnywhereWinUI.Helpers
                 double h = Math.Max(0, (targetRect.Bottom - targetRect.Top) / scale);
 
                 flyout.Closed += CurrentFlyout_Closed;
-                flyout.ShowAt(_flyoutHostRoot, new FlyoutShowOptions
+                var showOpts = new FlyoutShowOptions
                 {
-                    Position = new Point(0, 0),
+                    Position = new Point(w / 2.0, 0),
                     ExclusionRect = new Rect(0, 0, w, h)
-                });
+                };
+                if (isLeftPanel)
+                {
+                    showOpts.Placement = FlyoutPlacementMode.Top;
+                }
+                flyout.ShowAt(_flyoutHostRoot, showOpts);
             }
 
             if (_flyoutHostRoot.XamlRoot != null)
@@ -658,14 +703,28 @@ namespace AnywhereWinUI.Helpers
                 }
             }
 
+            if (_flyoutHostRoot != null)
+            {
+                try { _flyoutHostRoot.ContextFlyout = null; } catch { }
+            }
+
             if (!_disposed && _flyoutHostWindow != null)
             {
                 try { WindowExtensions.Hide(_flyoutHostWindow); } catch { }
             }
+
+            if (!_disposed)
+            {
+                ScheduleIdleFlyoutReclaim();
+            }
         }
 
-        public void CloseFlyout()
+        public void CloseFlyout() => CloseFlyout(scheduleReclaim: true);
+
+        private void CloseFlyout(bool scheduleReclaim)
         {
+            bool hadOpenFlyout = _currentFlyout != null || _flyoutHostWindow != null;
+
             if (_currentFlyout != null)
             {
                 var flyout = _currentFlyout;
@@ -681,31 +740,47 @@ namespace AnywhereWinUI.Helpers
                 catch { }
             }
 
+            if (_flyoutHostRoot != null)
+            {
+                try { _flyoutHostRoot.ContextFlyout = null; } catch { }
+            }
+
             if (_flyoutHostWindow != null)
             {
                 try { WindowExtensions.Hide(_flyoutHostWindow); } catch { }
             }
+
+            if (scheduleReclaim && hadOpenFlyout && !_disposed)
+            {
+                ScheduleIdleFlyoutReclaim();
+            }
         }
 
-        public void Dispose()
+        private void ScheduleIdleFlyoutReclaim()
         {
             if (_disposed) return;
-            _disposed = true;
 
-            try { _watchdogTimer.Stop(); } catch { }
-
-            try
+            if (_idleReclaimTimer == null)
             {
-                if (_currentFlyout != null)
+                _idleReclaimTimer = _dispatcherQueue.CreateTimer();
+                _idleReclaimTimer.Interval = TimeSpan.FromMilliseconds(350);
+                _idleReclaimTimer.IsRepeating = false;
+                _idleReclaimTimer.Tick += (_, _) =>
                 {
-                    _currentFlyout.Closed -= CurrentFlyout_Closed;
-                    if (_currentFlyout.IsOpen)
-                        _currentFlyout.Hide();
-                    _currentFlyout = null;
-                }
-            }
-            catch { }
+                    if (_disposed) return;
+                    if (_currentFlyout != null && _currentFlyout.IsOpen) return;
 
+                    DestroyFlyoutHostWindow();
+                    try { _onFlyoutIdleReclaim?.Invoke(); } catch { }
+                };
+            }
+
+            _idleReclaimTimer.Stop();
+            _idleReclaimTimer.Start();
+        }
+
+        private void DestroyFlyoutHostWindow()
+        {
             try
             {
                 if (_flyoutMessageMonitor != null)
@@ -719,12 +794,53 @@ namespace AnywhereWinUI.Helpers
 
             try
             {
-                _flyoutHostWindow?.Close();
+                if (_flyoutHostRoot != null)
+                {
+                    _flyoutHostRoot.ContextFlyout = null;
+                    _flyoutHostRoot.Children.Clear();
+                }
+            }
+            catch { }
+
+            try
+            {
+                if (_flyoutHostWindow != null)
+                {
+                    _flyoutHostWindow.Content = null;
+                    _flyoutHostWindow.Close();
+                }
+            }
+            catch { }
+            finally
+            {
                 _flyoutHostWindow = null;
                 _flyoutHostRoot = null;
                 _flyoutHostHwnd = IntPtr.Zero;
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            try { _bootRetryTimer?.Stop(); _bootRetryTimer = null; } catch { }
+            try { _leftClickTimer?.Stop(); _leftClickTimer = null; } catch { }
+            try { _idleReclaimTimer?.Stop(); _idleReclaimTimer = null; } catch { }
+
+            try
+            {
+                if (_currentFlyout != null)
+                {
+                    _currentFlyout.Closed -= CurrentFlyout_Closed;
+                    if (_currentFlyout.IsOpen)
+                        _currentFlyout.Hide();
+                    _currentFlyout = null;
+                }
+            }
             catch { }
+
+            DestroyFlyoutHostWindow();
 
             if (_hwnd != IntPtr.Zero)
             {
@@ -751,13 +867,15 @@ namespace AnywhereWinUI.Helpers
 
             if (_activeIcon != IntPtr.Zero)
             {
-                DestroyIcon(_activeIcon);
+                if (_ownsActiveIcon) DestroyIcon(_activeIcon);
                 _activeIcon = IntPtr.Zero;
+                _ownsActiveIcon = false;
             }
             if (_inactiveIcon != IntPtr.Zero)
             {
-                DestroyIcon(_inactiveIcon);
+                if (_ownsInactiveIcon) DestroyIcon(_inactiveIcon);
                 _inactiveIcon = IntPtr.Zero;
+                _ownsInactiveIcon = false;
             }
         }
 
@@ -908,71 +1026,6 @@ namespace AnywhereWinUI.Helpers
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr GetModuleHandleW(string? lpModuleName);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct ICONINFO
-        {
-            [MarshalAs(UnmanagedType.Bool)]
-            public bool fIcon;
-            public int xHotspot;
-            public int yHotspot;
-            public IntPtr hbmMask;
-            public IntPtr hbmColor;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct BITMAP
-        {
-            public int bmType;
-            public int bmWidth;
-            public int bmHeight;
-            public int bmWidthBytes;
-            public ushort bmPlanes;
-            public ushort bmBitsPixel;
-            public IntPtr bmBits;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct BITMAPINFOHEADER
-        {
-            public uint biSize;
-            public int biWidth;
-            public int biHeight;
-            public ushort biPlanes;
-            public ushort biBitCount;
-            public uint biCompression;
-            public uint biSizeImage;
-            public int biXPelsPerMeter;
-            public int biYPelsPerMeter;
-            public uint biClrUsed;
-            public uint biClrImportant;
-        }
-
-        [DllImport("user32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool GetIconInfo(IntPtr hIcon, out ICONINFO piconinfo);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr CreateIconIndirect(ref ICONINFO piconinfo);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetDC(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
-
-        [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
-        private static extern int GetObjectW(IntPtr hgdiobj, int cbBuffer, out BITMAP lpvObject);
-
-        [DllImport("gdi32.dll")]
-        private static extern int GetDIBits(IntPtr hdc, IntPtr hbm, uint start, uint cLines, [Out] byte[] lpvBits, ref BITMAPINFOHEADER lpbmi, uint usage);
-
-        [DllImport("gdi32.dll")]
-        private static extern int SetDIBits(IntPtr hdc, IntPtr hbm, uint start, uint cLines, byte[] lpBits, ref BITMAPINFOHEADER lpbmi, uint colorUse);
-
-        [DllImport("gdi32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool DeleteObject(IntPtr hObject);
 
         #endregion
     }

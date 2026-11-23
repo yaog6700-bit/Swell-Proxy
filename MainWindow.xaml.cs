@@ -21,6 +21,8 @@ namespace AnywhereWinUI
         
         private readonly WindowManager _windowManager;
         private Helpers.SystemTrayManager? _trayManager;
+        private Controls.TrayPanelControl? _trayPanelControl;
+        private Flyout? _trayPanelFlyout;
         private Helpers.PaneMorphAnimator? _paneMorph;
         private bool _isHiddenToTray;
         public static bool IsVisibleToUser { get; private set; } = true;
@@ -80,15 +82,24 @@ namespace AnywhereWinUI
                 });
             };
 
-            CoreManager.Instance.TrafficUpdated += (s, stats) =>
+            CoreManager.Instance.ActiveNodeChanged += (_, _) =>
             {
-                if (!CoreManager.Instance.IsRunning) return;
-                string selectedId = NodesManager.Instance.SelectedNodeId;
-                string nodeName = NodesManager.Instance.Nodes.Find(n => n.Id == selectedId)?.Name ?? "Swell Proxy";
-                if (nodeName.Length > 32) nodeName = nodeName[..31] + "…";
-                string tip = $"Swell Proxy · {nodeName}\n↑ {FormatTraySpeed(stats.UpSpeed)}  ↓ {FormatTraySpeed(stats.DownSpeed)}";
-                DispatcherQueue.TryEnqueue(() => _trayManager?.UpdateTooltip(tip));
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    UpdateMiniModeUI();
+                });
             };
+
+            CoreManager.Instance.ModeStateChanged += (_, _) =>
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    UpdateMiniModeUI();
+                });
+            };
+
+            // NOTE: Tray tooltip speed is now refreshed ON DEMAND when the user hovers the tray icon
+            // (WM_MOUSEMOVE in SystemTrayManager), eliminating 1s UI-thread wakeups & Shell_NotifyIconW calls!
 
             CoreManager.Instance.SystemProxyTampered += (s, result) =>
             {
@@ -687,49 +698,28 @@ namespace AnywhereWinUI
                 DispatcherQueue,
                 CoreManager.Instance.IsRunning,
                 onOpenRequested: RestoreFromTray,
-                contextMenuFactory: () =>
+                contextMenuFactory: BuildTrayContextMenu,
+                dynamicTooltipProvider: () =>
                 {
-                    var flyout = new MenuFlyout();
+                    if (!CoreManager.Instance.IsRunning)
+                        return null;
 
-                    var openItem = new MenuFlyoutItem
+                    var stats = CoreManager.Instance.LatestTrafficStats;
+                    string nodeName;
+                    if (AppSession.Instance.IsAutoNodeSelect)
                     {
-                        Text = L.Tray_ShowMainWindow,
-                        Icon = new FontIcon { Glyph = "\uE8A7" }
-                    };
-                    openItem.Click += (_, _) => RestoreFromTray();
-                    flyout.Items.Add(openItem);
-
-                    bool isLocked = ViewModel.IsPrivacyLocked;
-                    var privacyItem = new MenuFlyoutItem
+                        nodeName = $"{L.TrayPanel_AutoTitle} ({L.TrayPanel_AutoSubtitle})";
+                    }
+                    else
                     {
-                        Text = isLocked ? L.Tray_UnlockWindow : L.Tray_LockAndHide,
-                        Icon = new FontIcon { Glyph = isLocked ? "\uE785" : "\uE72E" }
-                    };
-                    privacyItem.Click += async (_, _) =>
-                    {
-                        if (ViewModel.IsPrivacyLocked)
-                        {
-                            RestoreFromTray();
-                        }
-                        else
-                        {
-                            await ViewModel.TogglePrivacyModeAsync();
-                        }
-                    };
-                    flyout.Items.Add(privacyItem);
-
-                    flyout.Items.Add(new MenuFlyoutSeparator());
-
-                    var exitItem = new MenuFlyoutItem
-                    {
-                        Text = L.Tray_Exit,
-                        Icon = new FontIcon { Glyph = "\uE7E8" }
-                    };
-                    exitItem.Click += (_, _) => ExitApplication();
-                    flyout.Items.Add(exitItem);
-
-                    return flyout;
-                });
+                        string selectedId = NodesManager.Instance.SelectedNodeId;
+                        nodeName = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == selectedId)?.Name ?? "Swell Proxy";
+                    }
+                    if (nodeName.Length > 32) nodeName = nodeName[..31] + "…";
+                    return $"Swell Proxy · {nodeName}\n↑ {FormatTraySpeed(stats.UpSpeed)}  ↓ {FormatTraySpeed(stats.DownSpeed)}";
+                },
+                leftClickPanelFactory: GetOrCreateTrayPanelFlyout,
+                onFlyoutIdleReclaim: OnTrayFlyoutIdleReclaim);
 
             UpdateAppIcon();
 
@@ -746,6 +736,319 @@ namespace AnywhereWinUI
                     ExitApplication();
                 }
             };
+        }
+
+        private void OnTrayPanelFlyoutOpening(object? sender, object e) => _trayPanelControl?.AttachAndRefresh();
+
+        private void OnTrayPanelFlyoutClosed(object? sender, object e) => _trayPanelControl?.DetachAndTrim();
+
+        private void ReleaseTrayPanelInstance()
+        {
+            if (_trayPanelControl != null)
+            {
+                try { _trayPanelControl.DetachAndTrim(); } catch { }
+                _trayPanelControl = null;
+            }
+
+            if (_trayPanelFlyout != null)
+            {
+                _trayPanelFlyout.Opening -= OnTrayPanelFlyoutOpening;
+                _trayPanelFlyout.Closed -= OnTrayPanelFlyoutClosed;
+                try { _trayPanelFlyout.Content = null; } catch { }
+                _trayPanelFlyout = null;
+            }
+        }
+
+        private void OnTrayFlyoutIdleReclaim()
+        {
+            // Release cached Flyout + TrayPanelControl XAML visual tree so their DirectComposition
+            // surfaces and WinRT RCWs can be collected together with the closed _flyoutHostWindow.
+            ReleaseTrayPanelInstance();
+
+            // If MainWindow is still hidden in the system tray, return GUI to EcoQoS hibernation
+            // and compact/trim the Working Set right back down to ~5 MB!
+            if (!IsVisibleToUser)
+            {
+                Helpers.ProcessPowerHelper.SetGuiHibernationMode(true);
+                ReleaseUiResources();
+            }
+        }
+
+        private Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase GetOrCreateTrayPanelFlyout()
+        {
+            if (_trayPanelFlyout != null && _trayPanelControl != null)
+            {
+                return _trayPanelFlyout;
+            }
+
+            _trayPanelControl = new Controls.TrayPanelControl(
+                onCloseFlyout: () => _trayManager?.CloseFlyout(),
+                onOpenServersPage: OpenMainWindowToServers,
+                onOpenSettingsAbout: () => OpenMainWindowToSettings("About"),
+                onRequestTunAdminStartAsync: RequestTunAdminStartFromTrayAsync);
+
+            var presenterStyle = new Style(typeof(FlyoutPresenter));
+            presenterStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(0)));
+            presenterStyle.Setters.Add(new Setter(FrameworkElement.MinWidthProperty, 328.0));
+            presenterStyle.Setters.Add(new Setter(FrameworkElement.MaxWidthProperty, 328.0));
+            presenterStyle.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty, 680.0));
+            // Match WinUI 3 OverlayCornerRadius (8px) & SurfaceStrokeColorFlyoutBrush per Fluent 2 flyout spec
+            presenterStyle.Setters.Add(new Setter(Control.CornerRadiusProperty, new CornerRadius(8)));
+            presenterStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(1)));
+            if (Application.Current.Resources.TryGetValue("SurfaceStrokeColorFlyoutBrush", out var strokeObj) && strokeObj is Microsoft.UI.Xaml.Media.Brush strokeBrush)
+            {
+                presenterStyle.Setters.Add(new Setter(Control.BorderBrushProperty, strokeBrush));
+            }
+            presenterStyle.Setters.Add(new Setter(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled));
+
+            _trayPanelFlyout = new Flyout
+            {
+                Content = _trayPanelControl,
+                FlyoutPresenterStyle = presenterStyle,
+                Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.Top,
+                ShouldConstrainToRootBounds = false
+            };
+
+            _trayPanelFlyout.Opening += OnTrayPanelFlyoutOpening;
+            _trayPanelFlyout.Closed += OnTrayPanelFlyoutClosed;
+
+            return _trayPanelFlyout;
+        }
+
+        private Microsoft.UI.Xaml.Controls.Primitives.FlyoutBase BuildTrayContextMenu()
+        {
+            var flyout = new MenuFlyout();
+
+            var openItem = new MenuFlyoutItem
+            {
+                Text = L.Tray_ShowMainWindow,
+                Icon = new FontIcon { Glyph = "\uE8A7" }
+            };
+            openItem.Click += (_, _) => RestoreFromTray();
+            flyout.Items.Add(openItem);
+
+            bool isLocked = ViewModel.IsPrivacyLocked;
+            var privacyItem = new MenuFlyoutItem
+            {
+                Text = isLocked ? L.Tray_UnlockWindow : L.Tray_LockAndHide,
+                Icon = new FontIcon { Glyph = isLocked ? "\uE785" : "\uE72E" }
+            };
+            privacyItem.Click += async (_, _) => await TogglePrivacyFromTrayAsync();
+            flyout.Items.Add(privacyItem);
+
+            flyout.Items.Add(new MenuFlyoutSeparator());
+
+            var exitItem = new MenuFlyoutItem
+            {
+                Text = L.Tray_Exit,
+                Icon = new FontIcon { Glyph = "\uE7E8" }
+            };
+            exitItem.Click += (_, _) => ExitApplication();
+            flyout.Items.Add(exitItem);
+
+            return flyout;
+        }
+
+        private async Task TogglePrivacyFromTrayAsync()
+        {
+            if (ViewModel.IsPrivacyLocked)
+            {
+                RestoreFromTray();
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(AppSession.Instance.PrivacyPassword))
+                {
+                    RestoreFromTray();
+                }
+                await ViewModel.TogglePrivacyModeAsync();
+            }
+        }
+
+        private void OpenMainWindowToServers()
+        {
+            RestoreFromTray();
+            if (_isMiniMode) SetMiniMode(false);
+            if (!ViewModel.IsPrivacyLocked && ServersNavItem != null)
+            {
+                MainNav.SelectedItem = ServersNavItem;
+            }
+        }
+
+        private void OpenMainWindowToSettings(string? categoryTag = null)
+        {
+            RestoreFromTray();
+            if (_isMiniMode) SetMiniMode(false);
+            if (ViewModel.IsPrivacyLocked) return;
+
+            if (SettingsNavItem != null)
+            {
+                MainNav.SelectedItem = SettingsNavItem;
+            }
+            if (ContentFrame.CurrentSourcePageType != typeof(Views.SettingsPage))
+            {
+                ContentFrame.Navigate(typeof(Views.SettingsPage));
+            }
+            if (!string.IsNullOrEmpty(categoryTag) && ContentFrame.Content is Views.SettingsPage settingsPage)
+            {
+                settingsPage.SelectCategory(categoryTag);
+            }
+        }
+
+        private async Task ToggleCoreFromTrayAsync()
+        {
+            if (CoreManager.Instance.IsRunning)
+            {
+                await CoreManager.Instance.StopAsync();
+                return;
+            }
+
+            var allNodes = NodesManager.Instance.GetNodesSnapshot();
+            if (string.IsNullOrEmpty(NodesManager.Instance.SelectedNodeId) && allNodes.Count > 0)
+            {
+                NodesManager.Instance.SelectedNodeId = allNodes[0].Id;
+                NodesManager.Instance.Save();
+            }
+
+            var node = allNodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+            bool isCustom = CustomConfigService.IsCustomNode(node);
+            bool needsAdmin = (AppSession.Instance.EnableTunMode && !isCustom && !AdminHelper.IsAdministrator())
+                           || CustomConfigService.RequiresTunAdmin(node);
+
+            if (needsAdmin)
+            {
+                await RequestTunAdminStartFromTrayAsync();
+                return;
+            }
+
+            if (node == null && allNodes.Count == 0)
+            {
+                OpenMainWindowToServers();
+                return;
+            }
+
+            string configJson = await ConfigBuilder.BuildAsync(node);
+            await CoreManager.Instance.StartAsync(configJson);
+        }
+
+        private async Task RequestTunAdminStartFromTrayAsync()
+        {
+            RestoreFromTray();
+            if (_isMiniMode) SetMiniMode(false);
+
+            await Task.Delay(120);
+            var xamlRoot = this.Content?.XamlRoot;
+            if (xamlRoot == null) return;
+
+            var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+            bool needsCustomTunAdmin = CustomConfigService.RequiresTunAdmin(node);
+
+            var dialog = new ContentDialog
+            {
+                Title = L.Tun_AdminRequiredTitle,
+                Content = L.Tun_AdminRequiredMsg,
+                PrimaryButtonText = L.Tun_AdminConfirmBtn,
+                CloseButtonText = L.Dialog_Cancel,
+                XamlRoot = xamlRoot
+            };
+
+            var res = await dialog.WithAppTheme().ShowAsync();
+            if (res != ContentDialogResult.Primary)
+                return;
+
+            if (CoreManager.Instance.IsRunning)
+            {
+                await CoreManager.Instance.StopAsync();
+            }
+
+            string arg = needsCustomTunAdmin
+                ? "--auto-start-proxy"
+                : (AppSession.Instance.ProxyModeIndex == 3 ? "--tun-system-start" : "--tun-start");
+            AdminHelper.RestartAsAdmin(arg);
+        }
+
+        private async Task ToggleTunFromTrayAsync(bool enableTun)
+        {
+            var session = AppSession.Instance;
+            bool keepSysProxy = session.EnableSystemProxy;
+            int targetModeIndex = enableTun
+                ? (keepSysProxy ? 3 : 1)
+                : (keepSysProxy ? 0 : 2);
+
+            if (!enableTun)
+            {
+                session.ProxyModeIndex = targetModeIndex;
+                LocalSettingsHelper.SetValue("proxyModeIndex", targetModeIndex);
+                LocalSettingsHelper.SetValue("enableTunMode", false);
+                CoreManager.Instance.NotifyModeStateChanged();
+
+                if (CoreManager.Instance.IsRunning)
+                {
+                    var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                    string configJson = await ConfigBuilder.BuildAsync(node);
+                    await CoreManager.Instance.StartAsync(configJson);
+                }
+                return;
+            }
+
+            if (AdminHelper.IsAdministrator())
+            {
+                session.ProxyModeIndex = targetModeIndex;
+                LocalSettingsHelper.SetValue("proxyModeIndex", targetModeIndex);
+                LocalSettingsHelper.SetValue("enableTunMode", true);
+                CoreManager.Instance.NotifyModeStateChanged();
+
+                if (CoreManager.Instance.IsRunning)
+                {
+                    var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                    string configJson = await ConfigBuilder.BuildAsync(node);
+                    await CoreManager.Instance.StartAsync(configJson);
+                }
+                return;
+            }
+
+            // Not elevated yet — show UAC prompt on MainWindow
+            RestoreFromTray();
+            if (_isMiniMode) SetMiniMode(false);
+            await Task.Delay(120);
+
+            var xamlRoot = this.Content?.XamlRoot;
+            if (xamlRoot == null) return;
+
+            var dialog = new ContentDialog
+            {
+                Title = L.Tun_AdminRequiredTitle,
+                Content = L.Tun_AdminRequiredMsg,
+                PrimaryButtonText = L.Tun_AdminConfirmBtn,
+                CloseButtonText = L.Dialog_Cancel,
+                XamlRoot = xamlRoot
+            };
+
+            var res = await dialog.WithAppTheme().ShowAsync();
+            if (res != ContentDialogResult.Primary)
+                return;
+
+            bool wasRunning = CoreManager.Instance.IsRunning;
+            if (wasRunning)
+            {
+                await CoreManager.Instance.StopAsync();
+            }
+
+            int prevIndex = session.ProxyModeIndex;
+            session.ProxyModeIndex = targetModeIndex;
+            LocalSettingsHelper.SetValue("proxyModeIndex", targetModeIndex);
+            LocalSettingsHelper.SetValue("enableTunMode", true);
+
+            string arg = targetModeIndex == 3
+                ? (wasRunning ? "--tun-system-start" : "--tun-system")
+                : (wasRunning ? "--tun-start" : "--tun");
+            if (!AdminHelper.RestartAsAdmin(arg))
+            {
+                session.ProxyModeIndex = prevIndex;
+                LocalSettingsHelper.SetValue("proxyModeIndex", prevIndex);
+                LocalSettingsHelper.SetValue("enableTunMode", prevIndex == 1 || prevIndex == 3);
+                CoreManager.Instance.NotifyModeStateChanged();
+            }
         }
 
         private void UpdateAppIcon()
@@ -819,6 +1122,10 @@ namespace AnywhereWinUI
             SetShownInSwitchersSafe(false);
             AppWindow.Hide();
 
+            // Detach DWM Mica / Acrylic backdrop while hidden so Desktop Window Manager & Composition
+            // release backdrop surfaces and stop sampling desktop wallpaper behind a hidden HWND
+            try { this.SystemBackdrop = null; } catch { }
+
             // Evict inactive cached pages from ContentFrame before trimming working set
             try
             {
@@ -828,17 +1135,23 @@ namespace AnywhereWinUI
             }
             catch { }
 
-            // BUG-12 fix: 不再 collapse 根视觉树，避免触发全局 Unloaded 和动画关闭异常
-            // OS 在 Hide() 后会自动释放 GPU 资源，无需手动干预。
+            // Enable Windows EcoQoS (Efficiency Mode + IgnoreTimerResolution) on the GUI process ONLY
+            // (CoreManager explicitly exempts sing-box / shoes so proxy throughput & latency are untouched!)
+            Helpers.ProcessPowerHelper.SetGuiHibernationMode(true);
+
             ReleaseUiResources();
         }
 
         public void RestoreFromTray()
         {
+            // Exit EcoQoS BEFORE showing the window so wakeup & animations run at full 120fps speed
+            Helpers.ProcessPowerHelper.SetGuiHibernationMode(false);
+
             if (!_isHiddenToTray)
             {
                 if (!AppWindow.IsVisible)
                 {
+                    if (this.SystemBackdrop == null) SetBackdrop(_activeBackdrop);
                     IsVisibleToUser = true;
                     VisibilityToUserChanged?.Invoke(this, true);
                     SetShownInSwitchersSafe(true);
@@ -850,9 +1163,9 @@ namespace AnywhereWinUI
             }
 
             _isHiddenToTray = false;
+            if (this.SystemBackdrop == null) SetBackdrop(_activeBackdrop);
             IsVisibleToUser = true;
             VisibilityToUserChanged?.Invoke(this, true);
-            // BUG-12 fix: 对应删除了 HideToTray 中的 Collapsed，此处不再需要 restore Visibility
             SetShownInSwitchersSafe(true);
             AppWindow.Show();
             Activate();
@@ -866,22 +1179,20 @@ namespace AnywhereWinUI
             {
                 try
                 {
-                    // Allow queued UI cleanup callbacks (Logs/Traffic/Connections/Frame cache eviction)
-                    // to finish releasing WinRT XAML RCWs before running two-pass GC + working-set trim.
-                    await Task.Delay(150);
+                    // Allow queued UI cleanup callbacks (Logs/Traffic/Connections/Win2D/Frame eviction)
+                    // to finish releasing WinRT XAML & Direct2D RCWs before compacting GC & trimming working set.
+                    await Task.Delay(200);
+
+                    try { Microsoft.Graphics.Canvas.CanvasDevice.GetSharedDevice()?.Trim(); } catch { }
 
                     GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: true, compacting: false);
                     GC.WaitForPendingFinalizers();
 
-                    // Compact LOH in the second pass — subscription/JSON paths
-                    // routinely allocate >85KB buffers that pin into LOH and never
-                    // compact under default settings.
                     System.Runtime.GCSettings.LargeObjectHeapCompactionMode =
                         System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
                     GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
 
-                    using var process = Process.GetCurrentProcess();
-                    NativeMethods.SetProcessWorkingSetSize(process.Handle, (IntPtr)(-1), (IntPtr)(-1));
+                    Helpers.ProcessPowerHelper.TrimWorkingSet();
                 }
                 catch (Exception ex)
                 {
@@ -1235,10 +1546,22 @@ namespace AnywhereWinUI
             catch { }
         }
 
+        public void StartSilentlyInTray()
+        {
+            HideToTray();
+        }
+
         private async void ExitApplication()
         {
             // Stop backend engine core completely
             await CoreManager.Instance.StopAsync();
+
+            try
+            {
+                var trafficVm = ((App)Application.Current).Services.GetService(typeof(TrafficViewModel)) as TrafficViewModel;
+                trafficVm?.FlushPendingToDisk();
+            }
+            catch { }
 
             // Fire shutdown trigger so plugins can clean up
             await AnywhereWinUI.Plugins.PluginManager.Instance.FireAsync(
@@ -1378,7 +1701,9 @@ namespace AnywhereWinUI
             if (!_isMiniMode) return;
             
             var activeNode = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
-            var nodeName = activeNode?.Name ?? L.Common_NoNodeSelected;
+            var nodeName = AppSession.Instance.IsAutoNodeSelect
+                ? $"{L.TrayPanel_AutoTitle} ({L.TrayPanel_AutoSubtitle})"
+                : (activeNode?.Name ?? L.Common_NoNodeSelected);
             MiniServerNameText.Text = nodeName;
 
             string proxyModeText = AppSession.Instance.ProxyModeIndex switch

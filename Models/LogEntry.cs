@@ -125,7 +125,7 @@ namespace AnywhereWinUI.Models
                 return entry;
             }
 
-            if (clean.StartsWith("[sing-box 进程已退出]"))
+            if (clean.StartsWith("[sing-box 进程已退出]") || clean.StartsWith("[shoes 进程已退出]"))
             {
                 entry.IsSystem = true;
                 entry.Level = "SYS";
@@ -134,20 +134,24 @@ namespace AnywhereWinUI.Models
                 return entry;
             }
 
-            if (clean.StartsWith("[sing-box] "))
+            if (clean.StartsWith("[sing-box] ") || clean.StartsWith("[shoes] "))
             {
-                clean = clean.Substring(11);
+                clean = clean.StartsWith("[sing-box] ") ? clean.Substring(11) : clean.Substring(8);
 
-                var match = Regex.Match(clean, @"^(?:([\+\-0-9]{5}\s\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\s+)?(INFO|WARN|ERROR|FATAL|DEBUG|PANIC)(.*)$");
+                var match = Regex.Match(clean, @"^(?:([\+\-0-9]{5}\s\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)\s+)?(INFO|WARN|ERROR|FATAL|DEBUG|TRACE|PANIC)\b(.*)$");
                 if (match.Success)
                 {
                     entry.Time = match.Groups[1].Value.Trim();
-                    entry.Level = match.Groups[2].Value;
+                    entry.Level = match.Groups[2].Value == "TRACE" ? "DEBUG" : match.Groups[2].Value;
                     entry.Message = match.Groups[3].Value.Trim();
 
                     if (!string.IsNullOrEmpty(entry.Time) && entry.Time.Length >= 8)
                     {
-                        entry.Time = entry.Time.Substring(entry.Time.Length - 8);
+                        var tIdx = entry.Time.IndexOf('T');
+                        if (tIdx >= 0 && entry.Time.Length >= tIdx + 9)
+                            entry.Time = entry.Time.Substring(tIdx + 1, 8);
+                        else
+                            entry.Time = entry.Time.Substring(entry.Time.Length - 8);
                     }
                 }
                 else

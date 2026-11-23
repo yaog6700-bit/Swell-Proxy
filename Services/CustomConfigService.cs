@@ -377,7 +377,8 @@ namespace AnywhereWinUI.Services
                     {
                         var srcInfo = new FileInfo(file);
                         var dstInfo = new FileInfo(destFile);
-                        if (!dstInfo.Exists || dstInfo.Length != srcInfo.Length)
+                        // Only seed bundled rule-sets if missing or empty — never overwrite user-updated .srs files!
+                        if (!dstInfo.Exists || dstInfo.Length == 0)
                         {
                             File.Copy(file, destFile, overwrite: true);
                         }
@@ -520,28 +521,28 @@ namespace AnywhereWinUI.Services
                 rootObj["experimental"] = expObj;
             }
 
+            string effectiveApiSecret;
             if (expObj["clash_api"] is JsonObject existingClashApi &&
                 existingClashApi["external_controller"]?.GetValue<string>() is string existingCtrl &&
                 !string.IsNullOrWhiteSpace(existingCtrl))
             {
-                session.ClashApiSecret = existingClashApi["secret"]?.GetValue<string>() ?? string.Empty;
+                effectiveApiSecret = existingClashApi["secret"]?.GetValue<string>() ?? string.Empty;
             }
             else
             {
-                var apiSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
-                session.ClashApiSecret = apiSecret;
+                effectiveApiSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
                 expObj["clash_api"] = new JsonObject
                 {
                     ["external_controller"] = "127.0.0.1:9090",
                     ["external_ui"] = "",
                     ["external_ui_download_url"] = "",
                     ["external_ui_download_detour"] = "",
-                    ["secret"] = apiSecret,
+                    ["secret"] = effectiveApiSecret,
                     ["default_mode"] = "rule"
                 };
             }
 
-            // 2. Inject sing-box >= 1.14 dashboard service on 127.0.0.1:9091 if not already present
+            // 2. Inject sing-box >= 1.14 dashboard service on 127.0.0.1:9091 (protected by secret!) if not already present
             var coreVersion = CoreUpdateService.GetLocalSingboxNumericVersion();
             bool isSingbox114OrAbove = coreVersion == null || coreVersion >= new Version(1, 14, 0);
             if (isSingbox114OrAbove)
@@ -572,22 +573,23 @@ namespace AnywhereWinUI.Services
 
                 if (!has9091OrApi)
                 {
+                    var svcSecret = !string.IsNullOrEmpty(effectiveApiSecret)
+                        ? effectiveApiSecret
+                        : Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
                     servicesArr.Add(new JsonObject
                     {
                         ["type"] = "api",
                         ["tag"] = "sing-box dashboard",
                         ["listen"] = "127.0.0.1",
                         ["listen_port"] = 9091,
-                        ["secret"] = "",
+                        ["secret"] = svcSecret,
                         ["access_control_allow_origin"] = new JsonArray
                         {
-                            (JsonNode)"http://sing-box-dashboard.sagernet.org",
                             (JsonNode)"https://sing-box-dashboard.sagernet.org",
-                            (JsonNode)"http://dash.sing-box.app",
                             (JsonNode)"https://dash.sing-box.app"
                         },
-                        ["access_control_allow_private_network"] = true,
-                        ["dashboard"] = true
+                        ["access_control_allow_private_network"] = false,
+                        ["dashboard"] = false
                     });
                 }
             }

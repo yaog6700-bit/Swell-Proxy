@@ -23,7 +23,8 @@ namespace AnywhereWinUI.Helpers
         private static readonly string[] OwnTunKeywords =
         {
             "singbox-tun",
-            "sing-box"
+            "sing-box",
+            "tun0"
         };
 
         private static readonly string[] TunnelAdapterKeywords =
@@ -138,6 +139,18 @@ namespace AnywhereWinUI.Helpers
                 IPInterfaceProperties props;
                 try { props = nic.GetIPProperties(); }
                 catch { continue; }
+
+                // Skip Swell Proxy's own TUN subnet (172.18.0.1/30) if an unnamed Wintun adapter is still up during hot-restart
+                bool isOwnTunAddress = false;
+                foreach (var ua in props.UnicastAddresses)
+                {
+                    if (ua.Address.Equals(IPAddress.Parse("172.18.0.1")))
+                    {
+                        isOwnTunAddress = true;
+                        break;
+                    }
+                }
+                if (isOwnTunAddress) continue;
 
                 string suffix = NormalizeDomainSuffix(props.DnsSuffix);
                 if (!string.IsNullOrEmpty(suffix))

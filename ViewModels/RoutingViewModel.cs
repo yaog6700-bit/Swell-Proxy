@@ -1,5 +1,5 @@
 using System;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AnywhereWinUI.Helpers;
@@ -9,52 +9,66 @@ namespace AnywhereWinUI.ViewModels
 {
     public class RoutingViewModel
     {
-        public ObservableCollection<RuleSetActionItem> AvailableActions { get; } = new();
+        private List<RuleSetActionItem> _cachedActions = new();
+        private Dictionary<string, RuleSetActionItem> _actionByTag = new(StringComparer.Ordinal);
+
+        public IReadOnlyList<RuleSetActionItem> AvailableActions => _cachedActions;
 
         public RoutingViewModel()
         {
-            PopulateActions();
+            RefreshActions();
         }
 
-        private void PopulateActions()
+        public void RefreshActions()
         {
-            AvailableActions.Clear();
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE724", Label = L.Routing_ActionProxy, Tag = "proxy" });
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE945", Label = L.Routing_ActionDirect, Tag = "direct" });
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE733", Label = L.Routing_ActionBlock, Tag = "block" });
-            AvailableActions.Add(new RuleSetActionItem { Glyph = "\uE81C", Label = L.Routing_ActionAuto, Tag = "urltest" });
+            var list = new List<RuleSetActionItem>(32)
+            {
+                new RuleSetActionItem { Glyph = "\uE724", Label = L.Routing_ActionProxy,  Tag = "proxy" },
+                new RuleSetActionItem { Glyph = "\uE945", Label = L.Routing_ActionDirect, Tag = "direct" },
+                new RuleSetActionItem { Glyph = "\uE733", Label = L.Routing_ActionBlock,  Tag = "block" },
+                new RuleSetActionItem { Glyph = "\uE81C", Label = L.Routing_ActionAuto,   Tag = "urltest" }
+            };
 
-            var nodes = NodesManager.Instance.Nodes;
+            var nodes = NodesManager.Instance.GetNodesSnapshot();
             if (nodes.Count > 0)
             {
-                // Separator could be handled in UI, but we'll add a dummy for now
-                AvailableActions.Add(new RuleSetActionItem { Tag = "separator" });
+                list.Add(new RuleSetActionItem { Tag = "separator" });
                 foreach (var node in nodes)
                 {
-                    AvailableActions.Add(new RuleSetActionItem
+                    list.Add(new RuleSetActionItem
                     {
-                        Glyph = "",
+                        Glyph = string.Empty,
                         Label = node.Name,
                         Tag = $"node:{node.Id}"
                     });
                 }
             }
-        }
 
-        public RuleSetActionItem ResolveItemForTag(string tag)
-        {
-            var match = AvailableActions.FirstOrDefault(i => i.Tag == tag);
-            if (match != null) return match;
-
-            if (tag != null && tag.StartsWith("node:"))
+            var map = new Dictionary<string, RuleSetActionItem>(list.Count, StringComparer.Ordinal);
+            foreach (var item in list)
             {
-                var id = tag.Substring(5);
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == id);
-                if (node != null)
-                    return new RuleSetActionItem { Glyph = "", Label = node.Name, Tag = tag };
+                if (item.Tag != "separator")
+                    map[item.Tag] = item;
             }
 
-            return AvailableActions.FirstOrDefault() ?? new RuleSetActionItem();
+            _cachedActions = list;
+            _actionByTag = map;
+        }
+
+        public RuleSetActionItem ResolveItemForTag(string? tag)
+        {
+            if (!string.IsNullOrEmpty(tag) && _actionByTag.TryGetValue(tag, out var match))
+                return match;
+
+            if (!string.IsNullOrEmpty(tag) && tag.StartsWith("node:", StringComparison.Ordinal))
+            {
+                var id = tag.Substring(5);
+                var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == id);
+                if (node != null)
+                    return new RuleSetActionItem { Glyph = string.Empty, Label = node.Name, Tag = tag };
+            }
+
+            return _cachedActions.Count > 0 ? _cachedActions[0] : new RuleSetActionItem();
         }
 
         public async Task ApplyCustomRulesAsync()
@@ -67,7 +81,8 @@ namespace AnywhereWinUI.ViewModels
             if (CoreManager.Instance.IsRunning)
             {
                 CoreManager.Instance.AppendLog("[系统] 检测到路由分流规则更新，正在自动重启代理引擎以重新加载配置...");
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                var selectedId = NodesManager.Instance.SelectedNodeId;
+                var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == selectedId);
                 string realConfig = node != null ? await ConfigBuilder.BuildAsync(node) : await ConfigBuilder.BuildAsync();
 
                 await CoreManager.Instance.StopAsync();

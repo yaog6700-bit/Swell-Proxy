@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using Microsoft.UI.Xaml.Media;
 using Windows.UI;
 using AnywhereWinUI.Services;
 
@@ -20,20 +22,38 @@ namespace AnywhereWinUI.Helpers
         public static Color Custom    { get; set; } = Color.FromArgb(255,  34, 211, 238);
         public static Color Fallback  { get; set; } = Color.FromArgb(255, 148, 163, 184);
 
+        private static readonly Dictionary<string, SolidColorBrush> _brushCache = new(StringComparer.OrdinalIgnoreCase);
+
         public static event EventHandler? ColorsChanged;
 
-        public static Color GetColor(string protocol) => protocol.ToLowerInvariant() switch
+        public static Color GetColor(string protocol) => (protocol ?? string.Empty).ToLowerInvariant() switch
         {
-            "ss" or "shadowsocks" => Ss,
-            "vless"               => Vless,
-            "vmess"               => Vmess,
-            "hysteria2" or "hysteria 2" => Hysteria2,
-            "trojan"              => Trojan,
-            "custom"              => Custom,
-            _                     => Fallback
+            "ss" or "shadowsocks"       => Ss,
+            "vless"                     => Vless,
+            "vmess"                     => Vmess,
+            "hysteria2" or "hysteria 2" or "hysteria" => Hysteria2,
+            "trojan"                    => Trojan,
+            "custom"                    => Custom,
+            _                           => Fallback
         };
 
-        public static void NotifyColorsChanged() => ColorsChanged?.Invoke(null, EventArgs.Empty);
+        public static Brush GetBrush(string? protocol)
+        {
+            string key = string.IsNullOrWhiteSpace(protocol) ? "__fallback__" : protocol.Trim();
+            if (_brushCache.TryGetValue(key, out var cached))
+                return cached;
+
+            var color = GetColor(key);
+            var brush = new SolidColorBrush(color);
+            _brushCache[key] = brush;
+            return brush;
+        }
+
+        public static void NotifyColorsChanged()
+        {
+            _brushCache.Clear();
+            ColorsChanged?.Invoke(null, EventArgs.Empty);
+        }
 
         public static void LoadFrom(NodesConfig s)
         {
@@ -43,6 +63,7 @@ namespace AnywhereWinUI.Helpers
             if (s.ColorHysteria2 is not null) Hysteria2 = ParseHex(s.ColorHysteria2, Hysteria2);
             if (s.ColorTrojan    is not null) Trojan    = ParseHex(s.ColorTrojan,    Trojan);
             if (s.ColorFallback  is not null) Fallback  = ParseHex(s.ColorFallback,  Fallback);
+            _brushCache.Clear();
         }
 
         public static void SaveTo(NodesConfig s)

@@ -79,6 +79,7 @@ namespace AnywhereWinUI.ViewModels
         private string _subTotal = "0G";
 
         private readonly Microsoft.UI.Dispatching.DispatcherQueue _dispatcherQueue;
+        public bool IsPageActive { get; set; }
 
         public ObservableCollection<double> UploadTraffic { get; } = new();
         public ObservableCollection<double> DownloadTraffic { get; } = new();
@@ -98,12 +99,60 @@ namespace AnywhereWinUI.ViewModels
 
             CoreManager.Instance.RunningChanged += CoreManager_RunningChanged;
             CoreManager.Instance.TrafficUpdated += CoreManager_TrafficUpdated;
+            CoreManager.Instance.ActiveNodeChanged += CoreManager_ActiveNodeChanged;
+            CoreManager.Instance.ModeStateChanged += CoreManager_ModeStateChanged;
 
             UpdateNodeInfo();
         }
 
+        private void CoreManager_ActiveNodeChanged(object? sender, EventArgs e)
+        {
+            if (!MainWindow.IsVisibleToUser) return;
+            _dispatcherQueue?.TryEnqueue(UpdateNodeInfo);
+        }
+
+        private void CoreManager_ModeStateChanged(object? sender, EventArgs e)
+        {
+            _dispatcherQueue?.TryEnqueue(() =>
+            {
+                int targetRouteIdx = GetInitialRoutingModeIndex();
+                if (_selectedModeIndex != targetRouteIdx)
+                {
+                    _selectedModeIndex = targetRouteIdx;
+                    OnPropertyChanged(nameof(SelectedModeIndex));
+                }
+
+                int targetProxyIdx = AppSession.Instance.ProxyModeIndex;
+                if (_proxyModeIndex != targetProxyIdx)
+                {
+                    _proxyModeIndex = targetProxyIdx;
+                    OnPropertyChanged(nameof(ProxyModeIndex));
+                }
+            });
+        }
+
+        public void SyncLatestStateOnActivate()
+        {
+            bool running = CoreManager.Instance.IsRunning;
+            IsCoreRunning = running;
+            CoreStatusText = running ? L.Common_Connected : L.Common_Disconnected;
+            UpdateNodeInfo();
+            if (running)
+            {
+                var latest = CoreManager.Instance.LatestTrafficStats;
+                DownloadSpeed = FormatBytes(latest.DownSpeed) + "/s";
+                UploadSpeed = FormatBytes(latest.UpSpeed) + "/s";
+            }
+            else
+            {
+                UploadSpeed = "0.0 KB/s";
+                DownloadSpeed = "0.0 KB/s";
+            }
+        }
+
         private void CoreManager_RunningChanged(object? sender, bool isRunning)
         {
+            if (!MainWindow.IsVisibleToUser) return;
             _dispatcherQueue.TryEnqueue(() =>
             {
                 IsCoreRunning = isRunning;
@@ -122,8 +171,12 @@ namespace AnywhereWinUI.ViewModels
 
         private void CoreManager_TrafficUpdated(object? sender, (long Down, long Up, long DownSpeed, long UpSpeed) e)
         {
+            if (!IsPageActive || !MainWindow.IsVisibleToUser)
+                return;
+
             _dispatcherQueue.TryEnqueue(() =>
             {
+                if (!IsPageActive || !MainWindow.IsVisibleToUser) return;
                 DownloadSpeed = FormatBytes(e.DownSpeed) + "/s";
                 UploadSpeed = FormatBytes(e.UpSpeed) + "/s";
 
@@ -151,6 +204,14 @@ namespace AnywhereWinUI.ViewModels
 
         private void UpdateNodeInfo()
         {
+            if (AppSession.Instance.IsAutoNodeSelect)
+            {
+                CurrentNodeName = $"{L.TrayPanel_AutoTitle} ({L.TrayPanel_AutoSubtitle})";
+                CurrentLatency = "- ms";
+                CurrentIp = "-";
+                return;
+            }
+
             var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
             if (node != null)
             {

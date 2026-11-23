@@ -14,8 +14,10 @@ using System.Collections.Generic;
 
 namespace AnywhereWinUI.Views
 {
-    public sealed partial class SettingsPage : Page
+    public sealed partial class SettingsPage : Page, INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
         public ViewModels.SettingsViewModel ViewModel { get; }
         public ViewModels.MainViewModel MainViewModel { get; }
 
@@ -64,15 +66,60 @@ namespace AnywhereWinUI.Views
             NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Disabled;
             ViewModel = ((App)Application.Current).Services.GetService(typeof(ViewModels.SettingsViewModel)) as ViewModels.SettingsViewModel;
             MainViewModel = ((App)Application.Current).Services.GetService(typeof(ViewModels.MainViewModel)) as ViewModels.MainViewModel;
+            if (ViewModel != null)
+            {
+                ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+            }
             this.InitializeComponent();
             InitializeSettings();
             _isLoaded = true;
         }
 
+        private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(SsColor)
+                or nameof(VlessColor)
+                or nameof(VmessColor)
+                or nameof(Hysteria2Color)
+                or nameof(TrojanColor)
+                or nameof(FallbackColor))
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(e.PropertyName));
+            }
+        }
+
         protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
+            if (ViewModel != null)
+            {
+                ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            }
             this.Bindings.StopTracking();
+        }
+
+        private static async Task HideDialogAndWaitClosedAsync(ContentDialog dialog)
+        {
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Windows.Foundation.TypedEventHandler<ContentDialog, ContentDialogClosedEventArgs>? onClosed = null;
+            onClosed = (s, _) =>
+            {
+                s.Closed -= onClosed;
+                tcs.TrySetResult(true);
+            };
+            dialog.Closed += onClosed;
+            try
+            {
+                dialog.Hide();
+            }
+            catch
+            {
+                dialog.Closed -= onClosed;
+                return;
+            }
+
+            await Task.WhenAny(tcs.Task, Task.Delay(500));
+            dialog.Closed -= onClosed;
         }
 
         private void InitializeSettings()
@@ -128,6 +175,20 @@ namespace AnywhereWinUI.Views
             }
         }
 
+        public void SelectCategory(string categoryTag)
+        {
+            if (CategoriesListView == null || string.IsNullOrWhiteSpace(categoryTag)) return;
+            foreach (var obj in CategoriesListView.Items)
+            {
+                if (obj is ListViewItem item &&
+                    string.Equals(item.Tag?.ToString(), categoryTag, StringComparison.OrdinalIgnoreCase))
+                {
+                    CategoriesListView.SelectedItem = item;
+                    break;
+                }
+            }
+        }
+
         private void CategoriesListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (CategoriesListView == null) return;
@@ -158,31 +219,50 @@ namespace AnywhereWinUI.Views
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatColorsSub;
                         break;
                     case "Routing":
+                        if (RoutingPanel == null)
+                        {
+                            FindName(nameof(RoutingPanel));
+                            RefreshCoreVersionUI();
+                        }
                         if (RoutingPanel != null) RoutingPanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatRoutingTitle;
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatRoutingSub;
                         break;
                     case "DnsSettings":
+                        if (DnsSettingsPanel == null)
+                        {
+                            FindName(nameof(DnsSettingsPanel));
+                            RefreshCoreVersionUI();
+                        }
                         if (DnsSettingsPanel != null) DnsSettingsPanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatDnsTitle;
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatDnsSub;
                         break;
                     case "Tailscale":
+                        if (TailscalePanel == null) FindName(nameof(TailscalePanel));
                         if (TailscalePanel != null) TailscalePanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatTailscaleTitle;
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatTailscaleSub;
                         break;
                     case "Backup":
+                        if (BackupPanel == null) FindName(nameof(BackupPanel));
                         if (BackupPanel != null) BackupPanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatBackupTitle;
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatBackupSub;
                         break;
                     case "Autostart":
+                        if (AutostartPanel == null) FindName(nameof(AutostartPanel));
                         if (AutostartPanel != null) AutostartPanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatAutostartTitle;
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatAutostartSub;
                         break;
                     case "About":
+                        if (AboutPanel == null)
+                        {
+                            FindName(nameof(AboutPanel));
+                            SetCoreEngineComboSelection(AppSession.Instance.CoreEngine);
+                            RefreshCoreVersionUI();
+                        }
                         if (AboutPanel != null) AboutPanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatAboutTitle;
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatAboutSub;
@@ -397,27 +477,27 @@ namespace AnywhereWinUI.Views
 
         private async void ExportBackupButton_Click(object sender, RoutedEventArgs e)
         {
-            var picker = new Microsoft.Windows.Storage.Pickers.FileSavePicker(MainWindow.Instance!.AppWindow.Id)
-            {
-                SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary,
-                SuggestedFileName = $"SwellProxy_Backup_{DateTime.Now:yyyyMMdd_HHmm}"
-            };
-            picker.FileTypeChoices.Add("Swell Proxy Backup", new List<string> { ".zip" });
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWindow.Instance);
+            var savePath = await Helpers.Win32FilePickerHelper.PickSaveFileAsync(
+                hwnd,
+                suggestedFileName: $"SwellProxy_Backup_{DateTime.Now:yyyyMMdd_HHmm}.zip",
+                defaultExtension: "zip",
+                filters: [(L.Settings_BackupFilterName, "*.zip")],
+                title: L.Settings_ExportBtnText);
 
-            var file = await picker.PickSaveFileAsync();
-            if (file != null)
+            if (!string.IsNullOrWhiteSpace(savePath))
             {
                 try
                 {
                     ExportBackupButton.IsEnabled = false;
                     ExportBackupButton.Content = L.Settings_ExportingBtn;
 
-                    await NodesManager.Instance.ExportBackupAsync(file.Path);
+                    await NodesManager.Instance.ExportBackupAsync(savePath);
 
                     var dialog = new ContentDialog
                     {
                         Title = L.Settings_ExportSuccessTitle,
-                        Content = string.Format(L.Settings_ExportSuccessFmt, file.Path),
+                        Content = string.Format(L.Settings_ExportSuccessFmt, savePath),
                         CloseButtonText = L.Dialog_OK,
                         XamlRoot = this.XamlRoot
                     };
@@ -665,8 +745,7 @@ namespace AnywhereWinUI.Views
                 try
                 {
                     await updateTask;
-                    progressDialog.Hide();
-                    await Task.Delay(50);
+                    await HideDialogAndWaitClosedAsync(progressDialog);
 
                     RefreshCoreVersionUI();
 
@@ -687,8 +766,7 @@ namespace AnywhereWinUI.Views
                 }
                 catch (Exception ex)
                 {
-                    progressDialog.Hide();
-                    await Task.Delay(50);
+                    await HideDialogAndWaitClosedAsync(progressDialog);
                     var errDialog = new ContentDialog
                     {
                         Title = L.Settings_UpdateFailTitle,
@@ -877,8 +955,7 @@ namespace AnywhereWinUI.Views
                 try
                 {
                     await updateTask;
-                    progressDialog.Hide();
-                    await Task.Delay(50);
+                    await HideDialogAndWaitClosedAsync(progressDialog);
 
                     RefreshCoreVersionUI();
 
@@ -894,8 +971,7 @@ namespace AnywhereWinUI.Views
                 }
                 catch (Exception ex)
                 {
-                    progressDialog.Hide();
-                    await Task.Delay(50);
+                    await HideDialogAndWaitClosedAsync(progressDialog);
                     var errDialog = new ContentDialog
                     {
                         Title = L.Settings_UpdateFailTitle,
@@ -1770,15 +1846,22 @@ namespace AnywhereWinUI.Views
 
         private async void TailscaleStateDirBrowse_Click(object sender, RoutedEventArgs e)
         {
-            var picker = new Microsoft.Windows.Storage.Pickers.FolderPicker(MainWindow.Instance!.AppWindow.Id)
+            try
             {
-                SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary
-            };
+                var picker = new Microsoft.Windows.Storage.Pickers.FolderPicker(MainWindow.Instance!.AppWindow.Id)
+                {
+                    SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary
+                };
 
-            var folder = await picker.PickSingleFolderAsync();
-            if (folder != null)
+                var folder = await picker.PickSingleFolderAsync();
+                if (folder != null)
+                {
+                    ViewModel.TailscaleStateDirectory = folder.Path;
+                }
+            }
+            catch (Exception ex)
             {
-                ViewModel.TailscaleStateDirectory = folder.Path;
+                Debug.WriteLine($"[SettingsPage] FolderPicker failed: {ex.Message}");
             }
         }
 

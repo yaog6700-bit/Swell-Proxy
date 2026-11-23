@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -88,9 +89,11 @@ namespace AnywhereWinUI.ViewModels
         [ObservableProperty]
         private string _lanProxyEndpoint = string.Empty;
 
-        // Guard flag: prevents OnAutoStartChanged from writing to the registry
-        // while LoadSettings() is initialising the property from the registry.
+        // Guard flag: prevents OnAutoStartChanged / restart handlers from firing
+        // while LoadSettings() is initialising properties.
         private bool _isLoading;
+        private readonly SemaphoreSlim _coreRestartLock = new(1, 1);
+        private CancellationTokenSource? _coreRestartDebounceCts;
 
         [ObservableProperty]
         private string _coreVersionText = "Checking...";
@@ -257,7 +260,6 @@ namespace AnywhereWinUI.ViewModels
         {
             AppSession.Instance.EnableAdvancedRouting = value;
             Helpers.LocalSettingsHelper.SetValue("enableAdvancedRouting", value);
-            // Notice MainWindow to update NavigationView
             MainWindow.Instance?.UpdateRoutingNavVisibility();
             _ = TriggerCoreRestartIfNeeded();
         }
@@ -321,7 +323,40 @@ namespace AnywhereWinUI.ViewModels
 
         partial void OnIsPrivacyModeActiveChanged(bool value)
         {
-            AppSession.Instance.IsPrivacyModeActive = value;
+            if (_isLoading) return;
+            _ = HandlePrivacyModeToggleAsync(value);
+        }
+
+        private async Task HandlePrivacyModeToggleAsync(bool value)
+        {
+            var session = AppSession.Instance;
+            if (value && string.IsNullOrWhiteSpace(session.PrivacyPassword))
+            {
+                if (MainWindow.Instance != null)
+                {
+                    var newPwd = await MainWindow.Instance.ShowSetPasswordDialogAsync();
+                    if (string.IsNullOrWhiteSpace(newPwd))
+                    {
+                        _isLoading = true;
+                        IsPrivacyModeActive = false;
+                        _isLoading = false;
+                        return;
+                    }
+
+                    var hashed = PrivacyPasswordHelper.Hash(newPwd);
+                    session.PrivacyPassword = hashed;
+                    Helpers.LocalSettingsHelper.SetValue("privacyPassword", hashed);
+                }
+                else
+                {
+                    _isLoading = true;
+                    IsPrivacyModeActive = false;
+                    _isLoading = false;
+                    return;
+                }
+            }
+
+            session.IsPrivacyModeActive = value;
             Helpers.LocalSettingsHelper.SetValue("isPrivacyModeActive", value);
         }
 
@@ -375,8 +410,6 @@ namespace AnywhereWinUI.ViewModels
                     .Where(ip => !ip.StartsWith("169.254.", StringComparison.Ordinal))
                     .ToList();
 
-                // 优先返回 RFC1918 私有地址（192.168.x.x / 10.x.x.x / 172.16-31.x.x）
-                // 避免多网卡时返回 VMware / Docker 等虚拟网卡的地址
                 return candidates.FirstOrDefault(ip =>
                            ip.StartsWith("192.168.", StringComparison.Ordinal) ||
                            ip.StartsWith("10.", StringComparison.Ordinal) ||
@@ -391,7 +424,6 @@ namespace AnywhereWinUI.ViewModels
 
         private static bool IsRfc1918_172(string ip)
         {
-            // 172.16.0.0 – 172.31.255.255
             if (!ip.StartsWith("172.", StringComparison.Ordinal)) return false;
             var parts = ip.Split('.');
             return parts.Length >= 2 &&
@@ -462,13 +494,43 @@ namespace AnywhereWinUI.ViewModels
 
         private async Task TriggerCoreRestartIfNeeded()
         {
-            if (CoreManager.Instance.IsRunning)
+            if (_isLoading || !CoreManager.Instance.IsRunning)
+                return;
+
+            var oldCts = Interlocked.Exchange(ref _coreRestartDebounceCts, null);
+            if (oldCts != null)
             {
+                try { oldCts.Cancel(); oldCts.Dispose(); } catch { }
+            }
+
+            var cts = new CancellationTokenSource();
+            _coreRestartDebounceCts = cts;
+
+            try
+            {
+                await Task.Delay(300, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            await _coreRestartLock.WaitAsync();
+            try
+            {
+                if (cts.Token.IsCancellationRequested || !CoreManager.Instance.IsRunning)
+                    return;
+
                 CoreManager.Instance.AppendLog("[系统] 检测到路由分流规则更新，正在自动重启代理引擎以重新加载配置...");
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                var selectedId = NodesManager.Instance.SelectedNodeId;
+                var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == selectedId);
                 string realConfig = node != null ? await ConfigBuilder.BuildAsync(node) : await ConfigBuilder.BuildAsync();
                 await CoreManager.Instance.StopAsync();
                 await CoreManager.Instance.StartAsync(realConfig);
+            }
+            finally
+            {
+                _coreRestartLock.Release();
             }
         }
 

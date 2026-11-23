@@ -25,33 +25,34 @@ namespace AnywhereWinUI.Converters
         private static readonly SolidColorBrush Light3 = new(Windows.UI.Color.FromArgb(255,  75, 141, 248)); // 中蓝
         private static readonly SolidColorBrush Light4 = new(Windows.UI.Color.FromArgb(255,  43, 102, 224)); // 深蓝
 
+        public static SolidColorBrush GetBrush(int level, bool isDark)
+        {
+            if (isDark)
+            {
+                return level switch
+                {
+                    1 => Dark1,
+                    2 => Dark2,
+                    3 => Dark3,
+                    4 => Dark4,
+                    _ => Dark0
+                };
+            }
+
+            return level switch
+            {
+                1 => Light1,
+                2 => Light2,
+                3 => Light3,
+                4 => Light4,
+                _ => Light0
+            };
+        }
+
         public object Convert(object value, Type targetType, object parameter, string language)
         {
             bool isDark = ContentDialogExtensions.IsDarkThemeActive();
-            if (value is int level)
-            {
-                if (isDark)
-                {
-                    return level switch
-                    {
-                        1 => Dark1,
-                        2 => Dark2,
-                        3 => Dark3,
-                        4 => Dark4,
-                        _ => Dark0
-                    };
-                }
-
-                return level switch
-                {
-                    1 => Light1,
-                    2 => Light2,
-                    3 => Light3,
-                    4 => Light4,
-                    _ => Light0
-                };
-            }
-            return isDark ? Dark0 : Light0;
+            return value is int level ? GetBrush(level, isDark) : GetBrush(0, isDark);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, string language)

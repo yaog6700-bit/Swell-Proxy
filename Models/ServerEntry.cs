@@ -41,6 +41,9 @@ namespace AnywhereWinUI.Models
             WgPrivateKey       = string.Empty;
             WgLocalAddress     = string.Empty;
             WgPreSharedKey     = string.Empty;
+            SnellMode          = string.Empty;
+            CustomConfigFile   = string.Empty;
+            CustomBridgeGui    = true;
         }
 
         /// <summary>ID of the subscription this node was imported from; empty = manually added.</summary>
@@ -62,7 +65,13 @@ namespace AnywhereWinUI.Models
         [JsonIgnore]
         public partial bool IsActive { get; set; }
 
-        [ObservableProperty] public partial bool IsFavorite { get; set; }
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(FavoriteVisibility))]
+        public partial bool IsFavorite { get; set; }
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Visibility FavoriteVisibility =>
+            IsFavorite ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 
         // Auth
         [ObservableProperty] public partial string Username { get; set; }
@@ -114,6 +123,12 @@ namespace AnywhereWinUI.Models
         // Snell
         /// <summary>Snell protocol version: 1, 2, 3, 4, or 5. Default 4.</summary>
         [ObservableProperty] public partial int SnellVersion { get; set; }
+        [ObservableProperty] public partial string SnellMode { get; set; }
+
+        // Native Custom Config
+        [ObservableProperty] public partial string CustomConfigFile { get; set; }
+        [ObservableProperty] public partial bool CustomBridgeGui { get; set; }
+        [ObservableProperty] public partial bool CustomHasTun { get; set; }
 
         /// <summary>前置代理节点的 Id。空 = 直连（不使用代理链）。</summary>
         [ObservableProperty] public partial string ProxyChainId { get; set; }

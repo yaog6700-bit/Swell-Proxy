@@ -22,6 +22,14 @@ namespace AnywhereWinUI.Services
                 };
             }
 
+            host = host.Trim();
+            if (host.Length > 2 && host[0] == '[' && host[^1] == ']')
+                host = host.Substring(1, host.Length - 2);
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                return new LatencyProbeResult { Status = LatencyProbeStatus.Failed };
+            }
+
             using var timeoutCts = new CancellationTokenSource(timeout);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
                 cancellationToken,
@@ -33,6 +41,7 @@ namespace AnywhereWinUI.Services
             {
                 await client.ConnectAsync(host, port, linkedCts.Token);
                 stopwatch.Stop();
+                try { client.LingerState = new LingerOption(true, 0); } catch { }
 
                 return new LatencyProbeResult
                 {

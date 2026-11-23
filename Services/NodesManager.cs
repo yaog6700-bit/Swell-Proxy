@@ -23,10 +23,27 @@ namespace AnywhereWinUI.Services
 
         public static NodesManager Instance { get; } = new NodesManager();
 
+        private readonly object _sync = new();
         public List<PersistedNode> Nodes { get; private set; } = new();
         public List<PersistedSubscription> Subscriptions { get; private set; } = new();
         public string SelectedNodeId { get; set; } = string.Empty;
         public string ViewMode { get; set; } = "card";
+
+        public List<PersistedNode> GetNodesSnapshot()
+        {
+            lock (_sync)
+            {
+                return new List<PersistedNode>(Nodes);
+            }
+        }
+
+        public List<PersistedSubscription> GetSubscriptionsSnapshot()
+        {
+            lock (_sync)
+            {
+                return new List<PersistedSubscription>(Subscriptions);
+            }
+        }
 
         // Expose personalized settings as properties
         public string ThemeSetting { get; set; } = "Default";
@@ -48,155 +65,189 @@ namespace AnywhereWinUI.Services
 
         public void Load()
         {
-            try
+            lock (_sync)
             {
-                var dir = Path.GetDirectoryName(ConfigPath);
-                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                bool fileExisted = false;
+                try
                 {
-                    Directory.CreateDirectory(dir);
-                }
-
-                if (File.Exists(ConfigPath))
-                {
-                    string json = File.ReadAllText(ConfigPath, Encoding.UTF8);
-                    var config = JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.NodesConfig);
-                    if (config != null)
+                    var dir = Path.GetDirectoryName(ConfigPath);
+                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     {
-                        Nodes = config.Nodes ?? new();
-                        Subscriptions = config.Subscriptions ?? new();
-                        SelectedNodeId = config.SelectedNodeId ?? string.Empty;
-                        if (string.IsNullOrEmpty(SelectedNodeId) && Nodes.Count > 0)
+                        Directory.CreateDirectory(dir);
+                    }
+
+                    fileExisted = File.Exists(ConfigPath);
+                    if (fileExisted)
+                    {
+                        string json = File.ReadAllText(ConfigPath, Encoding.UTF8);
+                        if (!string.IsNullOrWhiteSpace(json))
                         {
-                            SelectedNodeId = Nodes[0].Id;
-                            Save();
+                            var config = JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.NodesConfig);
+                            if (config != null)
+                            {
+                                Nodes = config.Nodes ?? new();
+                                Subscriptions = config.Subscriptions ?? new();
+                                SelectedNodeId = config.SelectedNodeId ?? string.Empty;
+                                if (string.IsNullOrEmpty(SelectedNodeId) && Nodes.Count > 0)
+                                {
+                                    SelectedNodeId = Nodes[0].Id;
+                                    Save();
+                                }
+                                ViewMode = config.ViewMode ?? "card";
+
+                                ThemeSetting = config.ThemeSetting ?? "Default";
+                                BackdropSetting = config.BackdropSetting ?? "Mica";
+                                ShowLatencyInDetails = config.ShowLatencyInDetails;
+                                ShowAiUnlockInDetails = config.ShowAiUnlockInDetails;
+                                ShowIpStatusInDetails = config.ShowIpStatusInDetails;
+                                ColorSs = config.ColorSs ?? "#60A5FA";
+                                ColorVless = config.ColorVless ?? "#34D399";
+                                ColorVmess = config.ColorVmess ?? "#A78BFA";
+                                ColorHysteria2 = config.ColorHysteria2 ?? "#FB923C";
+                                ColorTrojan = config.ColorTrojan ?? "#F87171";
+                                ColorFallback = config.ColorFallback ?? "#94A8A0";
+
+                                // Load into ProtocolColorStore
+                                Helpers.ProtocolColorStore.LoadFrom(config);
+                                return;
+                            }
                         }
-                        ViewMode = config.ViewMode ?? "card";
 
-                        ThemeSetting = config.ThemeSetting ?? "Default";
-                        BackdropSetting = config.BackdropSetting ?? "Mica";
-                        ShowLatencyInDetails = config.ShowLatencyInDetails;
-                        ShowAiUnlockInDetails = config.ShowAiUnlockInDetails;
-                        ShowIpStatusInDetails = config.ShowIpStatusInDetails;
-                        ColorSs = config.ColorSs ?? "#60A5FA";
-                        ColorVless = config.ColorVless ?? "#34D399";
-                        ColorVmess = config.ColorVmess ?? "#A78BFA";
-                        ColorHysteria2 = config.ColorHysteria2 ?? "#FB923C";
-                        ColorTrojan = config.ColorTrojan ?? "#F87171";
-                        ColorFallback = config.ColorFallback ?? "#94A8A0";
-
-                        // Load into ProtocolColorStore
-                        Helpers.ProtocolColorStore.LoadFrom(config);
-                        return;
+                        // Existing file failed to parse or was truncated — back it up and DO NOT overwrite it!
+                        Helpers.LocalSettingsHelper.BackupCorruptFileBestEffort(ConfigPath);
                     }
                 }
+                catch
+                {
+                    if (fileExisted)
+                    {
+                        Helpers.LocalSettingsHelper.BackupCorruptFileBestEffort(ConfigPath);
+                    }
+                }
+
+                ThemeSetting = "Default";
+                BackdropSetting = "Mica";
+                ShowLatencyInDetails = true;
+                ShowAiUnlockInDetails = true;
+                ShowIpStatusInDetails = true;
+                ColorSs = "#60A5FA";
+                ColorVless = "#34D399";
+                ColorVmess = "#A78BFA";
+                ColorHysteria2 = "#FB923C";
+                ColorTrojan = "#F87171";
+                ColorFallback = "#94A8A0";
+
+                Nodes = new List<PersistedNode>();
+                if (!fileExisted)
+                {
+                    Save();
+                }
             }
-            catch { }
-
-            ThemeSetting = "Default";
-            BackdropSetting = "Mica";
-            ShowLatencyInDetails = true;
-            ShowAiUnlockInDetails = true;
-            ShowIpStatusInDetails = true;
-            ColorSs = "#60A5FA";
-            ColorVless = "#34D399";
-            ColorVmess = "#A78BFA";
-            ColorHysteria2 = "#FB923C";
-            ColorTrojan = "#F87171";
-            ColorFallback = "#94A8A0";
-
-            // Default mock nodes
-            Nodes = new List<PersistedNode>();
-            Save();
         }
 
         public void Save()
         {
-            try
+            lock (_sync)
             {
-                var config = new NodesConfig
+                try
                 {
-                    Nodes = Nodes,
-                    Subscriptions = Subscriptions,
-                    SelectedNodeId = SelectedNodeId,
-                    ViewMode = ViewMode,
+                    var config = new NodesConfig
+                    {
+                        Nodes = new List<PersistedNode>(Nodes),
+                        Subscriptions = new List<PersistedSubscription>(Subscriptions),
+                        SelectedNodeId = SelectedNodeId,
+                        ViewMode = ViewMode,
 
-                    ThemeSetting = ThemeSetting,
-                    BackdropSetting = BackdropSetting,
-                    ShowLatencyInDetails = ShowLatencyInDetails,
-                    ShowAiUnlockInDetails = ShowAiUnlockInDetails,
-                    ShowIpStatusInDetails = ShowIpStatusInDetails,
-                    ColorSs = ColorSs,
-                    ColorVless = ColorVless,
-                    ColorVmess = ColorVmess,
-                    ColorHysteria2 = ColorHysteria2,
-                    ColorTrojan = ColorTrojan,
-                    ColorFallback = ColorFallback
-                };
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                var context = new AnywhereWinUI.Models.AppJsonContext(options);
-                string json = JsonSerializer.Serialize(config, context.NodesConfig);
-                File.WriteAllText(ConfigPath, json, Encoding.UTF8);
+                        ThemeSetting = ThemeSetting,
+                        BackdropSetting = BackdropSetting,
+                        ShowLatencyInDetails = ShowLatencyInDetails,
+                        ShowAiUnlockInDetails = ShowAiUnlockInDetails,
+                        ShowIpStatusInDetails = ShowIpStatusInDetails,
+                        ColorSs = ColorSs,
+                        ColorVless = ColorVless,
+                        ColorVmess = ColorVmess,
+                        ColorHysteria2 = ColorHysteria2,
+                        ColorTrojan = ColorTrojan,
+                        ColorFallback = ColorFallback
+                    };
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    var context = new AnywhereWinUI.Models.AppJsonContext(options);
+                    string json = JsonSerializer.Serialize(config, context.NodesConfig);
+                    Helpers.LocalSettingsHelper.WriteAllTextAtomic(ConfigPath, json);
+                }
+                catch { }
             }
-            catch { }
         }
 
         public void AddManualNode(string name, string protocol, string host)
         {
-            Nodes.Add(new PersistedNode
+            lock (_sync)
             {
-                Name = name,
-                Protocol = protocol,
-                Host = host,
-                SubscriptionId = string.Empty
-            });
-            Save();
+                Nodes.Add(new PersistedNode
+                {
+                    Name = name,
+                    Protocol = protocol,
+                    Host = host,
+                    SubscriptionId = string.Empty
+                });
+                Save();
+            }
         }
 
         public void AddManualNode(PersistedNode node)
         {
-            node.SubscriptionId = string.Empty;
-            Nodes.Add(node);
-            Save();
+            lock (_sync)
+            {
+                node.SubscriptionId = string.Empty;
+                Nodes.Add(node);
+                Save();
+            }
         }
 
         public void DeleteNode(string id)
         {
-            var existing = Nodes.Find(n => n.Id == id);
-            if (existing != null)
+            lock (_sync)
             {
-                CustomConfigService.DeleteConfigFile(existing);
-
-                // Remember single-node deletion for subscription nodes so refreshing
-                // the subscription won't resurrect unwanted info/dead nodes.
-                if (!string.IsNullOrEmpty(existing.SubscriptionId) && !string.IsNullOrWhiteSpace(existing.Name))
+                var existing = Nodes.Find(n => n.Id == id);
+                if (existing != null)
                 {
-                    var sub = Subscriptions.Find(s => s.Id == existing.SubscriptionId);
-                    if (sub != null)
+                    CustomConfigService.DeleteConfigFile(existing);
+
+                    // Remember single-node deletion for subscription nodes so refreshing
+                    // the subscription won't resurrect unwanted info/dead nodes.
+                    if (!string.IsNullOrEmpty(existing.SubscriptionId) && !string.IsNullOrWhiteSpace(existing.Name))
                     {
-                        sub.ExcludedNodeNames ??= new List<string>();
-                        string trimmedName = existing.Name.Trim();
-                        if (!sub.ExcludedNodeNames.Exists(x => string.Equals(x, trimmedName, StringComparison.OrdinalIgnoreCase)))
+                        var sub = Subscriptions.Find(s => s.Id == existing.SubscriptionId);
+                        if (sub != null)
                         {
-                            sub.ExcludedNodeNames.Add(trimmedName);
+                            sub.ExcludedNodeNames ??= new List<string>();
+                            string trimmedName = existing.Name.Trim();
+                            if (!sub.ExcludedNodeNames.Exists(x => string.Equals(x, trimmedName, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                sub.ExcludedNodeNames.Add(trimmedName);
+                            }
                         }
                     }
                 }
+                Nodes.RemoveAll(n => n.Id == id);
+                if (SelectedNodeId == id)
+                {
+                    SelectedNodeId = Nodes.Count > 0 ? Nodes[0].Id : string.Empty;
+                }
+                Save();
             }
-            Nodes.RemoveAll(n => n.Id == id);
-            if (SelectedNodeId == id)
-            {
-                SelectedNodeId = Nodes.Count > 0 ? Nodes[0].Id : string.Empty;
-            }
-            Save();
         }
 
         public async Task<string?> RestoreExcludedNodesAsync(string subId)
         {
-            var sub = Subscriptions.Find(s => s.Id == subId);
-            if (sub == null) return "订阅不存在";
+            lock (_sync)
+            {
+                var sub = Subscriptions.Find(s => s.Id == subId);
+                if (sub == null) return "订阅不存在";
 
-            sub.ExcludedNodeNames?.Clear();
-            Save();
+                sub.ExcludedNodeNames?.Clear();
+                Save();
+            }
             return await UpdateSubscriptionAsync(subId);
         }
 
@@ -219,47 +270,64 @@ namespace AnywhereWinUI.Services
 
         public void AddSubscription(string name, string url)
         {
-            Subscriptions.Add(new PersistedSubscription
+            lock (_sync)
             {
-                Name = name,
-                Url = url
-            });
-            Save();
+                Subscriptions.Add(new PersistedSubscription
+                {
+                    Name = name,
+                    Url = url
+                });
+                Save();
+            }
         }
 
         public void DeleteSubscription(string subId)
         {
-            Subscriptions.RemoveAll(s => s.Id == subId);
-            Nodes.RemoveAll(n => n.SubscriptionId == subId);
-            if (string.IsNullOrEmpty(SelectedNodeId) || !Nodes.Exists(n => n.Id == SelectedNodeId))
+            lock (_sync)
             {
-                SelectedNodeId = Nodes.Count > 0 ? Nodes[0].Id : string.Empty;
+                Subscriptions.RemoveAll(s => s.Id == subId);
+                Nodes.RemoveAll(n => n.SubscriptionId == subId);
+                if (string.IsNullOrEmpty(SelectedNodeId) || !Nodes.Exists(n => n.Id == SelectedNodeId))
+                {
+                    SelectedNodeId = Nodes.Count > 0 ? Nodes[0].Id : string.Empty;
+                }
+                Save();
             }
-            Save();
         }
+
+        private static readonly HttpClient _subHttpClient = new(new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+            AutomaticDecompression = System.Net.DecompressionMethods.All
+        })
+        {
+            Timeout = TimeSpan.FromSeconds(15)
+        };
 
         /// <summary>
         /// 更新订阅。成功返回 null，失败返回错误描述字符串。
         /// </summary>
         public async Task<string?> UpdateSubscriptionAsync(string subId)
         {
-            var sub = Subscriptions.Find(s => s.Id == subId);
-            if (sub == null) return "订阅不存在";
+            PersistedSubscription? sub;
+            string subUrl;
+            string subName;
+            lock (_sync)
+            {
+                sub = Subscriptions.Find(s => s.Id == subId);
+                if (sub == null) return "订阅不存在";
+                subUrl = sub.Url;
+                subName = sub.Name;
+            }
 
             try
             {
-                using var client = new HttpClient();
-                client.Timeout = TimeSpan.FromSeconds(15);
-
-                // 优先携带 clash.meta 兼容标识，让主流机场面板（V2Board / Xboard / SSPanel / Sub-Store）
-                // 下发包含 VLESS Reality / Hysteria2 / TUIC / AnyTLS 等现代协议在内的完整列表；
-                // 若返回内容解析出 0 个节点（例如纯 Naive / Nowhere 专有订阅），自动回退纯 Anywhere-Client 重试一次。
-                var newNodes = await FetchAndParseSubscriptionAsync(client, sub.Url, subId, "Anywhere-Client clash.meta/1.19");
+                var newNodes = await FetchAndParseSubscriptionAsync(_subHttpClient, subUrl, subId, "Anywhere-Client clash.meta/1.19");
                 if (newNodes.Count == 0)
                 {
                     try
                     {
-                        newNodes = await FetchAndParseSubscriptionAsync(client, sub.Url, subId, "Anywhere-Client");
+                        newNodes = await FetchAndParseSubscriptionAsync(_subHttpClient, subUrl, subId, "Anywhere-Client");
                     }
                     catch { /* 回退重试失败时保留首次结果，走统一空节点提示 */ }
                 }
@@ -267,23 +335,25 @@ namespace AnywhereWinUI.Services
                 if (newNodes.Count == 0)
                     return "订阅内容解析失败：未找到任何有效节点（支持 Base64 分享链接列表、sing-box JSON 和 Clash YAML 格式）";
 
-                // 两阶段单次消费匹配：先按「协议|地址|名称」精确配对，再按「协议|地址」顺序配对未认领的旧节点。
-                // 既能在跨格式（Base64 ↔ Clash）或节点改名时保留收藏与 Id，又避免同入口多节点（如流量提示或优选 CDN）复用到重复 Id。
-                var oldNodes = Nodes.FindAll(n => n.SubscriptionId == subId);
+                List<PersistedNode> oldNodes;
+                List<string>? excludedSnapshot;
+                lock (_sync)
+                {
+                    oldNodes = Nodes.FindAll(n => n.SubscriptionId == subId);
+                    excludedSnapshot = sub.ExcludedNodeNames != null ? new List<string>(sub.ExcludedNodeNames) : null;
+                }
                 PreserveNodeIdentityAndFavorites(oldNodes, newNodes);
 
-                // ── OnSubscribe plugin hook ──────────────────────────────────
-                // Serialize nodes to JSON, let plugins filter/transform, then deserialize back.
+                // ── OnSubscribe plugin hook (Trim-safe via AppJsonContext!) ──────
                 try
                 {
-                    var opts = new System.Text.Json.JsonSerializerOptions();
-                    var nodesJson = System.Text.Json.JsonSerializer.Serialize(newNodes, opts);
+                    var nodesJson = JsonSerializer.Serialize(newNodes, AnywhereWinUI.Models.AppJsonContext.Default.ListPersistedNode);
                     var transformedJson = await Plugins.PluginManager.Instance
-                        .FireSubscribeAsync(nodesJson, sub.Name);
+                        .FireSubscribeAsync(nodesJson, subName);
                     if (!string.Equals(transformedJson, nodesJson, System.StringComparison.Ordinal))
                     {
-                        var transformed = System.Text.Json.JsonSerializer
-                            .Deserialize<List<PersistedNode>>(transformedJson, opts);
+                        var transformed = JsonSerializer.Deserialize(
+                            transformedJson, AnywhereWinUI.Models.AppJsonContext.Default.ListPersistedNode);
                         if (transformed != null)
                             newNodes = transformed;
                     }
@@ -295,8 +365,7 @@ namespace AnywhereWinUI.Services
                     n.SubscriptionId = subId;
                 }
 
-                // Filter out nodes that the user previously removed from this subscription.
-                newNodes = FilterExcludedSubscriptionNodes(newNodes, sub.ExcludedNodeNames);
+                newNodes = FilterExcludedSubscriptionNodes(newNodes, excludedSnapshot);
 
                 var newEndpointKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var n in newNodes)
@@ -304,33 +373,32 @@ namespace AnywhereWinUI.Services
                     newEndpointKeys.Add($"{n.Protocol}|{n.Host}");
                 }
 
-                // Replace old sub nodes in-place so manual ordering is preserved.
-                // Strategy:
-                //   1. Find the index of the first node belonging to this subscription.
-                //   2. Remove all old subscription nodes (preserving their slots).
-                //   3. Insert new nodes at that same index.
-                //   4. Any nodes that no longer exist in the subscription are dropped;
-                //      brand-new nodes from the subscription are inserted at the end of
-                //      where the old subscription block was.
-                int insertIndex = Nodes.FindIndex(n => n.SubscriptionId == subId);
-                if (insertIndex < 0)
+                lock (_sync)
                 {
-                    insertIndex = Nodes.FindIndex(n =>
+                    // Re-verify subscription wasn't deleted while network request was in flight
+                    var currentSub = Subscriptions.Find(s => s.Id == subId);
+                    if (currentSub == null) return null;
+
+                    int insertIndex = Nodes.FindIndex(n => n.SubscriptionId == subId);
+                    if (insertIndex < 0)
+                    {
+                        insertIndex = Nodes.FindIndex(n =>
+                            !string.IsNullOrEmpty(n.SubscriptionId) &&
+                            !Subscriptions.Exists(s => s.Id == n.SubscriptionId) &&
+                            newEndpointKeys.Contains($"{n.Protocol}|{n.Host}"));
+                    }
+                    Nodes.RemoveAll(n => n.SubscriptionId == subId);
+                    Nodes.RemoveAll(n =>
                         !string.IsNullOrEmpty(n.SubscriptionId) &&
                         !Subscriptions.Exists(s => s.Id == n.SubscriptionId) &&
                         newEndpointKeys.Contains($"{n.Protocol}|{n.Host}"));
+                    if (insertIndex < 0 || insertIndex > Nodes.Count)
+                        insertIndex = Nodes.Count;
+                    Nodes.InsertRange(insertIndex, newNodes);
+                    currentSub.LastUpdated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    Save();
                 }
-                Nodes.RemoveAll(n => n.SubscriptionId == subId);
-                Nodes.RemoveAll(n =>
-                    !string.IsNullOrEmpty(n.SubscriptionId) &&
-                    !Subscriptions.Exists(s => s.Id == n.SubscriptionId) &&
-                    newEndpointKeys.Contains($"{n.Protocol}|{n.Host}"));
-                if (insertIndex < 0 || insertIndex > Nodes.Count)
-                    insertIndex = Nodes.Count; // fallback: append at end
-                Nodes.InsertRange(insertIndex, newNodes);
-                sub.LastUpdated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                Save();
-                return null; // success
+                return null;
             }
             catch (HttpRequestException ex)
             {
@@ -353,10 +421,13 @@ namespace AnywhereWinUI.Services
                 return 0;
 
             var dueSubscriptions = new List<PersistedSubscription>();
-            foreach (var sub in Subscriptions)
+            lock (_sync)
             {
-                if (IsSubscriptionAutoRefreshDue(sub))
-                    dueSubscriptions.Add(sub);
+                foreach (var sub in Subscriptions)
+                {
+                    if (IsSubscriptionAutoRefreshDue(sub))
+                        dueSubscriptions.Add(sub);
+                }
             }
 
             int refreshedCount = 0;
@@ -495,17 +566,30 @@ namespace AnywhereWinUI.Services
                 // 解析到 0 个节点时继续尝试其他格式（防止误判）
             }
 
-            // 2. 尝试整体 Base64 解码（老式订阅格式）
+            // 2. 尝试整体 Base64 / URL-Safe Base64 解码（老式订阅格式）
             string decoded;
             try
             {
-                // 先粗略判断：如果内容全是合法 Base64 字符才尝试解码
-                var testContent = content.Replace("\r", "").Replace("\n", "").Trim();
-                byte[] bytes = Convert.FromBase64String(
-                    testContent.PadRight((testContent.Length + 3) / 4 * 4, '='));
-                var candidate = Encoding.UTF8.GetString(bytes);
-                // 解码结果必须含有协议前缀才算有效
-                decoded = candidate.Contains("://") ? candidate : content;
+                var sb = new StringBuilder(content.Length);
+                foreach (char ch in content)
+                {
+                    if (!char.IsWhiteSpace(ch))
+                        sb.Append(ch == '-' ? '+' : ch == '_' ? '/' : ch);
+                }
+                var testContent = sb.ToString().TrimEnd('=');
+                if (testContent.Length > 0 && testContent.Length % 4 != 1)
+                {
+                    int pad = (4 - (testContent.Length % 4)) % 4;
+                    byte[] bytes = Convert.FromBase64String(testContent.PadRight(testContent.Length + pad, '='));
+                    var candidate = Encoding.UTF8.GetString(bytes);
+                    decoded = (candidate.Contains("://") || candidate.Contains("= snell,", StringComparison.OrdinalIgnoreCase))
+                        ? candidate
+                        : content;
+                }
+                else
+                {
+                    decoded = content;
+                }
             }
             catch
             {
@@ -655,6 +739,7 @@ namespace AnywhereWinUI.Services
                         {
                             string uuid = ob.TryGetProperty("uuid", out var uProp) ? uProp.GetString() ?? "" : "";
                             string flow = ob.TryGetProperty("flow", out var fProp) ? fProp.GetString() ?? "" : "";
+                            string vlessEnc = ob.TryGetProperty("encryption", out var veProp) ? veProp.GetString() ?? "" : "";
                             node.Protocol = "VLESS";
                             node.Host = NodeLinkParser.FormatHostPortPublic(server, port);
                             node.Uuid = uuid;
@@ -670,6 +755,7 @@ namespace AnywhereWinUI.Services
                             node.WsHost = wsHost;
                             node.Alpn = alpn;
                             node.Encryption = "none";
+                            node.VlessEncryption = vlessEnc;
                             break;
                         }
                         case "vmess":
@@ -721,6 +807,8 @@ namespace AnywhereWinUI.Services
                             node.Security = security;
                             node.Sni = sni;
                             node.Fingerprint = fingerprint;
+                            node.PublicKey = pbk;
+                            node.ShortId = sid;
                             node.AllowInsecure = allowInsecure;
                             node.Network = network;
                             node.Path = path;
@@ -881,63 +969,196 @@ namespace AnywhereWinUI.Services
             return list;
         }
 
-                public static string ToShareUrl(PersistedNode node)
+        public static string ToShareUrl(PersistedNode node)
         {
             try
             {
                 var name = Uri.EscapeDataString(node.Name ?? "");
-                if (node.Protocol == "VLESS")
+                var proto = (node.Protocol ?? "").Trim();
+
+                if (proto.Equals("VLESS", StringComparison.OrdinalIgnoreCase))
                 {
                     var qs = new List<string>();
-                    if (!string.IsNullOrEmpty(node.Encryption)) qs.Add($"encryption={node.Encryption}");
-                    if (!string.IsNullOrEmpty(node.Security)) qs.Add($"security={node.Security}");
-                    if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"sni={node.Sni}");
-                    if (!string.IsNullOrEmpty(node.Fingerprint)) qs.Add($"fp={node.Fingerprint}");
-                    if (!string.IsNullOrEmpty(node.Network)) qs.Add($"type={node.Network}");
+                    string vEnc = !string.IsNullOrEmpty(node.VlessEncryption) ? node.VlessEncryption : "none";
+                    qs.Add($"encryption={Uri.EscapeDataString(vEnc)}");
+                    if (!string.IsNullOrEmpty(node.Security)) qs.Add($"security={Uri.EscapeDataString(node.Security)}");
+                    if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"sni={Uri.EscapeDataString(node.Sni)}");
+                    if (!string.IsNullOrEmpty(node.Fingerprint) && node.Fingerprint != "none") qs.Add($"fp={Uri.EscapeDataString(node.Fingerprint)}");
+                    if (!string.IsNullOrEmpty(node.Network)) qs.Add($"type={Uri.EscapeDataString(node.Network)}");
+                    if (!string.IsNullOrEmpty(node.WsHost)) qs.Add($"host={Uri.EscapeDataString(node.WsHost)}");
                     if (!string.IsNullOrEmpty(node.Path)) qs.Add($"path={Uri.EscapeDataString(node.Path)}");
-                    if (!string.IsNullOrEmpty(node.PublicKey)) qs.Add($"pbk={node.PublicKey}");
-                    if (!string.IsNullOrEmpty(node.ShortId)) qs.Add($"sid={node.ShortId}");
-                    if (!string.IsNullOrEmpty(node.Flow)) qs.Add($"flow={node.Flow}");
-                    
+                    if (!string.IsNullOrEmpty(node.PublicKey)) qs.Add($"pbk={Uri.EscapeDataString(node.PublicKey)}");
+                    if (!string.IsNullOrEmpty(node.ShortId)) qs.Add($"sid={Uri.EscapeDataString(node.ShortId)}");
+                    if (!string.IsNullOrEmpty(node.SpiderX)) qs.Add($"spx={Uri.EscapeDataString(node.SpiderX)}");
+                    if (!string.IsNullOrEmpty(node.Flow)) qs.Add($"flow={Uri.EscapeDataString(node.Flow)}");
+                    if (!string.IsNullOrEmpty(node.Alpn)) qs.Add($"alpn={Uri.EscapeDataString(node.Alpn)}");
+                    if (!string.IsNullOrEmpty(node.HeaderType) && node.HeaderType != "none") qs.Add($"headerType={Uri.EscapeDataString(node.HeaderType)}");
+                    if (node.AllowInsecure) qs.Add("allowInsecure=1");
+
                     var qString = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
-                    return $"vless://{node.Uuid}@{node.Host}{qString}#{name}";
+                    return $"vless://{Uri.EscapeDataString(node.Uuid ?? "")}@{node.Host}{qString}#{name}";
                 }
-                else if (node.Protocol == "Trojan")
+                else if (proto.Equals("VMess", StringComparison.OrdinalIgnoreCase))
+                {
+                    var (vHost, vPort) = NodeLinkParser.SplitHostPort(node.Host);
+                    var vmessJson = new JsonObject
+                    {
+                        ["v"] = "2",
+                        ["ps"] = node.Name ?? "",
+                        ["add"] = vHost.Trim('[', ']'),
+                        ["port"] = (vPort > 0 ? vPort : 443).ToString(),
+                        ["id"] = node.Uuid ?? "",
+                        ["aid"] = node.AlterId.ToString(),
+                        ["scy"] = string.IsNullOrEmpty(node.Encryption) ? "auto" : node.Encryption,
+                        ["net"] = string.IsNullOrEmpty(node.Network) ? "tcp" : node.Network,
+                        ["type"] = string.IsNullOrEmpty(node.HeaderType) ? "none" : node.HeaderType,
+                        ["host"] = node.WsHost ?? "",
+                        ["path"] = node.Path ?? "",
+                        ["tls"] = string.Equals(node.Security, "tls", StringComparison.OrdinalIgnoreCase) ? "tls" : "",
+                        ["sni"] = node.Sni ?? "",
+                        ["alpn"] = node.Alpn ?? "",
+                        ["fp"] = node.Fingerprint == "none" ? "" : (node.Fingerprint ?? "")
+                    };
+                    string b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(vmessJson.ToJsonString()));
+                    return $"vmess://{b64}";
+                }
+                else if (proto.Equals("Trojan", StringComparison.OrdinalIgnoreCase))
                 {
                     var qs = new List<string>();
-                    qs.Add("security=tls");
-                    if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"sni={node.Sni}");
-                    if (!string.IsNullOrEmpty(node.Network)) qs.Add($"type={node.Network}");
+                    string sec = string.IsNullOrEmpty(node.Security) || node.Security == "none" ? "tls" : node.Security;
+                    qs.Add($"security={Uri.EscapeDataString(sec)}");
+                    if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"sni={Uri.EscapeDataString(node.Sni)}");
+                    if (!string.IsNullOrEmpty(node.Fingerprint) && node.Fingerprint != "none") qs.Add($"fp={Uri.EscapeDataString(node.Fingerprint)}");
+                    if (!string.IsNullOrEmpty(node.PublicKey)) qs.Add($"pbk={Uri.EscapeDataString(node.PublicKey)}");
+                    if (!string.IsNullOrEmpty(node.ShortId)) qs.Add($"sid={Uri.EscapeDataString(node.ShortId)}");
+                    if (!string.IsNullOrEmpty(node.Network)) qs.Add($"type={Uri.EscapeDataString(node.Network)}");
+                    if (!string.IsNullOrEmpty(node.WsHost)) qs.Add($"host={Uri.EscapeDataString(node.WsHost)}");
                     if (!string.IsNullOrEmpty(node.Path)) qs.Add($"path={Uri.EscapeDataString(node.Path)}");
-                    
+                    if (!string.IsNullOrEmpty(node.Alpn)) qs.Add($"alpn={Uri.EscapeDataString(node.Alpn)}");
+                    if (node.AllowInsecure) qs.Add("allowInsecure=1");
+
                     var qString = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
-                    return $"trojan://{node.Password}@{node.Host}{qString}#{name}";
+                    return $"trojan://{Uri.EscapeDataString(node.Password ?? "")}@{node.Host}{qString}#{name}";
                 }
-                else if (node.Protocol == "Shadowsocks")
+                else if (proto.Equals("Shadowsocks", StringComparison.OrdinalIgnoreCase) || proto.Equals("ss", StringComparison.OrdinalIgnoreCase))
                 {
                     string method = string.IsNullOrEmpty(node.Encryption) ? "chacha20-ietf-poly1305" : node.Encryption;
                     string creds = $"{method}:{node.Password}";
                     string base64Creds = Convert.ToBase64String(Encoding.UTF8.GetBytes(creds)).TrimEnd('=');
-                    return $"ss://{base64Creds}@{node.Host}#{name}";
+                    var qs = new List<string>();
+                    if (node.IsShadowTls)
+                    {
+                        qs.Add($"shadow-tls=1");
+                        if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"shadow-tls-sni={Uri.EscapeDataString(node.Sni)}");
+                    }
+                    var qString = qs.Count > 0 ? "/?" + string.Join("&", qs) : "";
+                    return $"ss://{base64Creds}@{node.Host}{qString}#{name}";
                 }
-                else if (node.Protocol == "Hysteria 2" || node.Protocol == "Hysteria2")
+                else if (proto.Equals("Hysteria 2", StringComparison.OrdinalIgnoreCase) || proto.Equals("Hysteria2", StringComparison.OrdinalIgnoreCase))
                 {
                     var qs = new List<string>();
-                    if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"sni={node.Sni}");
+                    if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"sni={Uri.EscapeDataString(node.Sni)}");
+                    if (!string.IsNullOrEmpty(node.Alpn)) qs.Add($"alpn={Uri.EscapeDataString(node.Alpn)}");
+                    if (!string.IsNullOrEmpty(node.ObfsType) && node.ObfsType != "none")
+                    {
+                        qs.Add($"obfs={Uri.EscapeDataString(node.ObfsType)}");
+                        if (!string.IsNullOrEmpty(node.ObfsPassword))
+                            qs.Add($"obfs-password={Uri.EscapeDataString(node.ObfsPassword)}");
+                    }
                     if (node.AllowInsecure) qs.Add("insecure=1");
-                    
+
                     var qString = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
-                    return $"hysteria2://{node.Password}@{node.Host}{qString}#{name}";
+                    return $"hysteria2://{Uri.EscapeDataString(node.Password ?? "")}@{node.Host}{qString}#{name}";
                 }
-                else if (node.Protocol == "Nowhere")
+                else if (proto.Equals("TUIC", StringComparison.OrdinalIgnoreCase))
+                {
+                    var qs = new List<string>();
+                    if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"sni={Uri.EscapeDataString(node.Sni)}");
+                    if (!string.IsNullOrEmpty(node.Alpn)) qs.Add($"alpn={Uri.EscapeDataString(node.Alpn)}");
+                    if (node.AllowInsecure) qs.Add("allow_insecure=1");
+                    qs.Add("congestion_control=bbr");
+                    var qString = "?" + string.Join("&", qs);
+                    return $"tuic://{Uri.EscapeDataString(node.Uuid ?? "")}:{Uri.EscapeDataString(node.Password ?? "")}@{node.Host}{qString}#{name}";
+                }
+                else if (proto.Equals("AnyTLS", StringComparison.OrdinalIgnoreCase))
+                {
+                    var qs = new List<string>();
+                    if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"sni={Uri.EscapeDataString(node.Sni)}");
+                    if (!string.IsNullOrEmpty(node.Fingerprint) && node.Fingerprint != "none") qs.Add($"fp={Uri.EscapeDataString(node.Fingerprint)}");
+                    if (!string.IsNullOrEmpty(node.Alpn)) qs.Add($"alpn={Uri.EscapeDataString(node.Alpn)}");
+                    if (node.AllowInsecure) qs.Add("insecure=1");
+                    var qString = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
+                    return $"anytls://{Uri.EscapeDataString(node.Password ?? "")}@{node.Host}{qString}#{name}";
+                }
+                else if (proto.Equals("Naive", StringComparison.OrdinalIgnoreCase) || proto.Equals("NaiveProxy", StringComparison.OrdinalIgnoreCase))
+                {
+                    string user = !string.IsNullOrEmpty(node.Username) ? node.Username : (node.Uuid ?? "");
+                    var qs = new List<string>();
+                    if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"sni={Uri.EscapeDataString(node.Sni)}");
+                    var qString = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
+                    return $"naive+https://{Uri.EscapeDataString(user)}:{Uri.EscapeDataString(node.Password ?? "")}@{node.Host}{qString}#{name}";
+                }
+                else if (proto.Equals("WireGuard", StringComparison.OrdinalIgnoreCase) || proto.Equals("wg", StringComparison.OrdinalIgnoreCase))
+                {
+                    var qs = new List<string>();
+                    if (!string.IsNullOrEmpty(node.PublicKey)) qs.Add($"publickey={Uri.EscapeDataString(node.PublicKey)}");
+                    if (!string.IsNullOrEmpty(node.WgLocalAddress)) qs.Add($"address={Uri.EscapeDataString(node.WgLocalAddress)}");
+                    if (!string.IsNullOrEmpty(node.WgPreSharedKey)) qs.Add($"presharedkey={Uri.EscapeDataString(node.WgPreSharedKey)}");
+                    if (node.WgMtu > 0) qs.Add($"mtu={node.WgMtu}");
+                    var qString = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
+                    return $"wireguard://{Uri.EscapeDataString(node.WgPrivateKey ?? "")}@{node.Host}{qString}#{name}";
+                }
+                else if (proto.Equals("SOCKS5", StringComparison.OrdinalIgnoreCase) || proto.Equals("socks", StringComparison.OrdinalIgnoreCase))
+                {
+                    string auth = !string.IsNullOrEmpty(node.Username) || !string.IsNullOrEmpty(node.Password)
+                        ? $"{Uri.EscapeDataString(node.Username ?? "")}:{Uri.EscapeDataString(node.Password ?? "")}@"
+                        : "";
+                    return $"socks5://{auth}{node.Host}#{name}";
+                }
+                else if (proto.Equals("HTTP", StringComparison.OrdinalIgnoreCase) || proto.Equals("HTTPS", StringComparison.OrdinalIgnoreCase))
+                {
+                    string scheme = proto.Equals("HTTPS", StringComparison.OrdinalIgnoreCase) || string.Equals(node.Security, "tls", StringComparison.OrdinalIgnoreCase)
+                        ? "https"
+                        : "http";
+                    string auth = !string.IsNullOrEmpty(node.Username) || !string.IsNullOrEmpty(node.Password)
+                        ? $"{Uri.EscapeDataString(node.Username ?? "")}:{Uri.EscapeDataString(node.Password ?? "")}@"
+                        : "";
+                    return $"{scheme}://{auth}{node.Host}#{name}";
+                }
+                else if (proto.Equals("Snell", StringComparison.OrdinalIgnoreCase))
+                {
+                    var (sHost, sPort) = NodeLinkParser.SplitHostPort(node.Host);
+                    int ver = node.SnellVersion > 0 ? node.SnellVersion : 4;
+                    var parts = new List<string>
+                    {
+                        $"{(string.IsNullOrWhiteSpace(node.Name) ? "Snell" : node.Name)} = snell",
+                        sHost.Trim('[', ']'),
+                        (sPort > 0 ? sPort : 443).ToString(),
+                        $"psk={node.Password}",
+                        $"version={ver}"
+                    };
+                    if (ver == 6 && !string.IsNullOrEmpty(node.SnellMode) && node.SnellMode != "default")
+                    {
+                        parts.Add($"mode={node.SnellMode}");
+                    }
+                    else if (!string.IsNullOrEmpty(node.ObfsType) && node.ObfsType != "none")
+                    {
+                        parts.Add($"obfs={node.ObfsType}");
+                        if (!string.IsNullOrEmpty(node.WsHost))
+                            parts.Add($"obfs-host={node.WsHost}");
+                    }
+                    return string.Join(", ", parts);
+                }
+                else if (proto.Equals("Nowhere", StringComparison.OrdinalIgnoreCase))
                 {
                     var qs = new List<string>();
                     if (!string.IsNullOrEmpty(node.Spec)) qs.Add($"spec={Uri.EscapeDataString(node.Spec)}");
                     if (!string.IsNullOrEmpty(node.Alpn)) qs.Add($"alpn={Uri.EscapeDataString(node.Alpn)}");
+                    if (!string.IsNullOrEmpty(node.Sni)) qs.Add($"sni={Uri.EscapeDataString(node.Sni)}");
                     if (node.AllowInsecure) qs.Add("insecure=1");
 
                     var qString = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
-                    return $"nowhere://{node.Password}@{node.Host}{qString}#{name}";
+                    return $"nowhere://{Uri.EscapeDataString(node.Password ?? "")}@{node.Host}{qString}#{name}";
                 }
             }
             catch { }
@@ -955,63 +1176,74 @@ namespace AnywhereWinUI.Services
 
 
 
-        public async Task ExportBackupAsync(string zipPath)
+        public Task ExportBackupAsync(string zipPath)
         {
-            try
+            return Task.Run(() =>
             {
-                if (File.Exists(zipPath))
-                    File.Delete(zipPath);
+                try
+                {
+                    if (File.Exists(zipPath))
+                        File.Delete(zipPath);
 
-                using var zip = System.IO.Compression.ZipFile.Open(zipPath, System.IO.Compression.ZipArchiveMode.Create);
-                if (File.Exists(ConfigPath))
-                {
-                    zip.CreateEntryFromFile(ConfigPath, "nodes_config.json");
-                }
-                if (Directory.Exists(CustomConfigService.ConfigsDirectory))
-                {
-                    foreach (var cfgFile in Directory.GetFiles(CustomConfigService.ConfigsDirectory, "*.json"))
+                    using var zip = System.IO.Compression.ZipFile.Open(zipPath, System.IO.Compression.ZipArchiveMode.Create);
+                    lock (_sync)
                     {
-                        zip.CreateEntryFromFile(cfgFile, $"configs/{Path.GetFileName(cfgFile)}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"备份保存失败: {ex.Message}", ex);
-            }
-            await Task.CompletedTask;
-        }
-
-        public async Task ImportBackupAsync(string zipPath)
-        {
-            try
-            {
-                using var zip = System.IO.Compression.ZipFile.OpenRead(zipPath);
-                foreach (var entry in zip.Entries)
-                {
-                    if (entry.FullName.Equals("nodes_config.json", StringComparison.OrdinalIgnoreCase))
-                    {
-                        entry.ExtractToFile(ConfigPath, overwrite: true);
-                    }
-                    else if (entry.FullName.StartsWith("configs/", StringComparison.OrdinalIgnoreCase) &&
-                             entry.FullName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var safeFileName = Path.GetFileName(entry.FullName);
-                        if (!string.IsNullOrWhiteSpace(safeFileName))
+                        if (File.Exists(ConfigPath))
                         {
-                            Directory.CreateDirectory(CustomConfigService.ConfigsDirectory);
-                            entry.ExtractToFile(Path.Combine(CustomConfigService.ConfigsDirectory, safeFileName), overwrite: true);
+                            zip.CreateEntryFromFile(ConfigPath, "nodes_config.json");
+                        }
+                    }
+                    if (Directory.Exists(CustomConfigService.ConfigsDirectory))
+                    {
+                        foreach (var cfgFile in Directory.GetFiles(CustomConfigService.ConfigsDirectory, "*.json"))
+                        {
+                            zip.CreateEntryFromFile(cfgFile, $"configs/{Path.GetFileName(cfgFile)}");
                         }
                     }
                 }
-                // Reload nodes config into memory
-                Load();
-            }
-            catch (Exception ex)
+                catch (Exception ex)
+                {
+                    throw new Exception($"备份保存失败: {ex.Message}", ex);
+                }
+            });
+        }
+
+        public Task ImportBackupAsync(string zipPath)
+        {
+            return Task.Run(() =>
             {
-                throw new Exception($"备份导入恢复失败: {ex.Message}", ex);
-            }
-            await Task.CompletedTask;
+                try
+                {
+                    using var zip = System.IO.Compression.ZipFile.OpenRead(zipPath);
+                    lock (_sync)
+                    {
+                        foreach (var entry in zip.Entries)
+                        {
+                            if (entry.FullName.Equals("nodes_config.json", StringComparison.OrdinalIgnoreCase))
+                            {
+                                string tmp = $"{ConfigPath}.{Guid.NewGuid():N}.tmp";
+                                entry.ExtractToFile(tmp, overwrite: true);
+                                File.Move(tmp, ConfigPath, overwrite: true);
+                            }
+                            else if (entry.FullName.StartsWith("configs/", StringComparison.OrdinalIgnoreCase) &&
+                                     entry.FullName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var safeFileName = Path.GetFileName(entry.FullName);
+                                if (!string.IsNullOrWhiteSpace(safeFileName))
+                                {
+                                    Directory.CreateDirectory(CustomConfigService.ConfigsDirectory);
+                                    entry.ExtractToFile(Path.Combine(CustomConfigService.ConfigsDirectory, safeFileName), overwrite: true);
+                                }
+                            }
+                        }
+                    }
+                    Load();
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"备份导入恢复失败: {ex.Message}", ex);
+                }
+            });
         }
     }
 }

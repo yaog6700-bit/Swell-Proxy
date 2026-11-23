@@ -220,56 +220,58 @@
                         </Grid>
 
 
-                        <!-- 热力图主体：7行 × 52列，行=周几，列=第几周 -->
-                        <!-- 热力图与底部月份标签 -->
-                        <!-- 增加 MinHeight 防止高度塌陷；HorizontalAlignment="Center" 让热力图在宽卡片中居中，平衡左右留白 -->
-                        <StackPanel Spacing="8" MinHeight="130" HorizontalAlignment="Center">
-                            <ItemsControl x:Name="HeatmapControl"
-                                          ItemsSource="{x:Bind ViewModel.HeatmapCells, Mode=OneWay}"
-                                          HorizontalAlignment="Stretch">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <ItemsWrapGrid Orientation="Vertical" MaximumRowsOrColumns="7"
-                                                       HorizontalAlignment="Left"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemContainerStyle>
-                                    <Style TargetType="ContentPresenter">
-                                        <!-- 格子间距，上下左右各 1.5，总共占据 10+3=13 像素宽度 -->
-                                        <Setter Property="Margin" Value="1.5"/>
-                                    </Style>
-                                </ItemsControl.ItemContainerStyle>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="viewmodels:HeatmapCellViewModel">
-                                        <Border Width="10" Height="10"
-                                                CornerRadius="2"
-                                                Background="{x:Bind ColorLevel, Converter={StaticResource HeatmapColorConverter}}"
-                                                ToolTipService.ToolTip="{x:Bind Tooltip}"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                        <!-- 热力图主体：5 层合并矢量 Path + 单共享坐标浮层提示（0 Win2D 显存开销，视觉树从 ~1280 节点降至 ~18 节点） -->
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled">
+                            <Grid HorizontalAlignment="Center" MinHeight="122">
+                                <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                    <Canvas x:Name="HeatmapCanvas"
+                                            Width="689"
+                                            Height="91"
+                                            Background="Transparent"
+                                            PointerMoved="HeatmapCanvas_PointerMoved"
+                                            PointerExited="HeatmapCanvas_PointerExited">
+                                        <Path x:Name="HeatmapPath0" IsHitTestVisible="False"/>
+                                        <Path x:Name="HeatmapPath1" IsHitTestVisible="False"/>
+                                        <Path x:Name="HeatmapPath2" IsHitTestVisible="False"/>
+                                        <Path x:Name="HeatmapPath3" IsHitTestVisible="False"/>
+                                        <Path x:Name="HeatmapPath4" IsHitTestVisible="False"/>
+                                        <Rectangle x:Name="HeatmapHoverRect"
+                                                   Width="12"
+                                                   Height="12"
+                                                   RadiusX="3"
+                                                   RadiusY="3"
+                                                   Stroke="{ThemeResource TextFillColorPrimaryBrush}"
+                                                   StrokeThickness="1.2"
+                                                   Fill="Transparent"
+                                                   IsHitTestVisible="False"
+                                                   Visibility="Collapsed"/>
+                                    </Canvas>
 
-                            <!-- 月份标签（宽度对齐热力图的列） -->
-                            <ItemsControl ItemsSource="{x:Bind ViewModel.MonthLabels, Mode=OneWay}" HorizontalAlignment="Stretch">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <!-- 每列宽度 13px (10 + 1.5 + 1.5) -->
-                                        <Border Width="13" Height="20">
-                                            <!-- 使用 Canvas 允许文字突破 13px 宽度向右溢出，防止两位数月份被截断，同时防止底部被截断 -->
-                                            <Canvas>
-                                                <TextBlock Text="{x:Bind}" FontSize="11" 
-                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            </Canvas>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
+                                    <!-- 月份标签（仅创建 ~12 个非空月份 TextBlock） -->
+                                    <Canvas x:Name="MonthLabelsCanvas" Width="689" Height="20"/>
+                                </StackPanel>
+
+                                <!-- 零延迟共享悬停提示浮层（对齐 WinUI 3 原生 ToolTip / Flyout 材质与等宽可变字体规范） -->
+                                <Canvas IsHitTestVisible="False">
+                                    <Border x:Name="HeatmapTooltipCard"
+                                            Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}"
+                                            BorderBrush="{ThemeResource SurfaceStrokeColorFlyoutBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="{ThemeResource OverlayCornerRadius}"
+                                            Padding="10,6"
+                                            Visibility="Collapsed"
+                                            IsHitTestVisible="False">
+                                        <Border.Shadow>
+                                            <ThemeShadow/>
+                                        </Border.Shadow>
+                                        <TextBlock x:Name="HeatmapTooltipText"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Typography.NumeralAlignment="Tabular"
+                                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    </Border>
+                                </Canvas>
+                            </Grid>
+                        </ScrollViewer>
 
                         <!-- 图例说明（如果不需要也可以直接注释掉，这里保留了和浅色模式相匹配的柔和颜色） -->
                         <!--

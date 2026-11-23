@@ -35,11 +35,12 @@ namespace AnywhereWinUI.Services
         private readonly object _bufferLock = new();
 
         private Process? _process;
+        private bool _isSimulating;
         private readonly StringBuilder _startupLog = new();
         private readonly object _startupLogLock = new();
         private readonly SemaphoreSlim _stateLock = new(1, 1);
 
-        public bool IsRunning => _process is { HasExited: false };
+        public bool IsRunning => _isSimulating || _process is { HasExited: false };
         public string LastError { get; private set; } = string.Empty;
         public SystemProxyTamperResult LastProxyTamperState { get; private set; } = SystemProxyTamperResult.Ok();
 
@@ -57,13 +58,113 @@ namespace AnywhereWinUI.Services
         }
         public event EventHandler<bool>? RunningChanged;
         public event EventHandler<(long Down, long Up, long DownSpeed, long UpSpeed)>? TrafficUpdated;
+        public event EventHandler? ActiveNodeChanged;
+        public event EventHandler? ModeStateChanged;
+
+        private volatile bool _isTrayPanelOpen;
+        private int _isHandlingResume;
+
+        /// <summary>
+        /// Automatically heals proxy state when Windows resumes from sleep / hibernation (WM_POWERBROADCAST):
+        /// - Restarts core if it exited during suspend
+        /// - Closes half-open pre-sleep TCP/UDP connections so apps immediately establish fresh sockets
+        /// - Verifies and re-applies Windows System Proxy if cleared during network re-init
+        /// </summary>
+        public async Task HandleSystemResumeAsync()
+        {
+            if (Interlocked.CompareExchange(ref _isHandlingResume, 1, 0) != 0)
+                return;
+
+            try
+            {
+                // Allow Wi-Fi / Ethernet adapter link & DHCP routes to settle after wake
+                await Task.Delay(1800).ConfigureAwait(false);
+
+                if (AdminHelper.IsAdministrator())
+                {
+                    AutostartManager.UpgradeToElevatedTaskIfNeeded();
+                }
+
+                bool shouldBeRunning = _isSimulating || _process != null;
+                if (!shouldBeRunning)
+                    return;
+
+                if (!_isSimulating && (_process == null || _process.HasExited))
+                {
+                    AppendLog("[电源恢复] 检测到系统睡眠唤醒后内核已退出，正在自动重新连接...");
+                    var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                    string cfg = await ConfigBuilder.BuildAsync(node).ConfigureAwait(false);
+                    await StartAsync(cfg).ConfigureAwait(false);
+                    return;
+                }
+
+                await SingboxApiClient.Instance.CloseAllConnectionsAsync().ConfigureAwait(false);
+
+                if (SystemProxyManager.IsExpectedActive)
+                {
+                    var tamper = SystemProxyManager.CheckSystemProxyIntegrity();
+                    if (tamper.IsTampered)
+                    {
+                        RetakeSystemProxy();
+                    }
+                }
+
+                if (_pollWakeSignal.CurrentCount == 0)
+                {
+                    try { _pollWakeSignal.Release(); } catch { }
+                }
+
+                AppendLog("[电源恢复] 系统从睡眠唤醒，已清理失效旧连接并同步网络状态");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[PowerResume] {ex.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isHandlingResume, 0);
+            }
+        }
+
+        /// <summary>
+        /// Called by TrayPanelControl when the left-click quick panel opens or closes.
+        /// Wakes stats polling to 1s cadence ONLY while the panel is visibly open on screen,
+        /// and drops straight back to 5s zero-allocation hibernation the instant it closes.
+        /// </summary>
+        public void SetTrayPanelOpen(bool isOpen)
+        {
+            _isTrayPanelOpen = isOpen;
+            if (isOpen && _pollWakeSignal.CurrentCount == 0)
+            {
+                try { _pollWakeSignal.Release(); } catch { }
+            }
+        }
+
+        private long _latestDown;
+        private long _latestUp;
+        private long _latestDownSpeed;
+        private long _latestUpSpeed;
+
+        public (long Down, long Up, long DownSpeed, long UpSpeed) LatestTrafficStats =>
+            (Interlocked.Read(ref _latestDown),
+             Interlocked.Read(ref _latestUp),
+             Interlocked.Read(ref _latestDownSpeed),
+             Interlocked.Read(ref _latestUpSpeed));
 
         private CancellationTokenSource? _statsCts;
+        private readonly SemaphoreSlim _pollWakeSignal = new(0, 1);
         private DateTime _lastStatsTime;
         private readonly ProxyTrafficTracker _proxyTraffic = new();
 
         private CoreManager()
         {
+            MainWindow.VisibilityToUserChanged += (_, isVisible) =>
+            {
+                if (isVisible && _pollWakeSignal.CurrentCount == 0)
+                {
+                    try { _pollWakeSignal.Release(); } catch { }
+                }
+            };
         }
 
         public IReadOnlyList<string> GetLogBuffer()
@@ -115,18 +216,9 @@ namespace AnywhereWinUI.Services
             {
                 if (IsRunning) await StopInternalAsync();
 
-                // Self-healing: Kill any orphaned sing-box / shoes processes from previous crashes
-                foreach (var coreName in new[] { "sing-box", "shoes" })
-                {
-                    try
-                    {
-                        foreach (var p in Process.GetProcessesByName(coreName))
-                        {
-                            try { p.Kill(); } catch { }
-                        }
-                    }
-                    catch { }
-                }
+                // Self-healing: only kill orphaned sing-box / shoes processes belonging to Swell Proxy's own directories,
+                // and always dispose Process handles!
+                KillOwnedOrphanedCoreProcesses();
 
                 LastError = string.Empty;
                 lock (_startupLogLock) { _startupLog.Clear(); }
@@ -191,6 +283,7 @@ namespace AnywhereWinUI.Services
                     if (!File.Exists(ExePath))
                     {
                         // Standalone Simulation fallback for visual UI demo when sing-box is not copied yet
+                        _isSimulating = true;
                         AppendLog("[系统] 未在 Assets 文件夹下检测到 sing-box.exe。启用独立 UI 仿真模式。");
                         AppendLog("[启动] 仿真引擎启动成功...");
                         RunningChanged?.Invoke(this, true);
@@ -263,6 +356,7 @@ namespace AnywhereWinUI.Services
                         AppendLog($"[{coreTag} 进程已退出]");
                         StopStatsPolling();
                         AppSession.Instance.ClashApiSecret = string.Empty;
+                        AppSession.Instance.ClearHotSwitchTags();
                         _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStopped);
                         if (AppSession.Instance.EnableTunMode)
                         {
@@ -286,6 +380,7 @@ namespace AnywhereWinUI.Services
 
                     _process.Start();
                     ChildProcessTracker.AddProcess(_process);
+                    ProcessPowerHelper.EnsureCoreUnthrottled(_process);
                     _process.BeginOutputReadLine();
                     _process.BeginErrorReadLine();
 
@@ -330,13 +425,15 @@ namespace AnywhereWinUI.Services
                         ? $"[启动] {coreTag} 就绪信号已收到"
                         : $"[启动] 等待超时，假设 {coreTag} 已就绪");
 
+                    SyncClashApiEndpointFromConfig(configJson, useShoes);
+
                     // Configure Windows System Proxy (and DNS cache flush) BEFORE firing RunningChanged,
                     // so OS proxy/DNS state is settled before UI triggers AI unlock & exit IP checks.
                     if (isCustom && AppSession.Instance.ActiveCustomSkipSystemProxy)
                     {
-                        SystemProxyManager.DisableProxy();
-                LastProxyTamperState = SystemProxyTamperResult.Ok();
-                SystemProxyTampered?.Invoke(this, LastProxyTamperState);
+                        SystemProxyManager.DisableProxyIfOwned();
+                        LastProxyTamperState = SystemProxyTamperResult.Ok();
+                        SystemProxyTampered?.Invoke(this, LastProxyTamperState);
                         AppendLog("[CustomConfig] 原生配置直连或未声明本地 HTTP/Mixed 入站，已跳过系统代理修改");
                     }
                     else if (AppSession.Instance.EnableSystemProxy)
@@ -349,9 +446,9 @@ namespace AnywhereWinUI.Services
                     }
                     else
                     {
-                        SystemProxyManager.DisableProxy();
-                LastProxyTamperState = SystemProxyTamperResult.Ok();
-                SystemProxyTampered?.Invoke(this, LastProxyTamperState);
+                        SystemProxyManager.DisableProxyIfOwned();
+                        LastProxyTamperState = SystemProxyTamperResult.Ok();
+                        SystemProxyTampered?.Invoke(this, LastProxyTamperState);
                     }
 
                     if (AppSession.Instance.EnableTunMode || (isCustom && AppSession.Instance.ActiveCustomHasTun))
@@ -364,6 +461,10 @@ namespace AnywhereWinUI.Services
                     }
 
                     StartStatsPolling();
+                    if (AdminHelper.IsAdministrator())
+                    {
+                        AutostartManager.UpgradeToElevatedTaskIfNeeded();
+                    }
                     RunningChanged?.Invoke(this, true);
                     _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnCoreStarted);
                     return true;
@@ -394,6 +495,220 @@ namespace AnywhereWinUI.Services
             }
         }
 
+        /// <summary>
+        /// Switches to <paramref name="node"/> with &lt;5ms zero-drop Clash API selector hot-switch whenever
+        /// sing-box is running and has <paramref name="node"/> loaded in its "proxy" selector;
+        /// seamlessly falls back to rebuilding &amp; restarting the core otherwise (e.g. Shoes, Custom JSON, or newly added node).
+        /// </summary>
+        public async Task<bool> SwitchToNodeAsync(PersistedNode node)
+        {
+            if (node == null) return false;
+
+            var session = AppSession.Instance;
+            bool wasAuto = session.IsAutoNodeSelect;
+            string previousId = NodesManager.Instance.SelectedNodeId;
+
+            session.IsAutoNodeSelect = false;
+            LocalSettingsHelper.SetValue("isAutoNodeSelect", false);
+
+            NodesManager.Instance.SelectedNodeId = node.Id;
+            NodesManager.Instance.Save();
+
+            session.SelectedNodeName = node.Name;
+            session.SelectedNodeProtocol = node.Protocol;
+            session.SelectedNodeHost = node.Host;
+
+            if (!IsRunning)
+            {
+                ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
+                return true;
+            }
+
+            if (!wasAuto && string.Equals(previousId, node.Id, StringComparison.Ordinal))
+            {
+                ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
+                return true;
+            }
+
+            bool canHotSwitch =
+                string.Equals(session.ActiveCoreEngine, ShoesConfigBuilder.EngineSingBox, StringComparison.OrdinalIgnoreCase) &&
+                !session.IsActiveNodeCustom &&
+                !CustomConfigService.IsCustomNode(node) &&
+                !string.Equals(session.CoreEngine, ShoesConfigBuilder.EngineShoes, StringComparison.OrdinalIgnoreCase) &&
+                session.CanHotSwitchTo(node.Id);
+
+            if (canHotSwitch)
+            {
+                bool switched = await SingboxApiClient.Instance.SelectOutboundAsync("proxy", node.Id).ConfigureAwait(false);
+                if (switched)
+                {
+                    session.LastBuildNode = node;
+                    AppendLog($"[热切换] 已无感切换至节点：{node.Name}");
+                    ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
+                    return true;
+                }
+            }
+
+            string configJson = await ConfigBuilder.BuildAsync(node).ConfigureAwait(false);
+            bool started = await StartAsync(configJson).ConfigureAwait(false);
+            ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
+            return started;
+        }
+
+        /// <summary>
+        /// Switches the active outbound to "urltest" (Auto: Fastest + Failover), using &lt;5ms zero-drop
+        /// hot-switch when sing-box is already running with "urltest" available.
+        /// </summary>
+        public async Task<bool> EnableAutoNodeSelectAsync()
+        {
+            var session = AppSession.Instance;
+            bool alreadyAuto = session.IsAutoNodeSelect;
+
+            session.IsAutoNodeSelect = true;
+            LocalSettingsHelper.SetValue("isAutoNodeSelect", true);
+
+            if (!IsRunning)
+            {
+                ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
+                return true;
+            }
+
+            if (alreadyAuto &&
+                string.Equals(session.ActiveCoreEngine, ShoesConfigBuilder.EngineSingBox, StringComparison.OrdinalIgnoreCase) &&
+                !session.IsActiveNodeCustom &&
+                session.CanHotSwitchTo("urltest"))
+            {
+                ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
+                return true;
+            }
+
+            bool canHotSwitch =
+                string.Equals(session.ActiveCoreEngine, ShoesConfigBuilder.EngineSingBox, StringComparison.OrdinalIgnoreCase) &&
+                !session.IsActiveNodeCustom &&
+                session.CanHotSwitchTo("urltest");
+
+            if (canHotSwitch)
+            {
+                bool switched = await SingboxApiClient.Instance.SelectOutboundAsync("proxy", "urltest").ConfigureAwait(false);
+                if (switched)
+                {
+                    AppendLog("[热切换] 已切换至自动选点（最快 + 故障转移）");
+                    ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
+                    return true;
+                }
+            }
+
+            var fallbackNode = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+            string configJson = await ConfigBuilder.BuildAsync(fallbackNode).ConfigureAwait(false);
+            bool started = await StartAsync(configJson).ConfigureAwait(false);
+            ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
+            return started;
+        }
+
+        public async Task SetRoutingModeAsync(string mode)
+        {
+            if (string.IsNullOrWhiteSpace(mode)) return;
+            var session = AppSession.Instance;
+            if (string.Equals(session.RoutingMode, mode, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            session.RoutingMode = mode;
+            LocalSettingsHelper.SetValue("routingMode", mode);
+            ModeStateChanged?.Invoke(this, EventArgs.Empty);
+
+            if (IsRunning)
+            {
+                AppendLog($"[系统] 路由模式切换为 {mode}，正在重新加载配置...");
+                var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                string realConfig = await ConfigBuilder.BuildAsync(node).ConfigureAwait(false);
+                await StartAsync(realConfig).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Toggles Windows System Proxy without restarting sing-box (mixed-in is always listening on MixedPort!).
+        /// </summary>
+        public void SetSystemProxyEnabled(bool enable)
+        {
+            var session = AppSession.Instance;
+            bool hasTun = session.EnableTunMode;
+            int newModeIndex = enable
+                ? (hasTun ? 3 : 0)
+                : (hasTun ? 1 : 2);
+
+            if (session.ProxyModeIndex == newModeIndex)
+                return;
+
+            session.ProxyModeIndex = newModeIndex;
+            LocalSettingsHelper.SetValue("proxyModeIndex", newModeIndex);
+
+            if (IsRunning && !(session.IsActiveNodeCustom && session.ActiveCustomSkipSystemProxy))
+            {
+                if (enable)
+                {
+                    int sysProxyPort = session.IsActiveNodeCustom
+                        ? (session.ActiveCustomHttpProxyPort ?? session.MixedPort)
+                        : session.MixedPort;
+                    SystemProxyManager.EnableProxy("127.0.0.1", sysProxyPort);
+                    LastProxyTamperState = SystemProxyTamperResult.Ok(SystemProxyManager.ExpectedServer);
+                    SystemProxyTampered?.Invoke(this, LastProxyTamperState);
+                    AppendLog($"[SystemProxy] 系统代理已开启 (127.0.0.1:{sysProxyPort})");
+                }
+                else
+                {
+                    SystemProxyManager.DisableProxyIfOwned();
+                    LastProxyTamperState = SystemProxyTamperResult.Ok();
+                    SystemProxyTampered?.Invoke(this, LastProxyTamperState);
+                    AppendLog("[SystemProxy] 系统代理已关闭");
+                }
+            }
+
+            ModeStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void NotifyModeStateChanged()
+        {
+            ModeStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        internal static void KillOwnedOrphanedCoreProcesses()
+        {
+            string appDir = Path.GetFullPath(AppContext.BaseDirectory);
+            string dataDir = Path.GetFullPath(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SwellProxy"));
+
+            foreach (var coreName in new[] { "sing-box", "shoes" })
+            {
+                Process[]? procs = null;
+                try
+                {
+                    procs = Process.GetProcessesByName(coreName);
+                    foreach (var p in procs)
+                    {
+                        try
+                        {
+                            string? exeFile = null;
+                            try { exeFile = p.MainModule?.FileName; } catch { }
+                            bool isOwned = string.IsNullOrEmpty(exeFile) ||
+                                           exeFile.StartsWith(appDir, StringComparison.OrdinalIgnoreCase) ||
+                                           exeFile.StartsWith(dataDir, StringComparison.OrdinalIgnoreCase);
+                            if (isOwned)
+                            {
+                                p.Kill();
+                            }
+                        }
+                        catch { }
+                        finally
+                        {
+                            try { p.Dispose(); } catch { }
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
         private static void SyncClashApiSecretFromConfig(string configJson)
         {
             try
@@ -404,54 +719,83 @@ namespace AnywhereWinUI.Services
                     AllowTrailingCommas = true
                 });
                 if (doc.RootElement.TryGetProperty("experimental", out var exp) &&
-                    exp.TryGetProperty("clash_api", out var clashApi) &&
-                    clashApi.TryGetProperty("secret", out var secretProp) &&
-                    secretProp.ValueKind == JsonValueKind.String)
+                    exp.TryGetProperty("clash_api", out var clashApi))
                 {
-                    AppSession.Instance.ClashApiSecret = secretProp.GetString() ?? string.Empty;
+                    if (clashApi.TryGetProperty("secret", out var secretProp) &&
+                        secretProp.ValueKind == JsonValueKind.String)
+                    {
+                        AppSession.Instance.ClashApiSecret = secretProp.GetString() ?? string.Empty;
+                    }
+                    if (clashApi.TryGetProperty("external_controller", out var ctrlProp) &&
+                        ctrlProp.ValueKind == JsonValueKind.String)
+                    {
+                        SingboxApiClient.Instance.UpdateControllerEndpoint(ctrlProp.GetString());
+                    }
+                    else
+                    {
+                        SingboxApiClient.Instance.UpdateControllerEndpoint("127.0.0.1:9090");
+                    }
                 }
             }
             catch { }
         }
 
-        private Task StopInternalAsync()
+        private static void SyncClashApiEndpointFromConfig(string configJson, bool useShoes)
+        {
+            if (useShoes)
+            {
+                SingboxApiClient.Instance.UpdateControllerEndpoint("127.0.0.1:9090");
+            }
+            else
+            {
+                SyncClashApiSecretFromConfig(configJson);
+            }
+        }
+
+        private async Task StopInternalAsync()
         {
             var proc = _process;
             _process = null;
+            bool wasSimulating = _isSimulating;
+            _isSimulating = false;
 
             StopStatsPolling();
+            Interlocked.Exchange(ref _latestDown, 0);
+            Interlocked.Exchange(ref _latestUp, 0);
+            Interlocked.Exchange(ref _latestDownSpeed, 0);
+            Interlocked.Exchange(ref _latestUpSpeed, 0);
             AppSession.Instance.ClashApiSecret = string.Empty;
-            if (AppSession.Instance.EnableTunMode)
-            {
-                var tunService = new TunService();
-                tunService.CleanupTunRoutes(AppSession.Instance.LastTunServerHost);
-            }
-            if (AppSession.Instance.EnableSystemProxy)
-            {
-                SystemProxyManager.DisableProxy();
-                LastProxyTamperState = SystemProxyTamperResult.Ok();
-                SystemProxyTampered?.Invoke(this, LastProxyTamperState);
-            }
+            AppSession.Instance.ClearHotSwitchTags();
+            SystemProxyManager.DisableProxyIfOwned();
+            LastProxyTamperState = SystemProxyTamperResult.Ok();
+            SystemProxyTampered?.Invoke(this, LastProxyTamperState);
 
             if (proc is null)
             {
-                // Fallback simulation state
-                AppendLog("[系统] 仿真引擎已停止...");
+                if (wasSimulating)
+                {
+                    AppendLog("[系统] 仿真引擎已停止...");
+                }
                 RunningChanged?.Invoke(this, false);
-                return Task.CompletedTask;
+                return;
             }
 
             try
             {
                 if (!proc.HasExited)
                 {
-                    // Give plugins a chance to react before the core is killed
-                    _ = Plugins.PluginManager.Instance.FireAsync(Plugins.PluginTrigger.OnBeforeCoreStop);
+                    // Allow OnBeforeCoreStop plugins up to 800ms before killing the core process
+                    try
+                    {
+                        await Plugins.PluginManager.Instance
+                            .FireAsync(Plugins.PluginTrigger.OnBeforeCoreStop)
+                            .WaitAsync(TimeSpan.FromMilliseconds(800));
+                    }
+                    catch { }
+
                     proc.Kill(entireProcessTree: true);
                 }
 
-                // Wait up to 3 s; if the process still hasn't exited, abandon it and move on
-                // so we never block the caller indefinitely.
                 if (!proc.WaitForExit(3000))
                 {
                     AppendLog("[警告] sing-box 进程未在 3 秒内退出，强制放弃等待。");
@@ -463,69 +807,103 @@ namespace AnywhereWinUI.Services
                 proc.Dispose();
             }
 
+            if (AppSession.Instance.EnableTunMode)
+            {
+                var tunService = new TunService();
+                tunService.CleanupTunRoutes(AppSession.Instance.LastTunServerHost);
+            }
+
             AppendLog("[已停止]");
             RunningChanged?.Invoke(this, false);
-            return Task.CompletedTask;
         }
 
         private void StartStatsPolling()
         {
-            _statsCts?.Cancel();
-            _statsCts = new CancellationTokenSource();
+            StopStatsPolling();
+            var cts = new CancellationTokenSource();
+            _statsCts = cts;
             _proxyTraffic.Reset();
             _lastStatsTime = DateTime.Now;
             bool seeded = false;
 
+            // Drain any stale wake signal before starting
+            while (_pollWakeSignal.CurrentCount > 0)
+            {
+                try { _pollWakeSignal.Wait(0); } catch { break; }
+            }
+
             _ = Task.Run(async () =>
             {
-                var token = _statsCts.Token;
-                int proxyCheckTicks = 0;
+                var token = cts.Token;
+                int proxyCheckElapsedMs = 0;
                 LastProxyTamperState = SystemProxyTamperResult.Ok();
                 // Brief wait so clash_api is listening after ready signal.
                 try { await Task.Delay(400, token); } catch (TaskCanceledException) { return; }
 
                 while (!token.IsCancellationRequested)
                 {
+                    bool isVisible = MainWindow.IsVisibleToUser || _isTrayPanelOpen;
+                    int delayMs = isVisible ? 1000 : 5000;
+
                     try
                     {
-                        // Full /connections snapshot — classify each conn as proxy vs direct.
-                        // Do NOT use downloadTotal/uploadTotal: those include domestic direct
-                        // traffic that still enters the core under system proxy / TUN.
-                        var message = await SingboxApiClient.Instance.FetchConnectionsAsync(token);
-                        if (message != null)
-                        {
-                            var now = DateTime.Now;
+                        var now = DateTime.Now;
+                        double elapsed = (now - _lastStatsTime).TotalSeconds;
+                        if (elapsed <= 0) elapsed = 1;
 
-                            if (!seeded)
+                        if (SingboxApiClient.Instance.HasActiveVisualConsumers)
+                        {
+                            // Full object snapshot ONLY when window is visible and ConnectionsPage / TopologyGraph is open
+                            var message = await SingboxApiClient.Instance.FetchConnectionsAsync(token).ConfigureAwait(false);
+                            if (message != null)
                             {
-                                _proxyTraffic.Seed(message);
+                                _lastStatsTime = now;
+                                (long down, long up, long downSpeed, long upSpeed) stats;
+                                if (!seeded)
+                                {
+                                    _proxyTraffic.Seed(message);
+                                    seeded = true;
+                                    stats = (0, 0, 0, 0);
+                                }
+                                else
+                                {
+                                    stats = _proxyTraffic.Apply(message, elapsed);
+                                }
+
+                                RecordAndPublishStats(stats);
+                                SingboxApiClient.Instance.PublishConnectionsSnapshot(message);
+                            }
+                        }
+                        else
+                        {
+                            // Zero-allocation Utf8JsonReader path (used in tray hibernation AND on non-connection pages)
+                            var statsOpt = await SingboxApiClient.Instance.FetchAndApplyTrafficZeroAllocAsync(
+                                _proxyTraffic,
+                                seedOnly: !seeded,
+                                elapsedSeconds: elapsed,
+                                token: token).ConfigureAwait(false);
+
+                            if (statsOpt.HasValue)
+                            {
+                                _lastStatsTime = now;
                                 seeded = true;
-                                _lastStatsTime = now;
-                                TrafficUpdated?.Invoke(this, (0, 0, 0, 0));
+                                RecordAndPublishStats(statsOpt.Value);
                             }
-                            else
-                            {
-                                var elapsed = (now - _lastStatsTime).TotalSeconds;
-                                if (elapsed <= 0) elapsed = 1;
-                                _lastStatsTime = now;
-
-                                var (down, up, downSpeed, upSpeed) = _proxyTraffic.Apply(message, elapsed);
-                                TrafficUpdated?.Invoke(this, (down, up, downSpeed, upSpeed));
-                            }
-
-                            // Reuse the same 1s snapshot for ConnectionsPage / TopologyGraphControl
-                            // so SingboxApiClient does not need a duplicate HTTP polling loop.
-                            SingboxApiClient.Instance.PublishConnectionsSnapshot(message);
                         }
 
-                        // Every 3 seconds, verify Windows System Proxy was not modified externally.
-                        if (++proxyCheckTicks >= 3)
+                        // Check Windows System Proxy integrity every ~3s when visible, or every ~15s when hibernating in tray
+                        proxyCheckElapsedMs += delayMs;
+                        int targetProxyCheckMs = isVisible ? 3000 : 15000;
+                        if (proxyCheckElapsedMs >= targetProxyCheckMs)
                         {
-                            proxyCheckTicks = 0;
-                            CheckAndNotifySystemProxyTamper();
+                            proxyCheckElapsedMs = 0;
+                            if (SystemProxyManager.IsExpectedActive)
+                            {
+                                CheckAndNotifySystemProxyTamper();
+                            }
                         }
 
-                        await Task.Delay(1000, token);
+                        await _pollWakeSignal.WaitAsync(delayMs, token).ConfigureAwait(false);
                     }
                     catch (TaskCanceledException)
                     {
@@ -537,16 +915,29 @@ namespace AnywhereWinUI.Services
                     }
                     catch
                     {
-                        // Even if /connections fetch transiently fails, keep checking system proxy integrity.
-                        if (++proxyCheckTicks >= 3)
+                        proxyCheckElapsedMs += delayMs;
+                        int targetProxyCheckMs = isVisible ? 3000 : 15000;
+                        if (proxyCheckElapsedMs >= targetProxyCheckMs)
                         {
-                            proxyCheckTicks = 0;
-                            CheckAndNotifySystemProxyTamper();
+                            proxyCheckElapsedMs = 0;
+                            if (SystemProxyManager.IsExpectedActive)
+                            {
+                                CheckAndNotifySystemProxyTamper();
+                            }
                         }
-                        try { await Task.Delay(1000, token); } catch { break; }
+                        try { await _pollWakeSignal.WaitAsync(delayMs, token).ConfigureAwait(false); } catch { break; }
                     }
                 }
             });
+        }
+
+        private void RecordAndPublishStats((long Down, long Up, long DownSpeed, long UpSpeed) stats)
+        {
+            Interlocked.Exchange(ref _latestDown, stats.Down);
+            Interlocked.Exchange(ref _latestUp, stats.Up);
+            Interlocked.Exchange(ref _latestDownSpeed, stats.DownSpeed);
+            Interlocked.Exchange(ref _latestUpSpeed, stats.UpSpeed);
+            TrafficUpdated?.Invoke(this, stats);
         }
 
         private void CheckAndNotifySystemProxyTamper()
@@ -568,8 +959,10 @@ namespace AnywhereWinUI.Services
 
         private void StopStatsPolling()
         {
-            _statsCts?.Cancel();
-            _statsCts = null;
+            var old = Interlocked.Exchange(ref _statsCts, null);
+            if (old == null) return;
+            try { old.Cancel(); } catch { }
+            try { old.Dispose(); } catch { }
         }
 
         /// <summary>

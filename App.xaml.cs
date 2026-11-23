@@ -40,12 +40,16 @@ namespace AnywhereWinUI
             
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
-                LogCrash(e.ExceptionObject as Exception, $"AppDomain Unhandled: {e.ExceptionObject}");
+                if (e.IsTerminating)
+                {
+                    try { SystemProxyManager.DisableProxyIfOwned(); } catch { }
+                }
+                LogCrash(e.ExceptionObject as Exception, $"AppDomain Unhandled: {e.ExceptionObject}", isFatal: e.IsTerminating);
             };
 
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, e) =>
             {
-                LogCrash(e.Exception, "TaskScheduler Unobserved Task Exception");
+                LogCrash(e.Exception, "TaskScheduler Unobserved Task Exception", isFatal: false);
                 e.SetObserved(); // Mark as observed to prevent crash on background task GC
             };
         }
@@ -73,6 +77,7 @@ namespace AnywhereWinUI
         {
             var cmdArgs = Environment.GetCommandLineArgs();
             bool isAutoStart = false;
+            bool isSilentBoot = false;
             int parentPid = 0;
 
             foreach (var arg in cmdArgs)
@@ -86,6 +91,11 @@ namespace AnywhereWinUI
                 }
                 else if (arg == "--auto-start-proxy")
                 {
+                    isAutoStart = true;
+                }
+                else if (arg == "--autostart" || arg == "-silent")
+                {
+                    isSilentBoot = true;
                     isAutoStart = true;
                 }
                 else if (arg.StartsWith("--parent-pid="))
@@ -124,42 +134,73 @@ namespace AnywhereWinUI
                 // ── One-time migration: rename AnywhereProxy folder → SwellProxy ────────
                 MigrateDataFolder();
 
-                // ── Cleanup leftover staged update packages on startup ────────────────────
-                new Services.AppUpdateService().CleanupOldStagingDirs();
+                // ── Cleanup leftover staged update packages on startup (skip if --parent-pid restart) ──
+                if (parentPid == 0)
+                {
+                    new Services.AppUpdateService().CleanupOldStagingDirs();
+                }
+
+                if (!isAutoStart)
+                {
+                    SystemProxyManager.RecoverCrashLeftoversOnStartup();
+                }
 
                 AnywhereWinUI.Services.ClipboardMonitorService.Instance.Start();
 
                 // ── Register notification service (required for Toast to work) ──────
                 try { AppNotificationManager.Default.Register(); } catch { }
 
-                _window = new MainWindow();
-                _window.Activate();
-
-                // ── Plugin system: load manifests and initialise enabled plugins ──────
-                if (AppSession.Instance.EnablePlugins)
+                var mainWindow = new MainWindow();
+                _window = mainWindow;
+                if (isSilentBoot)
                 {
-                    _ = Task.Run(async () =>
-                    {
-                        await PluginManager.Instance.LoadAllAsync();
-                        await PluginManager.Instance.FireAsync(PluginTrigger.OnStartup);
-                    });
+                    mainWindow.StartSilentlyInTray();
+                }
+                else
+                {
+                    _window.Activate();
                 }
 
-                if (isAutoStart)
+                if (Helpers.AdminHelper.IsAdministrator())
                 {
-                    // Auto-start proxy if it was running before UAC or language restart
-                    _ = Task.Run(async () =>
-                    {
-                        var cfg = await ConfigBuilder.BuildAsync();
-                        await CoreManager.Instance.StartAsync(cfg);
-                    });
+                    AutostartManager.UpgradeToElevatedTaskIfNeeded();
                 }
+
+                // ── Ordered startup: load plugins BEFORE auto-starting core so OnBeforeCoreStart hooks run ──
+                _ = Task.Run(async () =>
+                {
+                    if (AppSession.Instance.EnablePlugins)
+                    {
+                        try
+                        {
+                            await PluginManager.Instance.LoadAllAsync();
+                            await PluginManager.Instance.FireAsync(PluginTrigger.OnStartup);
+                        }
+                        catch (Exception pEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[PluginStartup] {pEx.Message}");
+                        }
+                    }
+
+                    if (isAutoStart)
+                    {
+                        try
+                        {
+                            var cfg = await ConfigBuilder.BuildAsync();
+                            await CoreManager.Instance.StartAsync(cfg);
+                        }
+                        catch (Exception startEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[AutoStartProxy] {startEx.Message}");
+                        }
+                    }
+                });
 
                 StartSubscriptionAutoRefreshMonitor();
             }
             catch (Exception ex)
             {
-                LogCrash(ex, "OnLaunched Execution");
+                LogCrash(ex, "OnLaunched Execution", isFatal: true);
                 throw;
             }
         }
@@ -179,6 +220,7 @@ namespace AnywhereWinUI
             catch { }
 
             MainWindow.Instance?.DisposeTrayForRestart();
+            ReleaseSingleInstanceMutex();
 
             string? exePath = Environment.ProcessPath;
             if (!string.IsNullOrEmpty(exePath))
@@ -196,11 +238,15 @@ namespace AnywhereWinUI
                 });
             }
 
-            try { _singleInstanceMutex?.ReleaseMutex(); } catch { }
-            try { _singleInstanceMutex?.Dispose(); } catch { }
-            _singleInstanceMutex = null;
-
             Environment.Exit(0);
+        }
+
+        internal static void ReleaseSingleInstanceMutex()
+        {
+            var m = System.Threading.Interlocked.Exchange(ref _singleInstanceMutex, null);
+            if (m == null) return;
+            try { m.ReleaseMutex(); } catch { }
+            try { m.Dispose(); } catch { }
         }
 
         private void StartSubscriptionAutoRefreshMonitor()
@@ -240,7 +286,7 @@ namespace AnywhereWinUI
 
         private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
-            LogCrash(e.Exception, e.Message);
+            LogCrash(e.Exception, e.Message, isFatal: false);
             // Mark as handled to prevent the runtime from terminating the process.
             // Non-fatal UI exceptions (e.g., stale WinRT object references after page unload)
             // should not bring down the whole app.
@@ -267,34 +313,50 @@ namespace AnywhereWinUI
             catch { }
         }
 
-        private static void LogCrash(Exception? ex, string message)
+        private static void LogCrash(Exception? ex, string message, bool isFatal = true)
         {
             try
             {
-                string logPath = Path.Combine(AppContext.BaseDirectory, "crash_log.txt");
-                string desktopLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "SwellProxy_crash.txt");
                 var sb = new StringBuilder();
-                sb.AppendLine($"==================================================");
-                sb.AppendLine($"[Crash Timestamp] {DateTime.Now}");
+                sb.AppendLine("==================================================");
+                sb.AppendLine($"[Crash Timestamp] {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} (Fatal={isFatal})");
                 sb.AppendLine($"[Error Message] {message}");
                 if (ex != null)
                 {
                     sb.AppendLine($"[Exception Type] {ex.GetType().FullName}");
-                    sb.AppendLine($"[Stack Trace]");
+                    sb.AppendLine("[Stack Trace]");
                     sb.AppendLine(ex.ToString());
-                    
+
                     if (ex.InnerException != null)
                     {
                         sb.AppendLine($"[Inner Exception Type] {ex.InnerException.GetType().FullName}");
                         sb.AppendLine($"[Inner Exception Message] {ex.InnerException.Message}");
-                        sb.AppendLine($"[Inner Exception Stack Trace]");
+                        sb.AppendLine("[Inner Exception Stack Trace]");
                         sb.AppendLine(ex.InnerException.ToString());
                     }
                 }
-                sb.AppendLine($"==================================================");
+                sb.AppendLine("==================================================");
                 string content = sb.ToString();
-                File.AppendAllText(logPath, content);
-                File.AppendAllText(desktopLog, content); // 同时写桌面，方便查找
+
+                try
+                {
+                    string appDataDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "SwellProxy");
+                    Directory.CreateDirectory(appDataDir);
+                    File.AppendAllText(Path.Combine(appDataDir, "crash_log.txt"), content);
+                }
+                catch { }
+
+                if (isFatal)
+                {
+                    try
+                    {
+                        string desktopLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "SwellProxy_crash.txt");
+                        File.AppendAllText(desktopLog, content);
+                    }
+                    catch { }
+                }
             }
             catch { }
         }

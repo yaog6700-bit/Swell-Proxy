@@ -50,6 +50,13 @@
             </controls:Segmented>
         </Grid>
 
+        <!-- Inline error display (avoids nested ContentDialog 0x80000019 crash) -->
+        <InfoBar x:Name="DialogErrorBar"
+                 Severity="Error"
+                 IsClosable="True"
+                 IsOpen="False"
+                 Visibility="Collapsed" />
+
         <!-- ── Add Page ─────────────────────────────────────────────────────── -->
         <StackPanel x:Name="AddPagePanel" Spacing="14">
             <TextBox x:Name="UrlInput" x:Uid="SubDialog_UrlInput"
@@ -61,8 +68,8 @@
                      Header="备注名称（可选）"
                      PlaceholderText="留空则使用链接域名" />
             <TextBlock x:Uid="SubDialog_Hint" Text="将自动拉取并导入订阅中的全部节点"
-                       FontSize="12"
-                       Opacity="0.65" />
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
 
         <!-- ── Manage Page ───────────────────────────────────────────────────── -->
@@ -79,10 +86,11 @@
                     <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                         <TextBlock x:Uid="SubDialog_AutoRefreshTitle" Text="自动刷新订阅"
                                    FontSize="14"
-                                   FontWeight="SemiBold" />
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                         <TextBlock x:Uid="SubDialog_AutoRefreshDesc" Text="每 24 小时同步一次"
-                                   FontSize="12"
-                                   Opacity="0.65" />
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                     <ToggleSwitch x:Name="AutoRefreshSwitch"
                                   Grid.Column="1"
@@ -101,7 +109,7 @@
                        HorizontalAlignment="Center"
                        Margin="0,48,0,48"
                        FontSize="14"
-                       Opacity="0.6"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                        Visibility="Collapsed" />
 
             <!-- Subscription list -->

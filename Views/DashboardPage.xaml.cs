@@ -42,6 +42,48 @@ namespace AnywhereWinUI.Views
         //  Page lifecycle
         // ─────────────────────────────────────────────────────────
 
+        protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            MainWindow.VisibilityToUserChanged -= OnMainWindowVisibilityChanged;
+            MainWindow.VisibilityToUserChanged += OnMainWindowVisibilityChanged;
+            if (ViewModel != null)
+            {
+                ViewModel.IsPageActive = true;
+                ViewModel.SyncLatestStateOnActivate();
+            }
+        }
+
+        protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            MainWindow.VisibilityToUserChanged -= OnMainWindowVisibilityChanged;
+            if (ViewModel != null)
+            {
+                ViewModel.IsPageActive = false;
+                ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            }
+            StopPulseAnimation();
+        }
+
+        private void OnMainWindowVisibilityChanged(object? sender, bool isVisible)
+        {
+            DispatcherQueue?.TryEnqueue(() =>
+            {
+                if (!isVisible)
+                {
+                    StopPulseAnimation();
+                }
+                else if (ViewModel != null && ViewModel.IsPageActive)
+                {
+                    ViewModel.SyncLatestStateOnActivate();
+                    if (ViewModel.IsCoreRunning)
+                        StartPulseAnimation();
+                    UpdateStatusDot(ViewModel.IsCoreRunning);
+                }
+            });
+        }
+
         private void DashboardPage_Loaded(object sender, RoutedEventArgs e)
         {
             // PropertyChanged must re-attach when the page re-enters the visual tree (cache reuse).

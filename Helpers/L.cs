@@ -483,5 +483,70 @@ namespace AnywhereWinUI.Helpers
         public static string MainWindow_UpdateReadyTitleFmt => Loc.GetString("MainWindow_UpdateReadyTitleFmt");
         public static string MainWindow_UpdateReadyMsg      => Loc.GetString("MainWindow_UpdateReadyMsg");
         public static string Settings_AppDownloadingBtnFmt  => Loc.GetString("Settings_AppDownloadingBtnFmt");
+
+        // ── Feature F1 + F3: Hot Selector Switch & Bowel-Style Tray Panel/Menu ─
+        public static string Shoes_ReasonAutoSelect         => Loc.GetString("Shoes_ReasonAutoSelect");
+        public static string TrayPanel_StatusNormal         => Loc.GetString("TrayPanel_StatusNormal");
+        public static string TrayPanel_StatusStopped        => Loc.GetString("TrayPanel_StatusStopped");
+        public static string TrayPanel_StatusStarting       => Loc.GetString("TrayPanel_StatusStarting");
+        public static string TrayPanel_StatusSwitching      => Loc.GetString("TrayPanel_StatusSwitching");
+        public static string TrayPanel_ProxyTamperedShort   => Loc.GetString("TrayPanel_ProxyTamperedShort");
+        public static string TrayPanel_UpdateReadyFmt       => Loc.GetString("TrayPanel_UpdateReadyFmt");
+        public static string TrayPanel_UpdateAvailFmt       => Loc.GetString("TrayPanel_UpdateAvailFmt");
+        public static string TrayPanel_UpdateViewBtn        => Loc.GetString("TrayPanel_UpdateViewBtn");
+        public static string TrayPanel_TodayFmt             => Loc.GetString("TrayPanel_TodayFmt");
+        public static string TrayPanel_NodesHeader          => Loc.GetString("TrayPanel_NodesHeader");
+        public static string TrayPanel_PingBtn              => Loc.GetString("TrayPanel_PingBtn");
+        public static string TrayPanel_Pinging              => Loc.GetString("TrayPanel_Pinging");
+        public static string TrayPanel_AutoTitle            => Loc.GetString("TrayPanel_AutoTitle");
+        public static string TrayPanel_AutoSubtitle         => Loc.GetString("TrayPanel_AutoSubtitle");
+        public static string TrayPanel_CurrentBadge         => Loc.GetString("TrayPanel_CurrentBadge");
+        public static string TrayPanel_AllNodes             => Loc.GetString("TrayPanel_AllNodes");
+        public static string TrayPanel_NodeCountFmt         => Loc.GetString("TrayPanel_NodeCountFmt");
+        public static string TrayPanel_EmptyNodes           => Loc.GetString("TrayPanel_EmptyNodes");
+        public static string TrayPanel_ModeLabel            => Loc.GetString("TrayPanel_ModeLabel");
+        public static string TrayPanel_ModeRuleShort        => Loc.GetString("TrayPanel_ModeRuleShort");
+        public static string TrayPanel_ModeGlobalShort      => Loc.GetString("TrayPanel_ModeGlobalShort");
+        public static string TrayPanel_ModeDirectShort      => Loc.GetString("TrayPanel_ModeDirectShort");
+        public static string TrayMenu_EnableProxy           => Loc.GetString("TrayMenu_EnableProxy");
+        public static string TrayMenu_SystemProxy           => Loc.GetString("TrayMenu_SystemProxy");
+        public static string TrayMenu_TunMode               => Loc.GetString("TrayMenu_TunMode");
+        public static string TrayMenu_NodesSubmenu          => Loc.GetString("TrayMenu_NodesSubmenu");
+        public static string TrayMenu_AutoNodeItem          => Loc.GetString("TrayMenu_AutoNodeItem");
+        public static string TrayMenu_AllNodesFmt           => Loc.GetString("TrayMenu_AllNodesFmt");
+        public static string TrayMenu_SubsSubmenu           => Loc.GetString("TrayMenu_SubsSubmenu");
+        public static string TrayMenu_UpdateAllSubs         => Loc.GetString("TrayMenu_UpdateAllSubs");
+        public static string TrayMenu_Settings              => Loc.GetString("TrayMenu_Settings");
+
+        // ── Feature N5 + N7: Routing Simulator & Plugin Visual Config Dialog ───
+        public static string RouteSim_HeaderTitle           => Loc.GetString("RouteSim_HeaderTitle");
+        public static string RouteSim_InputPlaceholder      => Loc.GetString("RouteSim_InputPlaceholder");
+        public static string RouteSim_ClearTooltip          => Loc.GetString("RouteSim_ClearTooltip");
+        public static string RouteSim_MatchedRuleFmt        => Loc.GetString("RouteSim_MatchedRuleFmt");
+        public static string RouteSim_DnsFmt                => Loc.GetString("RouteSim_DnsFmt");
+        public static string RouteSim_RuleGlobalMode        => Loc.GetString("RouteSim_RuleGlobalMode");
+        public static string RouteSim_RuleDirectMode        => Loc.GetString("RouteSim_RuleDirectMode");
+        public static string RouteSim_RulePrivateIp         => Loc.GetString("RouteSim_RulePrivateIp");
+        public static string RouteSim_RuleTailscale         => Loc.GetString("RouteSim_RuleTailscale");
+        public static string RouteSim_RuleIntranet          => Loc.GetString("RouteSim_RuleIntranet");
+        public static string RouteSim_RuleAdBlock           => Loc.GetString("RouteSim_RuleAdBlock");
+        public static string RouteSim_RuleGoogleCn          => Loc.GetString("RouteSim_RuleGoogleCn");
+        public static string RouteSim_RuleChinaDirect       => Loc.GetString("RouteSim_RuleChinaDirect");
+        public static string RouteSim_RuleFinalProxy        => Loc.GetString("RouteSim_RuleFinalProxy");
+        public static string RouteSim_DnsLocalFmt           => Loc.GetString("RouteSim_DnsLocalFmt");
+        public static string RouteSim_DnsRemoteFmt          => Loc.GetString("RouteSim_DnsRemoteFmt");
+        public static string RouteSim_DnsBlocked            => Loc.GetString("RouteSim_DnsBlocked");
+        public static string RouteSim_DnsDirectSkipped      => Loc.GetString("RouteSim_DnsDirectSkipped");
+
+        public static string Plugins_ConfigTip              => Loc.GetString("Plugins_ConfigTip");
+        public static string Plugins_ConfigDialogTitleFmt   => Loc.GetString("Plugins_ConfigDialogTitleFmt");
+        public static string Plugins_ConfigDesc             => Loc.GetString("Plugins_ConfigDesc");
+        public static string Plugins_ConfigEmptyHint        => Loc.GetString("Plugins_ConfigEmptyHint");
+        public static string Plugins_ConfigAddParamBtn      => Loc.GetString("Plugins_ConfigAddParamBtn");
+        public static string Plugins_ConfigKeyPlaceholder   => Loc.GetString("Plugins_ConfigKeyPlaceholder");
+        public static string Plugins_ConfigValuePlaceholder => Loc.GetString("Plugins_ConfigValuePlaceholder");
+        public static string Plugins_ConfigAutoDetected     => Loc.GetString("Plugins_ConfigAutoDetected");
+        public static string Plugins_ConfigSavedTitle       => Loc.GetString("Plugins_ConfigSavedTitle");
+        public static string Plugins_ConfigSavedFmt         => Loc.GetString("Plugins_ConfigSavedFmt");
     }
 }

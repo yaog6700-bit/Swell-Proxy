@@ -51,11 +51,13 @@ namespace AnywhereWinUI.Services
             // UDP/QUIC 协议（TUIC、Hysteria2 等）无法直接用 UDP 探测延迟。
             // 策略：优先尝试 TCP connect（大多数服务器同端口也响应 TCP）；
             //       若 TCP 失败/超时则 fallback 到 ICMP Ping 兜底。
-            var isUdpBased = string.Equals(protocol, "hysteria2", StringComparison.OrdinalIgnoreCase)
-                          || string.Equals(protocol, "tuic",      StringComparison.OrdinalIgnoreCase)
+            var isUdpBased = string.Equals(protocol, "hysteria2",  StringComparison.OrdinalIgnoreCase)
+                          || string.Equals(protocol, "tuic",       StringComparison.OrdinalIgnoreCase)
                           || string.Equals(protocol, "hysteria 2", StringComparison.OrdinalIgnoreCase)
-                          || string.Equals(protocol, "hysteria",  StringComparison.OrdinalIgnoreCase)
-                          || string.Equals(protocol, "nowhere",   StringComparison.OrdinalIgnoreCase);
+                          || string.Equals(protocol, "hysteria",   StringComparison.OrdinalIgnoreCase)
+                          || string.Equals(protocol, "nowhere",    StringComparison.OrdinalIgnoreCase)
+                          || string.Equals(protocol, "wireguard",  StringComparison.OrdinalIgnoreCase)
+                          || string.Equals(protocol, "wg",         StringComparison.OrdinalIgnoreCase);
 
             if (!isUdpBased)
             {

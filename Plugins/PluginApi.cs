@@ -1,6 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Threading;
 using Microsoft.Windows.AppNotifications;
 using Microsoft.Windows.AppNotifications.Builder;
 
@@ -8,19 +12,36 @@ namespace AnywhereWinUI.Plugins
 {
     /// <summary>
     /// The C# API surface exposed to every plugin's JavaScript sandbox.
-    /// Plugins access this via the global <c>Plugin</c> variable injected by Jint.
+    /// Marked with DynamicallyAccessedMembers so ILLink trimming keeps all JS-invoked methods/properties.
     /// </summary>
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)]
     public class PluginApi
     {
-        private static readonly HttpClient _http = new()
+        private const long MaxTextResponseBytes = 8 * 1024 * 1024;       // 8 MB max text body
+        private const long MaxDownloadFileBytes = 200L * 1024 * 1024;    // 200 MB max download file
+
+        private static readonly HttpClient _http = new(new SocketsHttpHandler
         {
-            Timeout = TimeSpan.FromSeconds(30)
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+            AllowAutoRedirect = true,
+            MaxAutomaticRedirections = 5
+        })
+        {
+            Timeout = TimeSpan.FromSeconds(30),
+            MaxResponseContentBufferSize = MaxTextResponseBytes
+        };
+
+        private static readonly HashSet<string> _blockedWriteExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".exe", ".dll", ".sys", ".bat", ".cmd", ".ps1", ".vbs", ".wsf", ".msi", ".scr", ".com", ".js"
         };
 
         private readonly PluginManifest _manifest;
-        private static readonly string _baseDir = Path.Combine(
+        private static readonly string _baseDir = Path.GetFullPath(Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SwellProxy");
+            "SwellProxy"));
+        private static readonly string _pluginsJailDir = Path.GetFullPath(Path.Combine(_baseDir, "plugins"));
+        private static readonly string _pluginsJailPrefix = _pluginsJailDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
         internal PluginApi(PluginManifest manifest)
         {
@@ -29,31 +50,20 @@ namespace AnywhereWinUI.Plugins
 
         // ── Identity ────────────────────────────────────────────────
 
-        /// <summary>Plugin's unique identifier.</summary>
         public string Id => _manifest.Id;
-
-        /// <summary>Plugin's display name.</summary>
         public string Name => _manifest.Name;
-
-        /// <summary>Plugin's version string.</summary>
         public string Version => _manifest.Version;
 
         // ── Logging ─────────────────────────────────────────────────
 
-        /// <summary>Write an informational message to the app log.</summary>
         public void Log(string message) =>
             Services.CoreManager.Instance.AppendLog($"[Plugin:{_manifest.Name}] {message}");
 
-        /// <summary>Write an error message to the app log.</summary>
         public void LogError(string message) =>
             Services.CoreManager.Instance.AppendLog($"[Plugin:{_manifest.Name}] ❌ {message}");
 
         // ── Configuration ───────────────────────────────────────────
 
-        /// <summary>
-        /// Read a plugin configuration value by key.
-        /// Returns empty string if the key is not found.
-        /// </summary>
         public string GetConfig(string key)
         {
             foreach (var item in _manifest.Configuration)
@@ -64,14 +74,34 @@ namespace AnywhereWinUI.Plugins
             return string.Empty;
         }
 
+        public void SetConfig(string key, string value)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return;
+            var existing = _manifest.Configuration.Find(c => string.Equals(c.Key, key, StringComparison.Ordinal));
+            if (existing != null)
+            {
+                existing.Value = value ?? string.Empty;
+            }
+            else
+            {
+                _manifest.Configuration.Add(new PluginConfigItem
+                {
+                    Key = key.Trim(),
+                    Label = key.Trim(),
+                    Value = value ?? string.Empty
+                });
+            }
+            _ = PluginManager.Instance.SaveAsync();
+        }
+
         // ── HTTP ────────────────────────────────────────────────────
 
-        /// <summary>Perform a synchronous HTTP GET and return the response body as a string.</summary>
         public string HttpGet(string url)
         {
             try
             {
-                var response = _http.GetAsync(url).GetAwaiter().GetResult();
+                ValidateOutboundUrl(url);
+                using var response = _http.GetAsync(url).GetAwaiter().GetResult();
                 if (!response.IsSuccessStatusCode)
                 {
                     throw new Exception($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
@@ -85,15 +115,13 @@ namespace AnywhereWinUI.Plugins
             }
         }
 
-        /// <summary>
-        /// Perform a synchronous HTTP POST.
-        /// </summary>
         public string HttpPost(string url, string body, string contentType = "application/json")
         {
             try
             {
-                using var content = new StringContent(body, System.Text.Encoding.UTF8, contentType);
-                var response = _http.PostAsync(url, content).GetAwaiter().GetResult();
+                ValidateOutboundUrl(url);
+                using var content = new StringContent(body ?? string.Empty, System.Text.Encoding.UTF8, contentType);
+                using var response = _http.PostAsync(url, content).GetAwaiter().GetResult();
                 if (!response.IsSuccessStatusCode)
                 {
                     throw new Exception($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
@@ -107,19 +135,37 @@ namespace AnywhereWinUI.Plugins
             }
         }
 
-        /// <summary>
-        /// Download a file directly to disk without loading it into string memory.
-        /// Useful for large downloads like speedtest files or rule providers.
-        /// </summary>
         public void DownloadFile(string url, string destPath)
         {
             try
             {
-                var fullPath = ResolvePath(destPath);
+                ValidateOutboundUrl(url);
+                var fullPath = ResolveJailedPath(destPath, isWriteOrDelete: true);
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-                using var stream = _http.GetStreamAsync(url).GetAwaiter().GetResult();
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                using var response = _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token).GetAwaiter().GetResult();
+                response.EnsureSuccessStatusCode();
+
+                if (response.Content.Headers.ContentLength is long contentLen && contentLen > MaxDownloadFileBytes)
+                {
+                    throw new InvalidOperationException($"Download exceeds {MaxDownloadFileBytes / (1024 * 1024)} MB limit.");
+                }
+
+                using var stream = response.Content.ReadAsStream(cts.Token);
                 using var fileStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
-                stream.CopyTo(fileStream);
+                byte[] buffer = new byte[65536];
+                long totalBytes = 0;
+                int read;
+                while ((read = stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cts.Token).GetAwaiter().GetResult()) > 0)
+                {
+                    totalBytes += read;
+                    if (totalBytes > MaxDownloadFileBytes)
+                    {
+                        throw new InvalidOperationException($"Download exceeded {MaxDownloadFileBytes / (1024 * 1024)} MB limit.");
+                    }
+                    fileStream.Write(buffer, 0, read);
+                }
             }
             catch (Exception ex)
             {
@@ -128,42 +174,47 @@ namespace AnywhereWinUI.Plugins
             }
         }
 
-        // ── File I/O ─────────────────────────────────────────────────
+        // ── File I/O (Jailed strictly to %LocalAppData%\SwellProxy\plugins\) ──
 
-        /// <summary>
-        /// Read a file. Path is relative to the SwellProxy data directory.
-        /// Absolute paths are also accepted.
-        /// </summary>
         public string ReadFile(string path)
         {
-            var full = ResolvePath(path);
+            var full = ResolveJailedPath(path, isWriteOrDelete: false);
+            var fi = new FileInfo(full);
+            if (fi.Exists && fi.Length > MaxTextResponseBytes)
+                throw new InvalidOperationException("File exceeds 8 MB plugin read limit.");
             return File.ReadAllText(full);
         }
 
-        /// <summary>
-        /// Write text to a file. Creates parent directories as needed.
-        /// Path is relative to the SwellProxy data directory, or absolute.
-        /// </summary>
         public void WriteFile(string path, string content)
         {
-            var full = ResolvePath(path);
+            if (content != null && content.Length > MaxTextResponseBytes)
+                throw new InvalidOperationException("Content exceeds 8 MB plugin write limit.");
+
+            var full = ResolveJailedPath(path, isWriteOrDelete: true);
             Directory.CreateDirectory(Path.GetDirectoryName(full)!);
-            File.WriteAllText(full, content);
+            Helpers.LocalSettingsHelper.WriteAllTextAtomic(full, content ?? string.Empty);
         }
 
-        /// <summary>Returns true if the specified file exists.</summary>
-        public bool FileExists(string path) => File.Exists(ResolvePath(path));
+        public bool FileExists(string path)
+        {
+            try
+            {
+                return File.Exists(ResolveJailedPath(path, isWriteOrDelete: false));
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
-        /// <summary>Delete a file if it exists.</summary>
         public void DeleteFile(string path)
         {
-            var full = ResolvePath(path);
+            var full = ResolveJailedPath(path, isWriteOrDelete: true);
             if (File.Exists(full)) File.Delete(full);
         }
 
         // ── Notifications ────────────────────────────────────────────
 
-        /// <summary>Show a Windows toast notification.</summary>
         public void Notify(string title, string message)
         {
             try
@@ -175,17 +226,98 @@ namespace AnywhereWinUI.Plugins
             }
             catch
             {
-                // Notification may fail in some environments; silently ignore.
                 Log($"Notification: {title} — {message}");
             }
         }
 
-        // ── Helpers ──────────────────────────────────────────────────
+        // ── Sandbox Helpers ──────────────────────────────────────────
 
-        private static string ResolvePath(string path)
+        private string ResolveJailedPath(string path, bool isWriteOrDelete)
         {
-            if (Path.IsPathRooted(path)) return path;
-            return Path.Combine(_baseDir, path);
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("File path cannot be empty.");
+
+            if (Path.IsPathRooted(path))
+                throw new UnauthorizedAccessException("Plugins are not allowed to access absolute filesystem paths.");
+
+            string normalizedRel = path.Replace('/', Path.DirectorySeparatorChar).TrimStart(Path.DirectorySeparatorChar);
+            string candidate;
+            if (normalizedRel.StartsWith("plugins" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            {
+                candidate = Path.GetFullPath(Path.Combine(_baseDir, normalizedRel));
+            }
+            else
+            {
+                string safeId = SanitizeFolderToken(_manifest.Id);
+                candidate = Path.GetFullPath(Path.Combine(_pluginsJailDir, "data", safeId, normalizedRel));
+            }
+
+            if (!candidate.StartsWith(_pluginsJailPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException("Plugin file path must stay inside the plugins directory.");
+            }
+
+            if (isWriteOrDelete)
+            {
+                string ext = Path.GetExtension(candidate);
+                if (_blockedWriteExtensions.Contains(ext))
+                {
+                    throw new UnauthorizedAccessException($"Plugins are not permitted to write or delete '{ext}' files.");
+                }
+            }
+
+            return candidate;
+        }
+
+        private static string SanitizeFolderToken(string? id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return "default";
+            var chars = id.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                char c = chars[i];
+                if (!char.IsLetterOrDigit(c) && c != '_' && c != '-')
+                    chars[i] = '_';
+            }
+            return new string(chars);
+        }
+
+        private static void ValidateOutboundUrl(string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                throw new ArgumentException("Invalid URL.");
+
+            if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException($"Unsupported URI scheme: {uri.Scheme}");
+            }
+
+            string host = uri.IdnHost.Trim('[', ']');
+            if (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException("Plugins are not allowed to access localhost control endpoints.");
+            }
+
+            if (IPAddress.TryParse(host, out var ip))
+            {
+                if (IPAddress.IsLoopback(ip) ||
+                    ip.Equals(IPAddress.Any) ||
+                    ip.Equals(IPAddress.IPv6Any) ||
+                    IsLinkLocal(ip))
+                {
+                    throw new UnauthorizedAccessException("Plugins are not allowed to access loopback or link-local addresses.");
+                }
+            }
+        }
+
+        private static bool IsLinkLocal(IPAddress ip)
+        {
+            if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+                return ip.IsIPv6LinkLocal;
+
+            var b = ip.GetAddressBytes();
+            return b.Length == 4 && b[0] == 169 && b[1] == 254;
         }
     }
 }

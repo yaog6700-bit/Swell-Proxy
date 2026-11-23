@@ -641,5 +641,45 @@ proxies:
             Assert.Equal("/up2", nodes[1].Path);
             Assert.Equal("h2.example.com", nodes[1].WsHost);
         }
+
+        [Fact]
+        public void Parse_ColumnZeroSequenceItemsAndVlessEncryption_ArePreserved()
+        {
+            // Malformed top-level tab forces ExtractProxiesSection fallback while items sit at column 0
+            const string yaml = "bad:\n\t- broken\nproxies:\n- name: pq-vless\n  type: vless\n  server: pq.example.com\n  port: 443\n  uuid: 11111111-2222-3333-4444-555555555555\n  encryption: mlkem768x25519plus.native.0rtt\n  tls: true\n";
+            var node = Assert.Single(ClashSubscriptionParser.Parse(yaml, SubA));
+            Assert.Equal("pq.example.com:443", node.Host);
+            Assert.Equal("mlkem768x25519plus.native.0rtt", node.VlessEncryption);
+        }
+
+        [Fact]
+        public void NodeLinkParser_EdgeCases_SsFragment_Ipv6_PortHopping_TrojanReality()
+        {
+            var ss = NodeLinkParser.Parse("ss://2022-blake3-aes-128-gcm:dGVzdGtleTEyMzQ1Njc4OQ==@1.2.3.4:8388?shadow-tls=1&shadow-tls-sni=sni.example.com&shadow-tls-password=stpass#HK-SS");
+            Assert.NotNull(ss);
+            Assert.Equal("HK-SS", ss!.Name);
+            Assert.Equal("sni.example.com", ss.Sni);
+            Assert.Equal("2022-blake3-aes-128-gcm", ss.Encryption);
+            Assert.Equal("dGVzdGtleTEyMzQ1Njc4OQ==", ss.Password);
+
+            var vlessIpv6 = NodeLinkParser.Parse("vless://11111111-2222-3333-4444-555555555555@[2001:db8::1]?security=tls&sni=v6.example.com#V6DefaultPort");
+            Assert.NotNull(vlessIpv6);
+            Assert.Equal("[2001:db8::1]:443", vlessIpv6!.Host);
+
+            var hy2Hop = NodeLinkParser.Parse("hy2://secret@hop.example.com:443,20000-30000?sni=hop.example.com#HopNode");
+            Assert.NotNull(hy2Hop);
+            Assert.Equal("hop.example.com:443", hy2Hop!.Host);
+
+            var trojanReality = NodeLinkParser.Parse("trojan://secret@tr.example.com:443?security=reality&sni=www.microsoft.com&pbk=pubKey123&sid=abcd&spx=%2F#TR-Reality");
+            Assert.NotNull(trojanReality);
+            Assert.Equal("pubKey123", trojanReality!.PublicKey);
+            Assert.Equal("abcd", trojanReality.ShortId);
+            Assert.Equal("/", trojanReality.SpiderX);
+
+            Assert.False(NodeLinkParser.TrySplitHostPort("foo:bar:baz", out _, out _));
+            Assert.True(NodeLinkParser.TrySplitHostPort("2001:db8::1", out var bareV6, out var barePort));
+            Assert.Equal("2001:db8::1", bareV6);
+            Assert.Equal(0, barePort);
+        }
     }
 }

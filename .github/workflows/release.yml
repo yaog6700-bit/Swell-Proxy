@@ -35,9 +35,12 @@ jobs:
       - name: Compute version from tag
         id: ver
         shell: pwsh
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
         run: |
-          $tag = '${{ github.ref_name }}'
-          if ('${{ github.ref_type }}' -eq 'tag') {
+          $tag = $env:REF_NAME
+          if ($env:REF_TYPE -eq 'tag') {
             $ver = ($tag -replace '^v','') -replace '-.*$',''
           } else {
             $xml = [xml](Get-Content AnywhereWinUI.csproj)
@@ -47,6 +50,24 @@ jobs:
           if ($ver -notmatch '^\d+(\.\d+){0,3}$') { $ver = '1.0.0' }
           "version=$ver" | Out-File $env:GITHUB_OUTPUT -Append
           Write-Host "Resolved version: $ver (from ref $tag)"
+
+      - name: Prepare native sing-box for ARM64
+        if: matrix.rid == 'win-arm64'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $rel = Invoke-RestMethod -Headers @{ Authorization = "Bearer $env:GH_TOKEN"; "User-Agent" = "Swell-CI" } "https://api.github.com/repos/SagerNet/sing-box/releases/latest"
+          $asset = $rel.assets | Where-Object { $_.name -match 'windows-arm64\.zip$' } | Select-Object -First 1
+          if (-not $asset) { throw "Could not find windows-arm64 asset in SagerNet/sing-box latest release" }
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "sb-arm64.zip"
+          Expand-Archive -Path "sb-arm64.zip" -DestinationPath "sb-arm64" -Force
+          $armExe = Get-ChildItem -Path "sb-arm64" -Filter "sing-box.exe" -Recurse | Select-Object -First 1
+          Copy-Item $armExe.FullName -Destination "Assets/sing-box.exe" -Force
+          if (Test-Path "Assets/libcronet.dll") { Remove-Item "Assets/libcronet.dll" -Force }
+          Remove-Item "sb-arm64.zip" -Force
+          Remove-Item "sb-arm64" -Recurse -Force
+          Write-Host "Replaced Assets/sing-box.exe with native windows-arm64 $($rel.tag_name)"
 
       - name: Run Parser Unit Tests
         run: dotnet test tests/AnywhereWinUI.Parsers.Tests/AnywhereWinUI.Parsers.Tests.csproj -c Release -nologo
@@ -87,7 +108,12 @@ jobs:
             exit 1
           }
           $priExternal = (Test-Path "$publishDir/Swell Proxy.pri") -or (Test-Path "$publishDir/resources.pri")
-          $priBundled  = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($exe)).Contains("Swell Proxy.pri")
+          $priBundled  = $false
+          if (-not $priExternal) {
+            $needle = [System.Text.Encoding]::ASCII.GetBytes("Swell Proxy.pri")
+            $bytes  = [System.IO.File]::ReadAllBytes($exe)
+            $priBundled = [System.MemoryExtensions]::IndexOf([System.ReadOnlySpan[byte]]$bytes, [System.ReadOnlySpan[byte]]$needle) -ge 0
+          }
           if (-not ($priExternal -or $priBundled)) {
             Write-Host "::error::Publish did not include MRT resource index (Swell Proxy.pri) in $publishDir"
             exit 1
@@ -120,8 +146,9 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          $tag = '${{ github.ref_name }}'
+          $tag = $env:REF_NAME
           $commitMsg = (git log -1 --pretty=%B) -join "`n"
           $isPre = $false
           if ($tag -match '-') { $isPre = $true }

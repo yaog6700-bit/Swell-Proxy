@@ -2696,4 +2696,184 @@ Download the latest Shoes binary online now?
   <data name="Settings_AppDownloadingBtnFmt" xml:space="preserve">
     <value>Downloading {0}%…</value>
   </data>
+  <data name="Shoes_ReasonAutoSelect" xml:space="preserve">
+    <value>Auto fastest/failover requires sing-box core</value>
+  </data>
+  <data name="TrayPanel_StatusNormal" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="TrayPanel_StatusStopped" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="TrayPanel_StatusStarting" xml:space="preserve">
+    <value>Starting…</value>
+  </data>
+  <data name="TrayPanel_StatusSwitching" xml:space="preserve">
+    <value>Switching…</value>
+  </data>
+  <data name="TrayPanel_ProxyTamperedShort" xml:space="preserve">
+    <value>System proxy modified externally</value>
+  </data>
+  <data name="TrayPanel_UpdateReadyFmt" xml:space="preserve">
+    <value>Update {0} is ready</value>
+  </data>
+  <data name="TrayPanel_UpdateAvailFmt" xml:space="preserve">
+    <value>Update {0} available</value>
+  </data>
+  <data name="TrayPanel_UpdateViewBtn" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="TrayPanel_TodayFmt" xml:space="preserve">
+    <value>Today {0}</value>
+  </data>
+  <data name="TrayPanel_NodesHeader" xml:space="preserve">
+    <value>Nodes</value>
+  </data>
+  <data name="TrayPanel_PingBtn" xml:space="preserve">
+    <value>Ping</value>
+  </data>
+  <data name="TrayPanel_Pinging" xml:space="preserve">
+    <value>Testing…</value>
+  </data>
+  <data name="TrayPanel_AutoTitle" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="TrayPanel_AutoSubtitle" xml:space="preserve">
+    <value>Fastest + Failover</value>
+  </data>
+  <data name="TrayPanel_CurrentBadge" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="TrayPanel_AllNodes" xml:space="preserve">
+    <value>All Nodes...</value>
+  </data>
+  <data name="TrayPanel_NodeCountFmt" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="TrayPanel_EmptyNodes" xml:space="preserve">
+    <value>No nodes yet — click to import</value>
+  </data>
+  <data name="TrayPanel_ModeLabel" xml:space="preserve">
+    <value>Mode</value>
+  </data>
+  <data name="TrayPanel_ModeRuleShort" xml:space="preserve">
+    <value>Rule</value>
+  </data>
+  <data name="TrayPanel_ModeGlobalShort" xml:space="preserve">
+    <value>Global</value>
+  </data>
+  <data name="TrayPanel_ModeDirectShort" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="TrayMenu_EnableProxy" xml:space="preserve">
+    <value>Enable Proxy</value>
+  </data>
+  <data name="TrayMenu_SystemProxy" xml:space="preserve">
+    <value>System Proxy</value>
+  </data>
+  <data name="TrayMenu_TunMode" xml:space="preserve">
+    <value>TUN Mode</value>
+  </data>
+  <data name="TrayMenu_NodesSubmenu" xml:space="preserve">
+    <value>Nodes</value>
+  </data>
+  <data name="TrayMenu_AutoNodeItem" xml:space="preserve">
+    <value>Auto (Fastest + Failover)</value>
+  </data>
+  <data name="TrayMenu_AllNodesFmt" xml:space="preserve">
+    <value>All {0} Nodes…</value>
+  </data>
+  <data name="TrayMenu_SubsSubmenu" xml:space="preserve">
+    <value>Subscriptions</value>
+  </data>
+  <data name="TrayMenu_UpdateAllSubs" xml:space="preserve">
+    <value>Update All Subscriptions</value>
+  </data>
+  <data name="TrayMenu_Settings" xml:space="preserve">
+    <value>Settings…</value>
+  </data>
+  <data name="RouteSim_HeaderTitle" xml:space="preserve">
+    <value>Routing Rule Simulator</value>
+  </data>
+  <data name="RouteSim_InputPlaceholder" xml:space="preserve">
+    <value>Test any domain, URL, IP, or process (e.g. claude.ai, 91.108.4.1, Telegram.exe)</value>
+  </data>
+  <data name="RouteSim_ClearTooltip" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="RouteSim_MatchedRuleFmt" xml:space="preserve">
+    <value>Matched: {0}</value>
+  </data>
+  <data name="RouteSim_DnsFmt" xml:space="preserve">
+    <value>DNS: {0}</value>
+  </data>
+  <data name="RouteSim_RuleGlobalMode" xml:space="preserve">
+    <value>Global Proxy Mode (all public traffic via proxy)</value>
+  </data>
+  <data name="RouteSim_RuleDirectMode" xml:space="preserve">
+    <value>Global Direct Mode (all traffic bypasses proxy)</value>
+  </data>
+  <data name="RouteSim_RulePrivateIp" xml:space="preserve">
+    <value>Built-in Private/LAN Address Rule (ip_is_private)</value>
+  </data>
+  <data name="RouteSim_RuleTailscale" xml:space="preserve">
+    <value>Built-in Tailscale Mesh Route</value>
+  </data>
+  <data name="RouteSim_RuleIntranet" xml:space="preserve">
+    <value>Enterprise Intranet / VPN Direct Route</value>
+  </data>
+  <data name="RouteSim_RuleAdBlock" xml:space="preserve">
+    <value>Built-in Ad-Blocking Rule (geosite-category-ads-all)</value>
+  </data>
+  <data name="RouteSim_RuleGoogleCn" xml:space="preserve">
+    <value>Google Play Download Proxy Protection</value>
+  </data>
+  <data name="RouteSim_RuleChinaDirect" xml:space="preserve">
+    <value>Bypass Mainland China Rule-Set (geosite-cn / geoip-cn)</value>
+  </data>
+  <data name="RouteSim_RuleFinalProxy" xml:space="preserve">
+    <value>Default Fallback (final → Proxy)</value>
+  </data>
+  <data name="RouteSim_DnsLocalFmt" xml:space="preserve">
+    <value>Local Direct ({0})</value>
+  </data>
+  <data name="RouteSim_DnsRemoteFmt" xml:space="preserve">
+    <value>Remote Proxy ({0})</value>
+  </data>
+  <data name="RouteSim_DnsBlocked" xml:space="preserve">
+    <value>Blocked</value>
+  </data>
+  <data name="RouteSim_DnsDirectSkipped" xml:space="preserve">
+    <value>Skipped (raw IP target)</value>
+  </data>
+  <data name="Plugins_ConfigTip" xml:space="preserve">
+    <value>Configure plugin parameters</value>
+  </data>
+  <data name="Plugins_ConfigDialogTitleFmt" xml:space="preserve">
+    <value>Plugin Settings · {0}</value>
+  </data>
+  <data name="Plugins_ConfigDesc" xml:space="preserve">
+    <value>Configure key-value parameters read via Plugin.GetConfig(key). Changes take effect immediately.</value>
+  </data>
+  <data name="Plugins_ConfigEmptyHint" xml:space="preserve">
+    <value>No preset parameters detected. Click below to add a custom key-value pair.</value>
+  </data>
+  <data name="Plugins_ConfigAddParamBtn" xml:space="preserve">
+    <value>Add Parameter</value>
+  </data>
+  <data name="Plugins_ConfigKeyPlaceholder" xml:space="preserve">
+    <value>Parameter Key</value>
+  </data>
+  <data name="Plugins_ConfigValuePlaceholder" xml:space="preserve">
+    <value>Value (leave empty for script default)</value>
+  </data>
+  <data name="Plugins_ConfigAutoDetected" xml:space="preserve">
+    <value>Script parameter</value>
+  </data>
+  <data name="Plugins_ConfigSavedTitle" xml:space="preserve">
+    <value>Settings Saved</value>
+  </data>
+  <data name="Plugins_ConfigSavedFmt" xml:space="preserve">
+    <value>Parameters for "{0}" have been saved and reloaded.</value>
+  </data>
 </root>

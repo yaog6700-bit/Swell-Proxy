@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Principal;
@@ -12,20 +14,25 @@ internal static class Program
     private const string ExtractedDirArg = "--extracted-dir=";
     private const string InstallDirArg   = "--install-dir=";
     private const string LaunchAfterArg  = "--launch-after=";
+    private const string LaunchArgsArg   = "--launch-args=";
     private const string ElevatedFlag    = "--elevated";
 
-    private const int CopyRetryCount     = 5;
-    private const int CopyRetryDelayMs   = 200;
-    private const int ParentExitTimeoutMs = 15_000;
+    private const int CopyRetryCount      = 10;
+    private const int CopyRetryDelayMs    = 250;
+    private const int ParentExitTimeoutMs = 20_000;
 
     private static StreamWriter? _log;
 
     private static int Main(string[] args)
     {
+        string? installDir = null;
+        string? launchAfter = null;
+        string? launchArgs = null;
+
         try
         {
             int? parentPid = null;
-            string? extractedDir = null, installDir = null, launchAfter = null;
+            string? extractedDir = null;
             var elevated = false;
 
             foreach (var a in args)
@@ -38,6 +45,8 @@ internal static class Program
                     installDir = a[InstallDirArg.Length..];
                 else if (a.StartsWith(LaunchAfterArg, StringComparison.OrdinalIgnoreCase))
                     launchAfter = a[LaunchAfterArg.Length..];
+                else if (a.StartsWith(LaunchArgsArg, StringComparison.OrdinalIgnoreCase))
+                    launchArgs = a[LaunchArgsArg.Length..];
                 else if (string.Equals(a, ElevatedFlag, StringComparison.OrdinalIgnoreCase))
                     elevated = true;
             }
@@ -45,31 +54,47 @@ internal static class Program
             if (parentPid is null || string.IsNullOrEmpty(extractedDir) ||
                 string.IsNullOrEmpty(installDir) || string.IsNullOrEmpty(launchAfter))
             {
-                Console.Error.WriteLine("Usage: Swell.Updater --parent-pid=N --extracted-dir=PATH --install-dir=PATH --launch-after=NAME [--elevated]");
+                Console.Error.WriteLine("Usage: Swell.Updater --parent-pid=N --extracted-dir=PATH --install-dir=PATH --launch-after=NAME [--launch-args=ARGS] [--elevated]");
                 return 2;
             }
 
-            OpenLog(installDir);
+            OpenLog();
             Log($"Updater started. parent={parentPid}, elevated={elevated}");
             Log($"  extracted-dir = {extractedDir}");
             Log($"  install-dir   = {installDir}");
             Log($"  launch-after  = {launchAfter}");
+            Log($"  launch-args   = {launchArgs}");
 
-            WaitForParentExit(parentPid.Value);
+            if (!WaitForParentExit(parentPid.Value))
+            {
+                Log($"Parent {parentPid.Value} is still running after {ParentExitTimeoutMs} ms; aborting update to avoid corrupting installation.");
+                return 6;
+            }
 
             if (!TryEnsureWritable(installDir))
             {
                 if (!elevated)
                 {
                     Log("Install dir not writable; relaunching elevated…");
-                    RelaunchElevated(args);
-                    return 0;
+                    if (TryRelaunchElevated(args))
+                    {
+                        return 0;
+                    }
+
+                    // User cancelled UAC — relaunch the existing app rather than leaving nothing running!
+                    Log("Elevation cancelled by user; relaunching existing app.");
+                    var existingExe = Path.Combine(installDir, launchAfter);
+                    if (File.Exists(existingExe))
+                    {
+                        try { LaunchApp(existingExe, installDir, launchArgs); } catch { }
+                    }
+                    return 3;
                 }
                 Log("Install dir still not writable after elevation. Aborting.");
                 return 3;
             }
 
-            CopyOverwrite(extractedDir, installDir);
+            CopyOverwriteWithRollback(extractedDir, installDir);
             Log("Copy complete.");
 
             var newExe = Path.Combine(installDir, launchAfter);
@@ -81,11 +106,9 @@ internal static class Program
 
             CleanupLargeStagingDirs(extractedDir);
 
-            // Launch the new app unelevated. Even if we elevated to do the file
-            // overwrite, the app itself should run under the user's normal token.
             try
             {
-                LaunchApp(newExe, installDir);
+                LaunchApp(newExe, installDir, launchArgs);
                 Log("New app launched.");
             }
             catch (Exception ex)
@@ -99,6 +122,15 @@ internal static class Program
         catch (Exception ex)
         {
             try { Log($"Fatal: {ex}"); } catch { }
+            // Attempt best-effort relaunch of existing app if rollback preserved it
+            if (!string.IsNullOrEmpty(installDir) && !string.IsNullOrEmpty(launchAfter))
+            {
+                var fallbackExe = Path.Combine(installDir, launchAfter);
+                if (File.Exists(fallbackExe))
+                {
+                    try { LaunchApp(fallbackExe, installDir, launchArgs); } catch { }
+                }
+            }
             return 1;
         }
         finally
@@ -107,23 +139,21 @@ internal static class Program
         }
     }
 
-    private static void WaitForParentExit(int pid)
+    private static bool WaitForParentExit(int pid)
     {
         try
         {
             using var parent = Process.GetProcessById(pid);
-            if (!parent.WaitForExit(ParentExitTimeoutMs))
-            {
-                Log($"Parent {pid} did not exit within {ParentExitTimeoutMs} ms; continuing anyway.");
-            }
+            return parent.WaitForExit(ParentExitTimeoutMs);
         }
         catch (ArgumentException)
         {
-            // Process already gone — that's fine.
+            return true; // Process already gone
         }
         catch (Exception ex)
         {
             Log($"WaitForParentExit error: {ex.Message}");
+            return true;
         }
     }
 
@@ -131,7 +161,7 @@ internal static class Program
     {
         try
         {
-            var probe = Path.Combine(installDir, ".xrayui-write-test");
+            var probe = Path.Combine(installDir, $".swell-write-test-{Guid.NewGuid():N}");
             File.WriteAllText(probe, string.Empty);
             File.Delete(probe);
             return true;
@@ -140,25 +170,37 @@ internal static class Program
         catch (IOException ex)                 { Log($"Write probe IO error: {ex.Message}"); return false; }
     }
 
-    private static void RelaunchElevated(string[] originalArgs)
+    private static bool TryRelaunchElevated(string[] originalArgs)
     {
-        var psi = new ProcessStartInfo
+        try
         {
-            FileName        = Environment.ProcessPath ?? "Swell.Updater.exe",
-            UseShellExecute = true,
-            Verb            = "runas",
-        };
-        foreach (var a in originalArgs) psi.ArgumentList.Add(a);
-        psi.ArgumentList.Add(ElevatedFlag);
-        Process.Start(psi);
+            var psi = new ProcessStartInfo
+            {
+                FileName        = Environment.ProcessPath ?? "Swell.Updater.exe",
+                UseShellExecute = true,
+                Verb            = "runas",
+            };
+            foreach (var a in originalArgs) psi.ArgumentList.Add(a);
+            psi.ArgumentList.Add(ElevatedFlag);
+            using var p = Process.Start(psi);
+            return true;
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            return false; // User cancelled UAC
+        }
     }
 
-    private static void CopyOverwrite(string source, string dest)
+    private static void CopyOverwriteWithRollback(string source, string dest)
     {
         Directory.CreateDirectory(dest);
+        var stageRoot = Directory.GetParent(source)?.FullName ?? Path.GetTempPath();
+        var rollbackDir = Path.Combine(stageRoot, "rollback_" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(rollbackDir);
 
-        var copied = 0;
+        var backedUpFiles = new List<(string RelativePath, bool ExistedPreviously)>();
         string? currentFile = null;
+
         try
         {
             foreach (var srcFile in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
@@ -169,14 +211,43 @@ internal static class Program
                 if (!string.IsNullOrEmpty(dstDir))
                     Directory.CreateDirectory(dstDir);
 
+                bool existed = File.Exists(dstFile);
+                if (existed)
+                {
+                    var bakFile = Path.Combine(rollbackDir, currentFile);
+                    var bakDir  = Path.GetDirectoryName(bakFile);
+                    if (!string.IsNullOrEmpty(bakDir))
+                        Directory.CreateDirectory(bakDir);
+                    File.Copy(dstFile, bakFile, overwrite: true);
+                }
+
                 CopyWithRetry(srcFile, dstFile);
-                copied++;
+                backedUpFiles.Add((currentFile, existed));
             }
-            Log($"Copied {copied} files into {dest}");
+            Log($"Copied {backedUpFiles.Count} files into {dest}");
+            DeleteDirectoryBestEffort(rollbackDir);
         }
         catch (Exception ex)
         {
-            Log($"Copy aborted after {copied} files. Failed on '{currentFile}': {ex.Message}");
+            Log($"Copy aborted after {backedUpFiles.Count} files on '{currentFile}': {ex.Message}. Rolling back…");
+            for (int i = backedUpFiles.Count - 1; i >= 0; i--)
+            {
+                var (rel, existed) = backedUpFiles[i];
+                var dstFile = Path.Combine(dest, rel);
+                var bakFile = Path.Combine(rollbackDir, rel);
+                try
+                {
+                    if (existed && File.Exists(bakFile))
+                        File.Copy(bakFile, dstFile, overwrite: true);
+                    else if (!existed && File.Exists(dstFile))
+                        File.Delete(dstFile);
+                }
+                catch (Exception rbEx)
+                {
+                    Log($"Rollback warning for '{rel}': {rbEx.Message}");
+                }
+            }
+            DeleteDirectoryBestEffort(rollbackDir);
             throw;
         }
     }
@@ -226,16 +297,24 @@ internal static class Program
         }
     }
 
-    private static void LaunchApp(string exePath, string workingDirectory)
+    private static void LaunchApp(string exePath, string workingDirectory, string? launchArgs)
     {
-        if (IsElevated())
+        bool needsAdminForTun = !string.IsNullOrEmpty(launchArgs) &&
+                                launchArgs.Contains("--tun", StringComparison.OrdinalIgnoreCase);
+
+        if (IsElevated() && !needsAdminForTun)
         {
             try
             {
-                Process.Start(new ProcessStartInfo
+                string explorerArgs = string.IsNullOrWhiteSpace(launchArgs)
+                    ? QuoteForCommandLine(exePath)
+                    : $"{QuoteForCommandLine(exePath)} {launchArgs}";
+
+                using var p = Process.Start(new ProcessStartInfo
                 {
                     FileName        = "explorer.exe",
-                    Arguments       = QuoteForCommandLine(exePath),
+                    Arguments       = explorerArgs,
+                    WorkingDirectory = workingDirectory,
                     UseShellExecute = true,
                 });
                 return;
@@ -246,12 +325,18 @@ internal static class Program
             }
         }
 
-        Process.Start(new ProcessStartInfo
+        var psi = new ProcessStartInfo
         {
             FileName         = exePath,
+            Arguments        = launchArgs ?? string.Empty,
             WorkingDirectory = workingDirectory,
             UseShellExecute  = true,
-        });
+        };
+        if (needsAdminForTun && !IsElevated())
+        {
+            psi.Verb = "runas";
+        }
+        using var started = Process.Start(psi);
     }
 
     private static bool IsElevated()
@@ -263,7 +348,7 @@ internal static class Program
     private static string QuoteForCommandLine(string value) =>
         "\"" + value.Replace("\"", "\\\"") + "\"";
 
-    private static void OpenLog(string installDir)
+    private static void OpenLog()
     {
         try
         {

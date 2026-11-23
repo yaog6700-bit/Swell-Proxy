@@ -210,8 +210,12 @@ namespace AnywhereWinUI.Services
 
                 if (i > start && line.Length > 0 && !char.IsWhiteSpace(line[0]))
                 {
-                    // Any column-0 token ends the block (next top-level key, `---`, `...`).
-                    if (line.StartsWith("#", StringComparison.Ordinal))
+                    // Allow column-0 comments and YAML sequence items (`- ...`) belonging to `proxies:`.
+                    if (line.StartsWith("#", StringComparison.Ordinal) ||
+                        line.StartsWith("- ", StringComparison.Ordinal) ||
+                        line.StartsWith("-\t", StringComparison.Ordinal) ||
+                        line.StartsWith("-{", StringComparison.Ordinal) ||
+                        line == "-")
                     {
                         builder.AppendLine(line);
                         continue;
@@ -375,6 +379,9 @@ namespace AnywhereWinUI.Services
             node.Uuid = uuid;
             node.Flow = Trimmed(Str(p, "flow"));
             node.Encryption = "none";
+            var vlessEnc = Trimmed(Str(p, "encryption"));
+            if (!string.IsNullOrEmpty(vlessEnc))
+                node.VlessEncryption = vlessEnc;
 
             ApplyTls(node, p, defaultTls: false);
             ApplyReality(node, p);

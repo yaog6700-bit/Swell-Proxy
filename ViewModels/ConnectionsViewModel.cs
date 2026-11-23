@@ -59,15 +59,51 @@ namespace AnywhereWinUI.ViewModels
         private ClashConnectionsMessage? _lastSnapshot;
         private CancellationTokenSource? _toastCts;
         private bool _isActivePage = false;
+        private bool _isSubscribedToApi = false;
         private const int MaxConnections = 200;
         private const int MaxAppRankings = 12;
 
         public ConnectionsViewModel()
         {
-            // BUG-2 fix: 在构造时缓存 DispatcherQueue，避免在背景线程回调时 GetForCurrentThread() 返回 null
             _dispatcherQueue = DispatcherQueue.GetForCurrentThread()
                                ?? MainWindow.Instance?.DispatcherQueue;
-            SingboxApiClient.Instance.ConnectionsUpdated += OnConnectionsUpdated;
+            MainWindow.VisibilityToUserChanged += OnMainWindowVisibilityChanged;
+        }
+
+        private void UpdateApiSubscription()
+        {
+            bool shouldSubscribe = _isActivePage && IsCapturing && MainWindow.IsVisibleToUser;
+            if (shouldSubscribe && !_isSubscribedToApi)
+            {
+                SingboxApiClient.Instance.ConnectionsUpdated += OnConnectionsUpdated;
+                _isSubscribedToApi = true;
+            }
+            else if (!shouldSubscribe && _isSubscribedToApi)
+            {
+                SingboxApiClient.Instance.ConnectionsUpdated -= OnConnectionsUpdated;
+                _isSubscribedToApi = false;
+            }
+        }
+
+        private void OnMainWindowVisibilityChanged(object? sender, bool isVisible)
+        {
+            _dispatcherQueue?.TryEnqueue(async () =>
+            {
+                UpdateApiSubscription();
+                if (!isVisible)
+                {
+                    _lastSnapshot = null;
+                    _trackedById.Clear();
+                    Connections.Clear();
+                    AppRankings.Clear();
+                    HasAppRankings = false;
+                    LocalProcessResolver.ClearCache();
+                }
+                else if (_isActivePage && IsCapturing)
+                {
+                    await SingboxApiClient.Instance.StartAsync();
+                }
+            });
         }
 
         partial void OnSearchTextChanged(string value)
@@ -100,7 +136,8 @@ namespace AnywhereWinUI.ViewModels
         public async Task OnNavigatedToAsync()
         {
             _isActivePage = true;
-            if (IsCapturing)
+            UpdateApiSubscription();
+            if (IsCapturing && MainWindow.IsVisibleToUser)
             {
                 await SingboxApiClient.Instance.StartAsync();
             }
@@ -108,8 +145,9 @@ namespace AnywhereWinUI.ViewModels
 
         public Task OnNavigatedFromAsync()
         {
-            // Mark page inactive and release row models while away; next navigation re-populates immediately.
+            // Mark page inactive, unsubscribe from live snapshots, and release row models while away.
             _isActivePage = false;
+            UpdateApiSubscription();
             _lastSnapshot = null;
             _trackedById.Clear();
             Connections.Clear();
@@ -186,7 +224,7 @@ namespace AnywhereWinUI.ViewModels
                     else if (!chainTag.Equals("direct", StringComparison.OrdinalIgnoreCase) &&
                              !chainTag.Equals("block", StringComparison.OrdinalIgnoreCase))
                     {
-                        var resolvedNode = NodesManager.Instance.Nodes.FirstOrDefault(n => n.Id == chainTag);
+                        var resolvedNode = NodesManager.Instance.GetNodesSnapshot().FirstOrDefault(n => n.Id == chainTag);
                         if (resolvedNode != null)
                         {
                             node = resolvedNode.Name;
@@ -513,18 +551,18 @@ namespace AnywhereWinUI.ViewModels
         private async Task ToggleCaptureAsync()
         {
             IsCapturing = !IsCapturing;
+            UpdateApiSubscription();
             if (IsCapturing)
             {
                 CaptureButtonText = L.Conn_StopCapture;
                 CaptureButtonIcon = "\xE769"; // Pause
-                if (_isActivePage)
+                if (_isActivePage && MainWindow.IsVisibleToUser)
                     await SingboxApiClient.Instance.StartAsync();
             }
             else
             {
                 CaptureButtonText = L.Conn_StartCapture;
                 CaptureButtonIcon = "\xE768"; // Play
-                await SingboxApiClient.Instance.StopAsync();
             }
         }
 

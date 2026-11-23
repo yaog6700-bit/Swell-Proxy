@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using AnywhereWinUI.Services;
 using AnywhereWinUI.ViewModels;
 
 namespace AnywhereWinUI.Controls
@@ -7,6 +8,7 @@ namespace AnywhereWinUI.Controls
     public sealed partial class TopologyGraphControl : UserControl
     {
         public TopologyViewModel ViewModel { get; } = new TopologyViewModel();
+        private bool _isLoadedInTree;
 
         public TopologyGraphControl()
         {
@@ -17,16 +19,47 @@ namespace AnywhereWinUI.Controls
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
-            ViewModel.Subscribe();
-            ViewModel.IsActive = true;
+            _isLoadedInTree = true;
+            MainWindow.VisibilityToUserChanged -= OnMainWindowVisibilityChanged;
+            MainWindow.VisibilityToUserChanged += OnMainWindowVisibilityChanged;
+
+            if (MainWindow.IsVisibleToUser)
+            {
+                ViewModel.Subscribe();
+                ViewModel.IsActive = true;
+                _ = SingboxApiClient.Instance.StartAsync();
+            }
         }
 
         private void UserControl_Unloaded(object sender, RoutedEventArgs e)
         {
+            _isLoadedInTree = false;
+            MainWindow.VisibilityToUserChanged -= OnMainWindowVisibilityChanged;
             ViewModel.IsActive = false;
-            ViewModel.Unsubscribe(); // 取消事件订阅，防止页面卸载后仍收到回调
+            ViewModel.Unsubscribe();
             ViewModel.Nodes.Clear();
             ViewModel.Links.Clear();
+        }
+
+        private void OnMainWindowVisibilityChanged(object? sender, bool isVisible)
+        {
+            DispatcherQueue?.TryEnqueue(() =>
+            {
+                if (!_isLoadedInTree) return;
+                if (isVisible)
+                {
+                    ViewModel.Subscribe();
+                    ViewModel.IsActive = true;
+                    _ = SingboxApiClient.Instance.StartAsync();
+                }
+                else
+                {
+                    ViewModel.IsActive = false;
+                    ViewModel.Unsubscribe();
+                    ViewModel.Nodes.Clear();
+                    ViewModel.Links.Clear();
+                }
+            });
         }
 
         private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
