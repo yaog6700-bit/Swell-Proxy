@@ -80,6 +80,11 @@ namespace AnywhereWinUI.ViewModels
             {
                 _selectedGroupFilterId = savedId;
             }
+            if (Helpers.LocalSettingsHelper.TryGetValue<int>("SelectedServerSortMode", out var savedSort) &&
+                Enum.IsDefined(typeof(ServerSortMode), savedSort))
+            {
+                _sortMode = (ServerSortMode)savedSort;
+            }
 
             // LoadSubscriptions() → RebuildGroupFilters() 第1次
             // LoadServersList()   → RebuildGroupFilters() + ApplyFilters() 第2次
@@ -144,17 +149,36 @@ namespace AnywhereWinUI.ViewModels
             ApplyFilters();
         }
 
+        public string? ActiveGroupFilterDisplayName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(SelectedGroupFilterId) || SelectedGroupFilterId == AllFilterId)
+                    return null;
+                return GroupFilters.FirstOrDefault(g => string.Equals(g.Id, SelectedGroupFilterId, StringComparison.Ordinal))?.Name;
+            }
+        }
+
         partial void OnSortModeChanged(ServerSortMode value)
         {
+            Helpers.LocalSettingsHelper.SetValue("SelectedServerSortMode", (int)value);
             ApplyFilters();
         }
 
         public void LoadServersList()
         {
+            var prevById = new System.Collections.Generic.Dictionary<string, ServerEntryItem>(AllServers.Count, StringComparer.Ordinal);
+            foreach (var existing in AllServers)
+            {
+                if (!string.IsNullOrEmpty(existing.Id))
+                    prevById[existing.Id] = existing;
+            }
+
             AllServers.Clear();
             var nodes = NodesManager.Instance.Nodes;
             string currentSelectedId = NodesManager.Instance.SelectedNodeId;
             bool isRunning = CoreManager.Instance.IsRunning;
+            bool isAuto = AppSession.Instance.IsAutoNodeSelect;
 
             foreach (var node in nodes)
             {
@@ -178,6 +202,27 @@ namespace AnywhereWinUI.ViewModels
                     if (portPart == 0) portPart = 443;
                 }
 
+                string subId = node.SubscriptionId ?? string.Empty;
+                string net = node.Network ?? string.Empty;
+                var activeVis = (!isAuto && node.Id == currentSelectedId && isRunning)
+                    ? Microsoft.UI.Xaml.Visibility.Visible
+                    : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+                if (prevById.TryGetValue(node.Id, out var prev) &&
+                    string.Equals(prev.Name, node.Name, StringComparison.Ordinal) &&
+                    string.Equals(prev.Host, hostPart, StringComparison.Ordinal) &&
+                    prev.Port == portPart &&
+                    string.Equals(prev.Protocol, node.Protocol, StringComparison.Ordinal) &&
+                    string.Equals(prev.SubscriptionId, subId, StringComparison.Ordinal) &&
+                    string.Equals(prev.Network, net, StringComparison.Ordinal))
+                {
+                    // Reuse unchanged item instance so tested LatencyMs/PingColor & ListView container survive!
+                    prev.IsFavorite = node.IsFavorite;
+                    prev.ActiveIndicatorVisibility = activeVis;
+                    AllServers.Add(prev);
+                    continue;
+                }
+
                 var item = new ServerEntryItem
                 {
                     Id = node.Id,
@@ -185,11 +230,11 @@ namespace AnywhereWinUI.ViewModels
                     Host = hostPart,
                     Port = portPart,
                     Protocol = node.Protocol,
-                    SubscriptionId = node.SubscriptionId ?? string.Empty,
-                    Network = node.Network ?? string.Empty,
+                    SubscriptionId = subId,
+                    Network = net,
                     IsFavorite = node.IsFavorite,
                     PingText = isCustom ? L.CustomCfg_ListBadge : L.Servers_PingUntested,
-                    ActiveIndicatorVisibility = (node.Id == currentSelectedId && isRunning) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed
+                    ActiveIndicatorVisibility = activeVis
                 };
                 AllServers.Add(item);
             }
@@ -271,31 +316,61 @@ namespace AnywhereWinUI.ViewModels
             var desiredIds = new System.Collections.Generic.HashSet<string>(
                 desired.Select(x => x.Id),
                 StringComparer.Ordinal);
+            var seenIds = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
 
-            for (int i = FilteredServers.Count - 1; i >= 0; i--)
+            for (int i = 0; i < FilteredServers.Count;)
             {
-                if (!desiredIds.Contains(FilteredServers[i].Id))
+                string id = FilteredServers[i].Id;
+                if (!desiredIds.Contains(id) || !seenIds.Add(id))
                 {
                     FilteredServers.RemoveAt(i);
+                }
+                else
+                {
+                    i++;
                 }
             }
 
             for (int i = 0; i < desired.Count; i++)
             {
                 var targetItem = desired[i];
-                if (i < FilteredServers.Count && ReferenceEquals(FilteredServers[i], targetItem))
+                if (i < FilteredServers.Count &&
+                    string.Equals(FilteredServers[i].Id, targetItem.Id, StringComparison.Ordinal))
+                {
+                    if (!ReferenceEquals(FilteredServers[i], targetItem))
+                    {
+                        FilteredServers[i] = targetItem;
+                    }
                     continue;
+                }
 
-                int existingIdx = FilteredServers.IndexOf(targetItem);
+                int existingIdx = -1;
+                for (int j = i + 1; j < FilteredServers.Count; j++)
+                {
+                    if (string.Equals(FilteredServers[j].Id, targetItem.Id, StringComparison.Ordinal))
+                    {
+                        existingIdx = j;
+                        break;
+                    }
+                }
+
                 if (existingIdx >= 0)
                 {
-                    if (existingIdx != i)
-                        FilteredServers.Move(existingIdx, i);
+                    FilteredServers.Move(existingIdx, i);
+                    if (!ReferenceEquals(FilteredServers[i], targetItem))
+                    {
+                        FilteredServers[i] = targetItem;
+                    }
                 }
                 else
                 {
                     FilteredServers.Insert(i, targetItem);
                 }
+            }
+
+            while (FilteredServers.Count > desired.Count)
+            {
+                FilteredServers.RemoveAt(FilteredServers.Count - 1);
             }
         }
 
@@ -530,15 +605,35 @@ namespace AnywhereWinUI.ViewModels
         }
 
         [RelayCommand]
-        private void DeleteServer(ServerEntryItem server)
+        private async Task DeleteServerAsync(ServerEntryItem server)
         {
-            if (server != null)
+            if (server == null) return;
+
+            bool wasActiveNode = !AppSession.Instance.IsAutoNodeSelect &&
+                                 string.Equals(NodesManager.Instance.SelectedNodeId, server.Id, StringComparison.Ordinal);
+            bool hadSub = !string.IsNullOrEmpty(server.SubscriptionId);
+
+            NodesManager.Instance.DeleteNode(server.Id);
+            if (hadSub) LoadSubscriptions();
+            LoadServersList();
+            SelectedServer = null;
+
+            if (CoreManager.Instance.IsRunning)
             {
-                bool hadSub = !string.IsNullOrEmpty(server.SubscriptionId);
-                NodesManager.Instance.DeleteNode(server.Id);
-                if (hadSub) LoadSubscriptions();
-                LoadServersList();
-                SelectedServer = null; // Clear selection
+                var remaining = NodesManager.Instance.Nodes;
+                if (remaining.Count == 0)
+                {
+                    await CoreManager.Instance.StopAsync();
+                }
+                else if (wasActiveNode)
+                {
+                    var nextNode = remaining.Find(n => n.Id == NodesManager.Instance.SelectedNodeId) ?? remaining[0];
+                    await CoreManager.Instance.SwitchToNodeAsync(nextNode);
+                }
+            }
+            else if (wasActiveNode)
+            {
+                SyncActiveNodeIndicators();
             }
         }
 
@@ -553,6 +648,11 @@ namespace AnywhereWinUI.ViewModels
                 {
                     node.IsFavorite = server.IsFavorite;
                     NodesManager.Instance.Save();
+                }
+
+                if (SelectedGroupFilterId == FavoritesFilterId)
+                {
+                    ApplyFilters();
                 }
             }
         }
@@ -603,6 +703,15 @@ namespace AnywhereWinUI.ViewModels
             }
             AllServers.Clear();
             foreach (var item in newAllServers) AllServers.Add(item);
+
+            // Reset sort mode to Default (custom manual order) so subsequent pings/filters preserve user's drag order!
+            if (_sortMode != ServerSortMode.Default)
+            {
+                _sortMode = ServerSortMode.Default;
+                Helpers.LocalSettingsHelper.SetValue("SelectedServerSortMode", (int)ServerSortMode.Default);
+                OnPropertyChanged(nameof(SortMode));
+            }
+            ApplyFilters();
         }
         [RelayCommand]
         private async Task UpdateSubscriptionAsync(PersistedSubscription sub)

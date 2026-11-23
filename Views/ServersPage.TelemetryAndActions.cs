@@ -480,19 +480,15 @@ namespace AnywhereWinUI.Views
             };
             favoriteItem.Click += (_, _) =>
             {
-                server.IsFavorite = !server.IsFavorite;
-                server.FavoriteVisibility = server.IsFavorite ? Visibility.Visible : Visibility.Collapsed;
+                ViewModel.ToggleFavoriteCommand.Execute(server);
                 if (ServersListView.SelectedItem == server && DetailFavoriteButton != null && DetailFavoriteIcon != null)
                 {
                     DetailFavoriteButton.IsChecked = server.IsFavorite;
                     DetailFavoriteIcon.Glyph = server.IsFavorite ? "\uE735" : "\uE734";
                 }
-
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == server.Id);
-                if (node != null)
+                else if (ServersListView.SelectedItem == null)
                 {
-                    node.IsFavorite = server.IsFavorite;
-                    NodesManager.Instance.Save();
+                    ShowPanel("empty");
                 }
             };
 
@@ -978,9 +974,7 @@ namespace AnywhereWinUI.Views
         {
             if (this.Resources.TryGetValue(resourceKey, out var pageRes) && pageRes is Microsoft.UI.Xaml.Media.Brush pageBrush)
                 return pageBrush;
-            if (Application.Current.Resources.TryGetValue(resourceKey, out var appRes) && appRes is Microsoft.UI.Xaml.Media.Brush appBrush)
-                return appBrush;
-            return new Microsoft.UI.Xaml.Media.SolidColorBrush(fallback);
+            return ContentDialogExtensions.LookupThemeBrush(resourceKey, ContentDialogExtensions.IsElementDark(this), fallback);
         }
 
         private void ResetAiLights()
@@ -1019,7 +1013,10 @@ namespace AnywhereWinUI.Views
             try
             {
                 var activeItem = GetActiveServerItem();
-                if (!CoreManager.Instance.IsRunning || ServersListView.SelectedItem as ServerEntryItem == null || ServersListView.SelectedItem as ServerEntryItem != activeItem)
+                bool isAuto = AppSession.Instance.IsAutoNodeSelect;
+                bool matchesActiveSelection = isAuto ||
+                    (ServersListView.SelectedItem is ServerEntryItem sel && sel == activeItem);
+                if (!CoreManager.Instance.IsRunning || !matchesActiveSelection)
                 {
                     ResetAiLights();
                     ResetIpInfoText();

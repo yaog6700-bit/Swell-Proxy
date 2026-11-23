@@ -302,24 +302,59 @@ namespace AnywhereWinUI.Controls
             _displayedNodes.Clear();
 
             var allNodes = NodesManager.Instance.GetNodesSnapshot();
+            var allValidNodes = allNodes.Where(n => !IsPseudoInfoNode(n)).ToList();
+            var nodeById = new Dictionary<string, PersistedNode>(allNodes.Count, StringComparer.Ordinal);
+            foreach (var n in allNodes)
+            {
+                nodeById[n.Id] = n;
+            }
+
             var serversVm = ((App)Application.Current).Services.GetService(typeof(ServersViewModel)) as ServersViewModel;
 
             var latencyMap = new Dictionary<string, int?>(StringComparer.Ordinal);
-            if (serversVm?.AllServers != null)
+            List<PersistedNode> validNodes;
+
+            if (serversVm != null)
             {
+                int loadableCount = allNodes.Count(n =>
+                    CustomConfigService.IsCustomNode(n) || NodeLinkParser.TrySplitHostPort(n.Host, out _, out _));
+                if (serversVm.AllServers.Count != loadableCount)
+                {
+                    serversVm.LoadSubscriptions();
+                    serversVm.LoadServersList();
+                }
+
                 foreach (var s in serversVm.AllServers)
                 {
                     latencyMap[s.Id] = s.LatencyMs;
                 }
+
+                string? filterLabel = serversVm.ActiveGroupFilterDisplayName;
+                NodesSectionHeaderText.Text = !string.IsNullOrWhiteSpace(filterLabel)
+                    ? $"{L.TrayPanel_NodesHeader} · {filterLabel}"
+                    : L.TrayPanel_NodesHeader;
+
+                validNodes = new List<PersistedNode>(serversVm.FilteredServers.Count);
+                foreach (var item in serversVm.FilteredServers)
+                {
+                    if (nodeById.TryGetValue(item.Id, out var persisted) && !IsPseudoInfoNode(persisted))
+                    {
+                        validNodes.Add(persisted);
+                    }
+                }
+            }
+            else
+            {
+                NodesSectionHeaderText.Text = L.TrayPanel_NodesHeader;
+                validNodes = allValidNodes;
             }
 
-            var validNodes = allNodes.Where(n => !IsPseudoInfoNode(n)).ToList();
             AllNodesCountText.Text = string.Format(L.TrayPanel_NodeCountFmt, validNodes.Count);
 
             bool isAuto = AppSession.Instance.IsAutoNodeSelect;
             string selectedId = NodesManager.Instance.SelectedNodeId;
 
-            AutoSelectBtn.Visibility = validNodes.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            AutoSelectBtn.Visibility = allValidNodes.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             QuickPingBtn.Visibility = validNodes.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             QuickPingBtnText.Text = _isPingingNodes
                 ? L.TrayPanel_Pinging
@@ -335,10 +370,9 @@ namespace AnywhereWinUI.Controls
             else
                 AutoSelectBtn.ClearValue(Control.BackgroundProperty);
 
-            if (isAuto && !string.IsNullOrEmpty(_autoResolvedNodeId))
+            if (isAuto && !string.IsNullOrEmpty(_autoResolvedNodeId) && nodeById.TryGetValue(_autoResolvedNodeId, out var resolved))
             {
-                var resolved = validNodes.Find(n => n.Id == _autoResolvedNodeId);
-                AutoResolvedNodeText.Text = resolved?.Name ?? string.Empty;
+                AutoResolvedNodeText.Text = resolved.Name ?? string.Empty;
             }
             else
             {
@@ -366,16 +400,25 @@ namespace AnywhereWinUI.Controls
                 return;
             }
 
-            var ranked = validNodes
-                .OrderByDescending(n => n.IsFavorite)
-                .ThenBy(n =>
-                {
-                    if (latencyMap.TryGetValue(n.Id, out var ms) && ms is > 0) return 0;
-                    if (ms is < 0) return 2;
-                    return 1;
-                })
-                .ThenBy(n => latencyMap.TryGetValue(n.Id, out var ms) && ms is > 0 ? ms.Value : int.MaxValue)
-                .ToList();
+            List<PersistedNode> ranked;
+            if (serversVm != null && serversVm.SortMode != ServerSortMode.Default)
+            {
+                // Preserve user's explicit sort mode from ServersPage (Active / Protocol / Latency)
+                ranked = validNodes;
+            }
+            else
+            {
+                ranked = validNodes
+                    .OrderByDescending(n => n.IsFavorite)
+                    .ThenBy(n =>
+                    {
+                        if (latencyMap.TryGetValue(n.Id, out var ms) && ms is > 0) return 0;
+                        if (ms is < 0) return 2;
+                        return 1;
+                    })
+                    .ThenBy(n => latencyMap.TryGetValue(n.Id, out var ms) && ms is > 0 ? ms.Value : int.MaxValue)
+                    .ToList();
+            }
 
             var picked = new List<PersistedNode>(MaxQuickNodes);
             var pickedIds = new HashSet<string>(StringComparer.Ordinal);

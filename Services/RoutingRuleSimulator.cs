@@ -172,32 +172,35 @@ namespace AnywhereWinUI.Services
             }
 
             // 6. User Custom Rules first, then Built-in App Rules (exact order from ConfigBuilder.BuildRoute!)
-            var allRules = overrideRules ?? RoutingRulesService.LoadRules();
-            foreach (var rule in allRules.Where(r => !r.IsBuiltIn && r.IsEnabled))
+            if (session.EnableAdvancedRouting)
             {
-                if (TryMatchRoutingRule(rule, domain, ip, procName, procPath, out string matchedExpr))
+                var allRules = overrideRules ?? RoutingRulesService.LoadRules();
+                foreach (var rule in allRules.Where(r => !r.IsBuiltIn && r.IsEnabled))
                 {
-                    var (kind, label) = ResolveOutboundDisplay(rule.OutboundTag);
-                    string ruleTitle = string.IsNullOrWhiteSpace(rule.Name) ? L.CustomRules_DefaultName : rule.Name;
-                    bool cnDns = !string.IsNullOrEmpty(domain) && session.BypassChina && IsLikelyChinaDomain(domain);
-                    return new RouteSimulationResult(
-                        kind,
-                        label,
-                        $"{ruleTitle} ({matchedExpr})",
-                        FormatDns(kind, forceLocal: cnDns));
+                    if (TryMatchRoutingRule(rule, domain, ip, procName, procPath, out string matchedExpr))
+                    {
+                        var (kind, label) = ResolveOutboundDisplay(rule.OutboundTag);
+                        string ruleTitle = string.IsNullOrWhiteSpace(rule.Name) ? L.CustomRules_DefaultName : rule.Name;
+                        bool cnDns = !string.IsNullOrEmpty(domain) && session.BypassChina && IsLikelyChinaDomain(domain);
+                        return new RouteSimulationResult(
+                            kind,
+                            label,
+                            $"{ruleTitle} ({matchedExpr})",
+                            FormatDns(kind, forceLocal: cnDns));
+                    }
                 }
-            }
 
-            foreach (var rule in allRules.Where(r => r.IsBuiltIn && r.IsEnabled))
-            {
-                if (TryMatchRoutingRule(rule, domain, ip, procName, procPath, out string matchedExpr))
+                foreach (var rule in allRules.Where(r => r.IsBuiltIn && r.IsEnabled))
                 {
-                    var (kind, label) = ResolveOutboundDisplay(rule.OutboundTag);
-                    return new RouteSimulationResult(
-                        kind,
-                        label,
-                        $"{rule.Name} ({matchedExpr})",
-                        FormatDns(kind));
+                    if (TryMatchRoutingRule(rule, domain, ip, procName, procPath, out string matchedExpr))
+                    {
+                        var (kind, label) = ResolveOutboundDisplay(rule.OutboundTag);
+                        return new RouteSimulationResult(
+                            kind,
+                            label,
+                            $"{rule.Name} ({matchedExpr})",
+                            FormatDns(kind));
+                    }
                 }
             }
 

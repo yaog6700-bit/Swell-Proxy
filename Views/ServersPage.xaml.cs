@@ -213,6 +213,8 @@ namespace AnywhereWinUI.Views
             CoreManager.Instance.ActiveNodeChanged += CoreManager_ActiveNodeChanged;
             CoreManager.Instance.ModeStateChanged += CoreManager_ModeStateChanged;
             MainWindow.VisibilityToUserChanged += OnMainWindowVisibilityChanged;
+            this.Loaded += (_, _) => ApplyControlBarBrushes();
+            this.ActualThemeChanged += (_, _) => ApplyControlBarBrushes();
 
             UpdateControlBarUI();
             UpdateProxyModeUI();
@@ -223,6 +225,17 @@ namespace AnywhereWinUI.Views
         {
             DispatcherQueue?.TryEnqueue(() =>
             {
+                // Sync list selection to the newly switched node (e.g. switched from Tray panel)
+                // BEFORE UpdateControlBarUI runs TriggerAiAndIpChecksAsync so exit IP & AI lights display properly!
+                if (!AppSession.Instance.IsAutoNodeSelect && string.IsNullOrEmpty(_editingNodeId))
+                {
+                    var activeMatch = FilteredServers.FirstOrDefault(s => s.Id == NodesManager.Instance.SelectedNodeId);
+                    if (activeMatch != null && !ReferenceEquals(ServersListView.SelectedItem, activeMatch))
+                    {
+                        ServersListView.SelectedItem = activeMatch;
+                    }
+                }
+
                 UpdateControlBarUI();
                 if (_isTopSheetOpen && CoreManager.Instance.IsRunning)
                 {
@@ -333,21 +346,35 @@ namespace AnywhereWinUI.Views
             });
         }
 
+        private void ApplyControlBarBrushes()
+        {
+            bool isRunning = CoreManager.Instance.IsRunning;
+            bool isDark = ContentDialogExtensions.IsElementDark(this);
+
+            if (isRunning)
+            {
+                StatusDot.Fill = ContentDialogExtensions.LookupThemeBrush(
+                    "SystemFillColorSuccessBrush", isDark, Microsoft.UI.Colors.Green);
+                ActiveNodeText.Foreground = ContentDialogExtensions.LookupThemeBrush(
+                    "TextFillColorPrimaryBrush", isDark, isDark ? Microsoft.UI.Colors.White : Microsoft.UI.Colors.Black);
+            }
+            else
+            {
+                var secBrush = ContentDialogExtensions.LookupThemeBrush(
+                    "TextFillColorSecondaryBrush", isDark, Microsoft.UI.Colors.Gray);
+                StatusDot.Fill = secBrush;
+                ActiveNodeText.Foreground = secBrush;
+            }
+        }
+
         private void UpdateControlBarUI()
         {
             bool isRunning = CoreManager.Instance.IsRunning;
             StartStopButton.IsChecked = isRunning;
+            ApplyControlBarBrushes();
+
             if (isRunning)
             {
-                if (Application.Current.Resources.TryGetValue("SystemFillColorSuccessBrush", out var sysSucc) && sysSucc is Microsoft.UI.Xaml.Media.Brush sucBrush)
-                {
-                    StatusDot.Fill = sucBrush;
-                }
-                else
-                {
-                    StatusDot.Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Green);
-                }
-
                 // 恢复显示“概览”按钮（应对切页面后再切回来的情况）
                 if (!_isTopSheetOpen)
                 {
@@ -359,33 +386,12 @@ namespace AnywhereWinUI.Views
                     : (NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId)?.Name ?? L.Common_UnknownNode);
                 ActiveNodeText.Text = selectedName;
 
-                if (Application.Current.Resources.TryGetValue("TextFillColorPrimaryBrush", out var txtPri) && txtPri is Microsoft.UI.Xaml.Media.Brush priBrush)
-                {
-                    ActiveNodeText.Foreground = priBrush;
-                }
-                else
-                {
-                    ActiveNodeText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Black);
-                }
-                
                 _ = TriggerAiAndIpChecksAsync();
             }
             else
             {
-                if (Application.Current.Resources.TryGetValue("TextFillColorSecondaryBrush", out var txtSec) && txtSec is Microsoft.UI.Xaml.Media.Brush secBrush)
-                {
-                    StatusDot.Fill = secBrush;
-                    ActiveNodeText.Foreground = secBrush;
-                }
-                else
-                {
-                    var fallbackBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
-                    StatusDot.Fill = fallbackBrush;
-                    ActiveNodeText.Foreground = fallbackBrush;
-                }
-
                 ActiveNodeText.Text = L.Common_Disconnected;
-                
+
                 _aiCheckCts?.Cancel();
                 UpdateAiAndIpDisplay();
                 DownSpeedText.Text = "0.0 KB/s";

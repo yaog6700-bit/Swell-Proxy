@@ -283,10 +283,13 @@ namespace AnywhereWinUI.ViewModels
 
             var filtered = allActiveItems.Where(c =>
             {
-                if (!string.IsNullOrEmpty(appFilter) &&
-                    !string.Equals(c.ProcessName, appFilter, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(appFilter))
                 {
-                    return false;
+                    string effectiveProc = string.IsNullOrWhiteSpace(c.ProcessName) ? L.Conn_UnknownApp : c.ProcessName;
+                    if (!string.Equals(effectiveProc, appFilter, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
                 }
 
                 if (string.IsNullOrEmpty(query))
@@ -363,7 +366,7 @@ namespace AnywhereWinUI.ViewModels
 
                     return new
                     {
-                        AppName = g.First().ProcessName,
+                        AppName = g.Key,
                         Count = g.Count(),
                         SumRate = sumRate,
                         SumBytes = sumBytes,

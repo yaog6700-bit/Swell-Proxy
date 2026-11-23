@@ -434,7 +434,7 @@ namespace AnywhereWinUI.Views
                 var result = await dialog.WithAppTheme().ShowAsync();
                 if (result == ContentDialogResult.Primary)
                 {
-                    ViewModel.DeleteServerCommand.Execute(selected);
+                    await ViewModel.DeleteServerCommand.ExecuteAsync(selected);
                     ShowPanel("empty");
                 }
             }
@@ -835,7 +835,10 @@ namespace AnywhereWinUI.Views
                         .Select(x => x.Id)
                         .ToList();
                     if (orderedIds.Count > 0)
+                    {
                         ViewModel.ApplyNodeOrder(orderedIds);
+                        UpdateSortMenuCheckedState();
+                    }
                 });
         }
 
