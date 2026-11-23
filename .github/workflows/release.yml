@@ -97,7 +97,7 @@ jobs:
       - name: Verify exe produced
         shell: pwsh
         run: |
-          $publishDir = (Get-ChildItem -Path "bin" -Filter "publish" -Recurse -Directory | Where-Object { $_.FullName -match "${{ matrix.rid }}" } | Select-Object -First 1).FullName
+          $publishDir = (Get-ChildItem -Path "bin" -Filter "publish" -Recurse -Directory | Where-Object { $_.FullName -match "${{ matrix.rid }}" -and $_.FullName -notmatch "Updater" } | Select-Object -First 1).FullName
           if (-not $publishDir) {
             Write-Host "::error::Could not find publish directory"
             exit 1
@@ -108,12 +108,7 @@ jobs:
             exit 1
           }
           $priExternal = (Test-Path "$publishDir/Swell Proxy.pri") -or (Test-Path "$publishDir/resources.pri")
-          $priBundled  = $false
-          if (-not $priExternal) {
-            $needle = [System.Text.Encoding]::ASCII.GetBytes("Swell Proxy.pri")
-            $bytes  = [System.IO.File]::ReadAllBytes($exe)
-            $priBundled = [System.MemoryExtensions]::IndexOf([System.ReadOnlySpan[byte]]$bytes, [System.ReadOnlySpan[byte]]$needle) -ge 0
-          }
+          $priBundled  = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($exe)).Contains("Swell Proxy.pri")
           if (-not ($priExternal -or $priBundled)) {
             Write-Host "::error::Publish did not include MRT resource index (Swell Proxy.pri) in $publishDir"
             exit 1
