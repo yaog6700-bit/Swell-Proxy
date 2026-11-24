@@ -687,6 +687,11 @@ namespace AnywhereWinUI.Services
                     node.Network = network;
                     break;
 
+                case "xhttp":
+                case "splithttp":
+                    node.Network = "xhttp";
+                    break;
+
                 case "":
                 case "tcp":
                 default:

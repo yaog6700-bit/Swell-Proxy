@@ -44,6 +44,21 @@ namespace AnywhereWinUI.Services
             };
         }
 
+        private static bool IsUuidVersion4(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return false;
+            string s = value.Trim();
+            // Shoes (Rust uuid crate) strictly enforces version 4 UUIDs (xxxxxxxx-xxxx-4xxx-xxxx-xxxxxxxxxxxx).
+            // Airport panels (v2board / Xboard / SSPanel) commonly derive UUIDv3/v5 from user email, which must fall back to sing-box.
+            return s.Length == 36 &&
+                   s[8] == '-' &&
+                   s[13] == '-' &&
+                   s[14] == '4' &&
+                   s[18] == '-' &&
+                   s[23] == '-' &&
+                   Guid.TryParse(s, out _);
+        }
+
         public static bool TryBuildClientProxyYaml(
             PersistedNode node,
             string tag,
@@ -76,7 +91,7 @@ namespace AnywhereWinUI.Services
             string network = string.IsNullOrWhiteSpace(node.Network) ? "tcp" : node.Network.Trim().ToLowerInvariant();
             string security = string.IsNullOrWhiteSpace(node.Security) ? "none" : node.Security.Trim().ToLowerInvariant();
             string sni = !string.IsNullOrWhiteSpace(node.Sni) ? node.Sni.Trim() : cleanHost;
-            string uuid = !string.IsNullOrEmpty(node.Uuid) ? node.Uuid : "de000000-0000-0000-0000-000000000000";
+            string uuid = !string.IsNullOrWhiteSpace(node.Uuid) ? node.Uuid.Trim() : "de000000-0000-4000-8000-000000000000";
             string password = !string.IsNullOrEmpty(node.Password) ? node.Password : "anywhere-password";
 
             if (network != "tcp" && network != "ws")
@@ -91,10 +106,17 @@ namespace AnywhereWinUI.Services
             if (protoLower.Contains("vless"))
             {
                 if (!string.IsNullOrWhiteSpace(node.VlessEncryption) &&
-                    !string.Equals(node.VlessEncryption, "none", StringComparison.OrdinalIgnoreCase))
+                    !string.Equals(node.VlessEncryption.Trim(), "none", StringComparison.OrdinalIgnoreCase))
                 {
                     rejectKind = RejectKind.UnsupportedProtocol;
                     rejectDetail = "VLESS-PQ";
+                    return false;
+                }
+
+                if (!IsUuidVersion4(uuid))
+                {
+                    rejectKind = RejectKind.UnsupportedProtocol;
+                    rejectDetail = "VLESS (UUIDv3/v5)";
                     return false;
                 }
 
@@ -105,24 +127,11 @@ namespace AnywhereWinUI.Services
 
                 if (security == "reality")
                 {
-                    if (network != "tcp" || string.IsNullOrWhiteSpace(node.PublicKey))
-                    {
-                        rejectKind = RejectKind.UnsupportedProtocol;
-                        rejectDetail = "VLESS Reality (" + network + ")";
-                        return false;
-                    }
-
-                    var realityProps = new List<(string Key, string RawYamlValue)>
-                    {
-                        ("public_key", Quote(node.PublicKey.Trim())),
-                        ("short_id", Quote((node.ShortId ?? string.Empty).Trim())),
-                        ("sni_hostname", Quote(sni))
-                    };
-                    if (isVision)
-                    {
-                        realityProps.Add(("vision", "true"));
-                    }
-                    rootLayer = new ProtoLayer("reality", realityProps, inner);
+                    // Shoes uses rustls without uTLS browser ClientHello fingerprint spoofing (chrome/firefox/safari),
+                    // which causes Xray Reality servers to fail handshakes at runtime. Always fall back to sing-box (with_utls).
+                    rejectKind = RejectKind.UnsupportedProtocol;
+                    rejectDetail = "VLESS Reality (uTLS)";
+                    return false;
                 }
                 else if (security == "tls")
                 {
@@ -141,6 +150,13 @@ namespace AnywhereWinUI.Services
                 }
                 else
                 {
+                    if (isVision)
+                    {
+                        rejectKind = RejectKind.UnsupportedProtocol;
+                        rejectDetail = "VLESS XTLS-Vision";
+                        return false;
+                    }
+
                     rootLayer = network == "ws"
                         ? WrapWebSocket(inner, node.Path, node.WsHost)
                         : inner;
@@ -152,6 +168,13 @@ namespace AnywhereWinUI.Services
                 {
                     rejectKind = RejectKind.UnsupportedProtocol;
                     rejectDetail = "VMess Legacy (AlterId)";
+                    return false;
+                }
+
+                if (!IsUuidVersion4(uuid))
+                {
+                    rejectKind = RejectKind.UnsupportedProtocol;
+                    rejectDetail = "VMess (UUIDv3/v5)";
                     return false;
                 }
 

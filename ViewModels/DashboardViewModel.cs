@@ -450,10 +450,13 @@ namespace AnywhereWinUI.ViewModels
                 bool success = await CoreManager.Instance.StartAsync(config);
                 if (!success)
                 {
+                    string errDetail = CoreManager.Instance.LastError;
                     var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
                     {
                         Title = L.Core_StartFailedTitle,
-                        Content = L.Core_StartFailedDashboard,
+                        Content = !string.IsNullOrWhiteSpace(errDetail)
+                            ? string.Format(L.Core_StartFailedWithError, errDetail)
+                            : L.Core_StartFailedDashboard,
                         CloseButtonText = L.Dialog_OK,
                         XamlRoot = MainWindow.Instance?.Content.XamlRoot
                     };

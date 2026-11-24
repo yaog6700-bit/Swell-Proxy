@@ -570,17 +570,44 @@ namespace AnywhereWinUI.ViewModels
                 return;
             }
 
+            bool switchedOk = true;
+            string switchErr = string.Empty;
             try
             {
-                await CoreManager.Instance.SwitchToNodeAsync(node);
+                switchedOk = await CoreManager.Instance.SwitchToNodeAsync(node);
+                if (!switchedOk)
+                {
+                    switchErr = CoreManager.Instance.LastError;
+                }
             }
             catch (Exception ex)
             {
+                switchedOk = false;
+                switchErr = ex.Message;
                 System.Diagnostics.Debug.WriteLine($"Error switching node: {ex}");
             }
 
             SelectedNodeId = NodesManager.Instance.SelectedNodeId;
             SyncActiveNodeIndicators();
+
+            if (isRunning && !switchedOk)
+            {
+                var xamlRoot = MainWindow.Instance?.Content?.XamlRoot;
+                if (xamlRoot != null)
+                {
+                    string content = !string.IsNullOrWhiteSpace(switchErr)
+                        ? string.Format(L.Core_StartFailedWithError, switchErr)
+                        : L.Core_StartFailedDashboard;
+                    var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                    {
+                        Title = L.Core_StartFailedTitle,
+                        Content = content,
+                        CloseButtonText = L.Dialog_OK,
+                        XamlRoot = xamlRoot
+                    };
+                    _ = dialog.WithAppTheme().ShowAsync();
+                }
+            }
         }
 
         [RelayCommand]

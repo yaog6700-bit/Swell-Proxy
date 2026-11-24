@@ -215,6 +215,17 @@ namespace AnywhereWinUI.Services
             await _stateLock.WaitAsync();
             try
             {
+                return await StartLockedAsync(configJson, allowSingleNodeSelfHeal: true);
+            }
+            finally
+            {
+                _stateLock.Release();
+            }
+        }
+
+        private async Task<bool> StartLockedAsync(string configJson, bool allowSingleNodeSelfHeal)
+        {
+            {
                 if (IsRunning) await StopInternalAsync();
 
                 // Self-healing: only kill orphaned sing-box / shoes processes belonging to Swell Proxy's own directories,
@@ -223,6 +234,22 @@ namespace AnywhereWinUI.Services
 
                 LastError = string.Empty;
                 lock (_startupLogLock) { _startupLog.Clear(); }
+
+                // Fail fast with an explicit explanation if the user selected an Xray-exclusive node (e.g. xhttp / VLESS-PQ)
+                // instead of starting a broken TCP/H2 fallback that connects locally with 0 internet!
+                var selectedBuildNode = AppSession.Instance.LastBuildNode;
+                if (!AppSession.Instance.IsActiveNodeCustom && !AppSession.Instance.IsAutoNodeSelect)
+                {
+                    string? xrayOnlyReason = ConfigBuilder.GetXrayExclusiveIncompatibilityReason(selectedBuildNode);
+                    if (xrayOnlyReason != null)
+                    {
+                        _desiredRunning = false;
+                        _activeRunningOutboundTag = string.Empty;
+                        LastError = $"当前节点使用了 {xrayOnlyReason}，官方 sing-box 与 Shoes 内核暂不支持该特性，请切换其他传输协议节点（如 Reality TCP / TLS / WS / gRPC / Hysteria 2）。";
+                        AppendLog("[错误] " + LastError);
+                        return false;
+                    }
+                }
 
                 // Ensure directory & shared *.srs rule-set files exist
                 var localDir = ShoesConfigBuilder.EnsureLocalRuleSetDirectory();
@@ -409,6 +436,25 @@ namespace AnywhereWinUI.Services
                         if (ReferenceEquals(_process, proc)) _process = null;
                         try { proc.Dispose(); } catch { }
 
+                        if (allowSingleNodeSelfHeal &&
+                            !useShoes &&
+                            !isCustom &&
+                            AppSession.Instance.LastBuildNode != null)
+                        {
+                            string firstErr;
+                            lock (_startupLogLock)
+                            {
+                                firstErr = _startupLog.ToString().Trim();
+                                _startupLog.Clear();
+                            }
+                            AppendLog($"[自愈] 检测到多节点预加载配置异常 ({firstErr})，正在以单节点兼容模式自动重试...");
+                            string singleNodeCfg = await ConfigBuilder.BuildAsync(
+                                AppSession.Instance.LastBuildNode,
+                                forceSingbox: true,
+                                singleNodeOnly: true);
+                            return await StartLockedAsync(singleNodeCfg, allowSingleNodeSelfHeal: false);
+                        }
+
                         lock (_startupLogLock)
                         {
                             var rawErr = _startupLog.Length > 0
@@ -518,10 +564,6 @@ namespace AnywhereWinUI.Services
                     AppendLog("[异常] " + ex.Message);
                     return false;
                 }
-            }
-            finally
-            {
-                _stateLock.Release();
             }
         }
 

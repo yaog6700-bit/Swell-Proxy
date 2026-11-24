@@ -17,20 +17,17 @@ namespace AnywhereWinUI.Parsers.Tests
         }
 
         [Fact]
-        public void VlessRealityVision_GeneratesValidShoesNestedProtocolYaml()
+        public void VlessTls_ValidUuidV4_GeneratesValidShoesNestedProtocolYaml()
         {
             var node = new PersistedNode
             {
-                Name = "HK #1 \"Reality\" [IPv6]",
+                Name = "HK #1 \"TLS\" [IPv6]",
                 Protocol = "VLESS",
                 Host = "[2001:db8::1]:443",
-                Uuid = "11111111-2222-3333-4444-555555555555",
-                Security = "reality",
+                Uuid = "8768c449-f7c7-4cc6-ac53-2d9869ee98f8",
+                Security = "tls",
                 Network = "tcp",
-                Flow = "xtls-rprx-vision",
-                Sni = "www.microsoft.com",
-                PublicKey = "pbk_test_123",
-                ShortId = "abcd01"
+                Sni = "www.microsoft.com"
             };
 
             bool ok = ShoesYamlSerializer.TryBuildClientProxyYaml(
@@ -40,19 +37,66 @@ namespace AnywhereWinUI.Parsers.Tests
             Assert.Equal(ShoesYamlSerializer.RejectKind.None, kind);
 
             var root = ParseFirstSequenceItem(yaml);
-            Assert.Equal("HK #1 \"Reality\" [IPv6]", root.Children["name"].ToString());
+            Assert.Equal("HK #1 \"TLS\" [IPv6]", root.Children["name"].ToString());
             Assert.Equal("[2001:db8::1]:443", root.Children["address"].ToString());
 
             var proto = Assert.IsType<YamlMappingNode>(root.Children["protocol"]);
-            Assert.Equal("reality", proto.Children["type"].ToString());
-            Assert.Equal("pbk_test_123", proto.Children["public_key"].ToString());
-            Assert.Equal("abcd01", proto.Children["short_id"].ToString());
+            Assert.Equal("tls", proto.Children["type"].ToString());
             Assert.Equal("www.microsoft.com", proto.Children["sni_hostname"].ToString());
-            Assert.Equal("true", proto.Children["vision"].ToString());
 
             var inner = Assert.IsType<YamlMappingNode>(proto.Children["protocol"]);
             Assert.Equal("vless", inner.Children["type"].ToString());
-            Assert.Equal("11111111-2222-3333-4444-555555555555", inner.Children["user_id"].ToString());
+            Assert.Equal("8768c449-f7c7-4cc6-ac53-2d9869ee98f8", inner.Children["user_id"].ToString());
+        }
+
+        [Fact]
+        public void VlessRealityVision_RejectedForSingboxUtlsFallback()
+        {
+            var node = new PersistedNode
+            {
+                Name = "HK Reality Vision",
+                Protocol = "VLESS",
+                Host = "pzhkt.example.com:52473",
+                Uuid = "8768c449-f7c7-4cc6-ac53-2d9869ee98f8",
+                Security = "reality",
+                Network = "tcp",
+                Flow = "xtls-rprx-vision",
+                Fingerprint = "chrome",
+                Sni = "blog.api.www.cloudflare.com",
+                PublicKey = "OKMwndkiAlluBrTUU3IM2DUIUpgvGCm3F12h2KbEC0E",
+                ShortId = "3b"
+            };
+
+            bool ok = ShoesYamlSerializer.TryBuildClientProxyYaml(
+                node, node.Name, indent: 0, out _, out var kind, out var detail);
+
+            Assert.False(ok);
+            Assert.Equal(ShoesYamlSerializer.RejectKind.UnsupportedProtocol, kind);
+            Assert.Contains("Reality", detail);
+        }
+
+        [Theory]
+        [InlineData("VLESS", "eab701c8-afc2-380e-b9c5-f0dd2df114e4")]
+        [InlineData("VMess", "eab701c8-afc2-380e-b9c5-f0dd2df114e4")]
+        public void NonVersion4Uuid_RejectedForSingboxFallback(string protocol, string uuidV3)
+        {
+            var node = new PersistedNode
+            {
+                Name = "Airport UUIDv3 Node",
+                Protocol = protocol,
+                Host = "g-002.example.com:41593",
+                Uuid = uuidV3,
+                Security = "tls",
+                Network = "tcp",
+                Sni = "bgpvless.example.com"
+            };
+
+            bool ok = ShoesYamlSerializer.TryBuildClientProxyYaml(
+                node, node.Name, indent: 0, out _, out var kind, out var detail);
+
+            Assert.False(ok);
+            Assert.Equal(ShoesYamlSerializer.RejectKind.UnsupportedProtocol, kind);
+            Assert.Contains("UUID", detail);
         }
 
         [Fact]
@@ -63,7 +107,7 @@ namespace AnywhereWinUI.Parsers.Tests
                 Name = "JP-VMess-WS",
                 Protocol = "VMess",
                 Host = "jp.example.com:8443",
-                Uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                Uuid = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
                 Encryption = "auto",
                 Network = "ws",
                 Path = "/ws?ed=2048",

@@ -76,47 +76,80 @@ namespace AnywhereWinUI.Services
                     catch { }
                 }
 
-                if (outboundAddr == null || outboundAddr.Equals(IPAddress.Any) || outboundAddr.Equals(IPAddress.IPv6Any))
-                {
-                    Debug.WriteLine("[TunService] 无法获取默认出站地址");
-                    return null;
-                }
-
+                var allNics = NetworkInterface.GetAllNetworkInterfaces();
                 string? vEthernetFallback = null;
 
-                foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+                if (outboundAddr != null && !outboundAddr.Equals(IPAddress.Any) && !outboundAddr.Equals(IPAddress.IPv6Any))
                 {
-                    if (nic.OperationalStatus != OperationalStatus.Up) continue;
-                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback ||
-                        nic.NetworkInterfaceType == NetworkInterfaceType.Tunnel) continue;
-
-                    var label = $"{nic.Name} {nic.Description}";
-                    if (ContainsAny(label, DefaultTunInterfaceName, "tun0", "wintun", "singbox", "sing-box",
-                                    "loopback", "pseudo-interface", "virtualbox", "vmware", "wsl", "default switch"))
-                        continue;
-
-                    foreach (var ua in nic.GetIPProperties().UnicastAddresses)
+                    foreach (var nic in allNics)
                     {
-                        if (ua.Address.AddressFamily == outboundAddr.AddressFamily &&
-                            ua.Address.Equals(outboundAddr))
-                        {
-                            // Prefer real physical NIC, but allow Hyper-V External Virtual Switch if it owns the host's primary IP
-                            if (ContainsAny(label, "hyper-v virtual", "vethernet"))
-                            {
-                                vEthernetFallback ??= nic.Name;
-                                continue;
-                            }
+                        if (!IsCandidatePhysicalAdapter(nic, out var label))
+                            continue;
 
-                            Debug.WriteLine($"[TunService] 默认出站网卡: {nic.Name} ({outboundAddr})");
-                            return nic.Name;
+                        foreach (var ua in nic.GetIPProperties().UnicastAddresses)
+                        {
+                            if (ua.Address.AddressFamily == outboundAddr.AddressFamily &&
+                                ua.Address.Equals(outboundAddr))
+                            {
+                                if (ContainsAny(label, "hyper-v virtual", "vethernet"))
+                                {
+                                    vEthernetFallback ??= nic.Name;
+                                    continue;
+                                }
+
+                                Debug.WriteLine($"[TunService] 默认出站网卡: {nic.Name} ({outboundAddr})");
+                                return nic.Name;
+                            }
                         }
+                    }
+
+                    if (vEthernetFallback != null)
+                    {
+                        Debug.WriteLine($"[TunService] 使用 Hyper-V 外部虚拟交换机网卡: {vEthernetFallback} ({outboundAddr})");
+                        return vEthernetFallback;
                     }
                 }
 
-                if (vEthernetFallback != null)
+                // Fallback when singbox-tun is already active (capturing probe socket) or UDP probe failed:
+                // pick the first active physical adapter that owns a real IPv4/IPv6 default gateway.
+                string? gwVethFallback = null;
+                foreach (var nic in allNics)
                 {
-                    Debug.WriteLine($"[TunService] 使用 Hyper-V 外部虚拟交换机网卡: {vEthernetFallback} ({outboundAddr})");
-                    return vEthernetFallback;
+                    if (!IsCandidatePhysicalAdapter(nic, out var label))
+                        continue;
+
+                    IPInterfaceProperties props;
+                    try { props = nic.GetIPProperties(); }
+                    catch { continue; }
+
+                    bool hasRealGateway = false;
+                    foreach (var gw in props.GatewayAddresses)
+                    {
+                        if (gw?.Address != null &&
+                            !gw.Address.Equals(IPAddress.Any) &&
+                            !gw.Address.Equals(IPAddress.IPv6Any) &&
+                            !IPAddress.IsLoopback(gw.Address))
+                        {
+                            hasRealGateway = true;
+                            break;
+                        }
+                    }
+                    if (!hasRealGateway) continue;
+
+                    if (ContainsAny(label, "hyper-v virtual", "vethernet"))
+                    {
+                        gwVethFallback ??= nic.Name;
+                        continue;
+                    }
+
+                    Debug.WriteLine($"[TunService] 通过默认网关回退识别出站网卡: {nic.Name}");
+                    return nic.Name;
+                }
+
+                if (gwVethFallback != null)
+                {
+                    Debug.WriteLine($"[TunService] 通过网关回退使用虚拟交换机网卡: {gwVethFallback}");
+                    return gwVethFallback;
                 }
 
                 Debug.WriteLine($"[TunService] 未能将出站地址 {outboundAddr} 映射到网卡");
@@ -126,6 +159,34 @@ namespace AnywhereWinUI.Services
                 Debug.WriteLine($"[TunService] 网卡探测失败: {ex.Message}");
             }
             return null;
+        }
+
+        private static bool IsCandidatePhysicalAdapter(NetworkInterface nic, out string label)
+        {
+            label = string.Empty;
+            if (nic.OperationalStatus != OperationalStatus.Up) return false;
+            if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback ||
+                nic.NetworkInterfaceType == NetworkInterfaceType.Tunnel) return false;
+
+            label = $"{nic.Name} {nic.Description}";
+            // Exclude TUN/VPN virtual adapters and host-only virtual NICs (VMnet1/VMnet8/VirtualBox Host-Only),
+            // while allowing real VM guest NICs (e.g. VMware VMXNET3) when running inside a VM.
+            if (ContainsAny(label, DefaultTunInterfaceName, "tun0", "wintun", "singbox", "sing-box",
+                            "loopback", "pseudo-interface", "virtualbox host-only",
+                            "vmware network adapter", "vmnet", "wsl", "default switch", "tailscale", "wireguard"))
+                return false;
+
+            try
+            {
+                foreach (var ua in nic.GetIPProperties().UnicastAddresses)
+                {
+                    if (ua.Address.Equals(IPAddress.Parse("172.18.0.1")))
+                        return false;
+                }
+            }
+            catch { }
+
+            return true;
         }
 
         private static bool TryParseSafeIPv4(string? value, out string address)

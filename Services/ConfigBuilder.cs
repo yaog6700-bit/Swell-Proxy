@@ -11,7 +11,10 @@ namespace AnywhereWinUI.Services
     {
         private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
-        public static async System.Threading.Tasks.Task<string> BuildAsync(PersistedNode? selectedNode = null, bool forceSingbox = false)
+        public static async System.Threading.Tasks.Task<string> BuildAsync(
+            PersistedNode? selectedNode = null,
+            bool forceSingbox = false,
+            bool singleNodeOnly = false)
         {
             var session = AppSession.Instance;
             var routingMode = session.RoutingMode;
@@ -132,6 +135,7 @@ namespace AnywhereWinUI.Services
                 intranet,
                 hasIntranetTunnelRoutes,
                 isSingbox114OrAbove,
+                singleNodeOnly,
                 out var wireGuardEndpoints,
                 out var validOutboundTags,
                 out var hotSwitchTags,
@@ -176,8 +180,8 @@ namespace AnywhereWinUI.Services
                     ["level"] = "warn",
                     ["timestamp"] = true
                 },
-                ["dns"] = BuildDns(bypassChina, blockIPv6, routingMode, intranet, enableTun),
-                ["inbounds"] = await BuildInboundsAsync(enableTun, nodesSnapshot, intranet, isSingbox115OrAbove),
+                ["dns"] = BuildDns(bypassChina, blockIPv6, routingMode, intranet, enableTun, outboundInterface),
+                ["inbounds"] = await BuildInboundsAsync(enableTun, selectedNode, nodesSnapshot, intranet, isSingbox115OrAbove, singleNodeOnly),
                 ["outbounds"] = outbounds,
                 ["route"] = BuildRoute(routingMode, bypassChina, blockAds, intranet, validOutboundTags, enableTun, outboundInterface, isSingbox114OrAbove),
                 ["experimental"] = experimentalObj
@@ -284,7 +288,8 @@ namespace AnywhereWinUI.Services
             bool blockIPv6,
             string routingMode,
             Helpers.WindowsIntranetDetector.IntranetDetectionResult intranet,
-            bool enableTun = false)
+            bool enableTun = false,
+            string? outboundInterface = null)
         {
             var session = AppSession.Instance;
             string proxyDns = !string.IsNullOrEmpty(session.ProxyDns) ? session.ProxyDns : "https://1.1.1.1/dns-query";
@@ -296,11 +301,21 @@ namespace AnywhereWinUI.Services
 
             var localDnsObj = new JsonObject { ["tag"] = "local-dns", ["domain_resolver"] = "bootstrap-dns" };
             ParseAndSetDnsServer(localDnsObj, directDns);
+            if (enableTun && !string.IsNullOrEmpty(outboundInterface))
+            {
+                localDnsObj["bind_interface"] = outboundInterface;
+            }
 
             JsonObject bootstrapDnsObj;
             if (enableTun)
             {
-                bootstrapDnsObj = new JsonObject { ["tag"] = "bootstrap-dns", ["type"] = "tcp", ["server"] = "223.5.5.5" };
+                // Use UDP 223.5.5.5 bound directly to the physical NIC (and excluded in route_exclude_address):
+                // avoids ISP/router drops on outbound TCP port 53 while still preventing any TUN DNS loop.
+                bootstrapDnsObj = new JsonObject { ["tag"] = "bootstrap-dns", ["type"] = "udp", ["server"] = "223.5.5.5" };
+                if (!string.IsNullOrEmpty(outboundInterface))
+                {
+                    bootstrapDnsObj["bind_interface"] = outboundInterface;
+                }
             }
             else
             {
@@ -460,9 +475,11 @@ namespace AnywhereWinUI.Services
 
         private static async System.Threading.Tasks.Task<JsonArray> BuildInboundsAsync(
             bool enableTun,
+            PersistedNode? selectedNode,
             List<PersistedNode> nodesSnapshot,
             Helpers.WindowsIntranetDetector.IntranetDetectionResult intranet,
-            bool isSingbox115OrAbove = false)
+            bool isSingbox115OrAbove = false,
+            bool singleNodeOnly = false)
         {
             var list = new JsonArray();
 
@@ -476,7 +493,8 @@ namespace AnywhereWinUI.Services
                     ["address"]        = new JsonArray { (JsonNode)"172.18.0.1/30", (JsonNode)"fdfe:dcba:9876::1/126" },
                     ["auto_route"]     = true,
                     ["strict_route"]   = false,
-                    ["mtu"]            = 9000
+                    // Standard 1500 Ethernet MTU prevents oversized TCP MSS (8960) & QUIC UDP frames from blackholing on PPPoE / IPLC VLESS links
+                    ["mtu"]            = 1500
                 };
 
                 if (!isSingbox115OrAbove)
@@ -508,8 +526,25 @@ namespace AnywhereWinUI.Services
 
                 // Exclude ALL valid IPv4/IPv6 proxy server addresses & corporate VPN split-tunnel CIDRs/DNS so TUN never captures them
                 var resolvedCidrs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var priorityDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var uniqueDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var excludeLock = new object();
+
+                // Also exclude custom DirectDns IP if configured
+                string rawDirectDns = AppSession.Instance.DirectDns ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(rawDirectDns))
+                {
+                    string dnsHostCandidate = rawDirectDns.Contains("://", StringComparison.Ordinal) &&
+                                              Uri.TryCreate(rawDirectDns, UriKind.Absolute, out var dUri)
+                        ? CleanHost(dUri.IdnHost)
+                        : (NodeLinkParser.TrySplitHostPort(rawDirectDns, out var dh, out _) ? CleanHost(dh) : CleanHost(rawDirectDns));
+                    if (System.Net.IPAddress.TryParse(dnsHostCandidate, out var customDnsIp) && IsValidRoutableServerIp(customDnsIp))
+                    {
+                        resolvedCidrs.Add(customDnsIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6
+                            ? $"{customDnsIp}/128"
+                            : $"{customDnsIp}/32");
+                    }
+                }
 
                 foreach (var intranetCidr in intranet.DirectIpCidrs)
                 {
@@ -529,13 +564,13 @@ namespace AnywhereWinUI.Services
                     }
                 }
 
-                foreach (var node in nodesSnapshot)
+                void CollectNodeHost(PersistedNode? n, bool highPriority)
                 {
-                    if (string.IsNullOrWhiteSpace(node.Host) || CustomConfigService.IsCustomNode(node) || IsInformationalPseudoNode(node))
-                        continue;
-                    var (nHost, _) = NodeLinkParser.SplitHostPort(node.Host);
+                    if (n == null || string.IsNullOrWhiteSpace(n.Host) || CustomConfigService.IsCustomNode(n) || IsInformationalPseudoNode(n))
+                        return;
+                    var (nHost, _) = NodeLinkParser.SplitHostPort(n.Host);
                     var cleanNHost = CleanHost(nHost);
-                    if (string.IsNullOrWhiteSpace(cleanNHost)) continue;
+                    if (string.IsNullOrWhiteSpace(cleanNHost)) return;
 
                     if (System.Net.IPAddress.TryParse(cleanNHost, out var ip))
                     {
@@ -545,15 +580,52 @@ namespace AnywhereWinUI.Services
                             resolvedCidrs.Add(cidr);
                         }
                     }
-                    else
+                    else if (highPriority)
+                    {
+                        priorityDomains.Add(cleanNHost);
+                    }
+                    else if (!priorityDomains.Contains(cleanNHost))
                     {
                         uniqueDomains.Add(cleanNHost);
                     }
                 }
 
+                // Always prioritize the user's active node (and its proxy chain hop) with a dedicated 1.5s lookup
+                CollectNodeHost(selectedNode, highPriority: true);
+                if (selectedNode != null && !string.IsNullOrEmpty(selectedNode.ProxyChainId))
+                {
+                    CollectNodeHost(nodesSnapshot.Find(n => n.Id == selectedNode.ProxyChainId), highPriority: true);
+                }
+
+                if (!singleNodeOnly)
+                {
+                    foreach (var node in nodesSnapshot)
+                    {
+                        CollectNodeHost(node, highPriority: false);
+                    }
+                }
+
+                foreach (var pDomain in priorityDomains)
+                {
+                    try
+                    {
+                        using var pCts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(1500));
+                        var ips = await System.Net.Dns.GetHostAddressesAsync(pDomain, pCts.Token).ConfigureAwait(false);
+                        foreach (var resolvedIp in ips)
+                        {
+                            if (!IsValidRoutableServerIp(resolvedIp)) continue;
+                            string cidr = resolvedIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6
+                                ? $"{resolvedIp}/128"
+                                : $"{resolvedIp}/32";
+                            resolvedCidrs.Add(cidr);
+                        }
+                    }
+                    catch { }
+                }
+
                 if (uniqueDomains.Count > 0)
                 {
-                    using var gate = new System.Threading.SemaphoreSlim(32, 32);
+                    using var gate = new System.Threading.SemaphoreSlim(24, 24);
                     using var overallCts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(1500));
                     var dnsTasks = new List<System.Threading.Tasks.Task>(uniqueDomains.Count);
 
@@ -568,7 +640,7 @@ namespace AnywhereWinUI.Services
                                 await gate.WaitAsync(overallCts.Token).ConfigureAwait(false);
                                 entered = true;
                                 using var perHostCts = System.Threading.CancellationTokenSource.CreateLinkedTokenSource(overallCts.Token);
-                                perHostCts.CancelAfter(500);
+                                perHostCts.CancelAfter(800);
                                 var ips = await System.Net.Dns.GetHostAddressesAsync(capturedHost, perHostCts.Token).ConfigureAwait(false);
                                 lock (excludeLock)
                                 {
@@ -634,10 +706,30 @@ namespace AnywhereWinUI.Services
             if (System.Net.IPAddress.IsLoopback(ip) ||
                 ip.Equals(System.Net.IPAddress.Any) ||
                 ip.Equals(System.Net.IPAddress.IPv6Any) ||
-                ip.Equals(System.Net.IPAddress.Broadcast))
+                ip.Equals(System.Net.IPAddress.Broadcast) ||
+                ip.IsIPv6LinkLocal)
             {
                 return false;
             }
+
+            var bytes = ip.GetAddressBytes();
+            if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && bytes.Length == 4)
+            {
+                // Never add FakeIP (198.18.0.0/15) or TUN subnet (172.18.0.0/30) to route_exclude_address
+                if (bytes[0] == 198 && (bytes[1] == 18 || bytes[1] == 19))
+                    return false;
+                if (bytes[0] == 172 && bytes[1] == 18 && bytes[2] == 0 && bytes[3] <= 3)
+                    return false;
+            }
+            else if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 && bytes.Length == 16)
+            {
+                // Never add FakeIPv6 (2001:2::/48) or ULA (fc00::/7) to route_exclude_address
+                if (bytes[0] == 0x20 && bytes[1] == 0x01 && bytes[2] == 0x00 && bytes[3] == 0x02 && bytes[4] == 0x00 && bytes[5] == 0x00)
+                    return false;
+                if ((bytes[0] & 0xFE) == 0xFC)
+                    return false;
+            }
+
             return true;
         }
 
@@ -663,23 +755,62 @@ namespace AnywhereWinUI.Services
             return false;
         }
 
-        private static bool IsSafeHotSwitchCandidate(PersistedNode node, List<PersistedNode> nodesSnapshot)
+        internal static string? GetXrayExclusiveIncompatibilityReason(PersistedNode? node)
+        {
+            if (node == null || CustomConfigService.IsCustomNode(node))
+                return null;
+
+            string net = (node.Network ?? string.Empty).Trim().ToLowerInvariant();
+            if (net is "xhttp" or "splithttp" or "kcp" or "mkcp")
+            {
+                return $"传输层协议 \"{node.Network}\"（Xray 专属扩展）";
+            }
+
+            string proto = (node.Protocol ?? string.Empty).Trim().ToLowerInvariant();
+            if (proto.Contains("vless") &&
+                !string.IsNullOrWhiteSpace(node.VlessEncryption) &&
+                !string.Equals(node.VlessEncryption.Trim(), "none", StringComparison.OrdinalIgnoreCase))
+            {
+                return "VLESS 传输加密（Xray 专属扩展）";
+            }
+
+            return null;
+        }
+
+        private static bool IsCompatibleSingboxSelectorNode(PersistedNode node)
         {
             if (IsInformationalPseudoNode(node) || IsWireGuardNode(node))
                 return false;
 
-            // Never preload "nowhere" outbounds into the shared selector: official sing-box 1.14+ exits with
-            // "unknown outbound type: nowhere" if even a single unselected nowhere outbound exists in outbounds!
-            string proto = node.Protocol?.ToLowerInvariant() ?? string.Empty;
+            // Never preload "nowhere" or Xray-exclusive nodes into the shared selector: official sing-box 1.14+ exits
+            // if even a single unselected incompatible outbound exists in outbounds!
+            string proto = (node.Protocol ?? string.Empty).Trim().ToLowerInvariant();
             if (proto == "nowhere")
+                return false;
+
+            if (GetXrayExclusiveIncompatibilityReason(node) != null)
+                return false;
+
+            string net = (node.Network ?? string.Empty).Trim().ToLowerInvariant();
+            if (net == "quic")
+                return false;
+
+            string sec = (node.Security ?? string.Empty).Trim().ToLowerInvariant();
+            if (sec == "reality" && string.IsNullOrWhiteSpace(node.PublicKey))
+                return false;
+
+            return true;
+        }
+
+        private static bool IsSafeHotSwitchCandidate(PersistedNode node, List<PersistedNode> nodesSnapshot)
+        {
+            if (!IsCompatibleSingboxSelectorNode(node))
                 return false;
 
             if (!string.IsNullOrEmpty(node.ProxyChainId))
             {
                 var chainNode = nodesSnapshot.Find(n => n.Id == node.ProxyChainId);
-                if (chainNode == null || IsInformationalPseudoNode(chainNode) || IsWireGuardNode(chainNode))
-                    return false;
-                if (string.Equals(chainNode.Protocol, "nowhere", StringComparison.OrdinalIgnoreCase))
+                if (chainNode == null || !IsCompatibleSingboxSelectorNode(chainNode))
                     return false;
             }
 
@@ -695,6 +826,7 @@ namespace AnywhereWinUI.Services
             Helpers.WindowsIntranetDetector.IntranetDetectionResult intranet,
             bool hasIntranetTunnelRoutes,
             bool isSingbox114OrAbove,
+            bool singleNodeOnly,
             out JsonArray wireGuardEndpoints,
             out HashSet<string> validOutboundTags,
             out HashSet<string> hotSwitchTags,
@@ -731,6 +863,13 @@ namespace AnywhereWinUI.Services
                 var generated = GenerateOutboundsForNode(node, nodesSnapshot, nHost, nPort, tag, isSingbox114OrAbove, wgEndpoints, addedTags);
                 foreach (var ob in generated)
                 {
+                    // Bind non-detoured proxy outbounds directly to the physical NIC in TUN mode so even TTL=1s
+                    // or multi-CNAME dynamic GTM proxy server IPs never loop back into singbox-tun!
+                    if (enableTun && !string.IsNullOrEmpty(outboundInterface) && !ob.ContainsKey("detour"))
+                    {
+                        ob["bind_interface"] = outboundInterface;
+                    }
+
                     var obTag = ob["tag"]?.ToString() ?? string.Empty;
                     if (addedTags.Add(obTag))
                     {
@@ -743,38 +882,42 @@ namespace AnywhereWinUI.Services
             EnsureNodeGenerated(selectedNode, primaryTag);
 
             // 2. Populate selector & urltest outbounds for <5ms zero-drop hot node switching
+            //    (skipped in singleNodeOnly self-healing mode if an unrelated subscription node caused sing-box init error)
             const int MaxSelectorNodes = 400;
             const int MaxUrlTestNodes = 120;
 
-            // Pass A: Favorites first so urltest & selector always cover user's pinned nodes
-            foreach (var node in nodesSnapshot)
+            if (!singleNodeOnly)
             {
-                if (selectorNodeIds.Count >= MaxSelectorNodes) break;
-                if (!node.IsFavorite || !IsSafeHotSwitchCandidate(node, nodesSnapshot))
-                    continue;
-
-                EnsureNodeGenerated(node, node.Id);
-                if (selectorTagSet.Add(node.Id))
+                // Pass A: Favorites first so urltest & selector always cover user's pinned nodes
+                foreach (var node in nodesSnapshot)
                 {
-                    selectorNodeIds.Add(node.Id);
-                    if (urlTestNodeIds.Count < MaxUrlTestNodes)
-                        urlTestNodeIds.Add(node.Id);
+                    if (selectorNodeIds.Count >= MaxSelectorNodes) break;
+                    if (!node.IsFavorite || !IsSafeHotSwitchCandidate(node, nodesSnapshot))
+                        continue;
+
+                    EnsureNodeGenerated(node, node.Id);
+                    if (selectorTagSet.Add(node.Id))
+                    {
+                        selectorNodeIds.Add(node.Id);
+                        if (urlTestNodeIds.Count < MaxUrlTestNodes)
+                            urlTestNodeIds.Add(node.Id);
+                    }
                 }
-            }
 
-            // Pass B: Remaining safe nodes in user's list order
-            foreach (var node in nodesSnapshot)
-            {
-                if (selectorNodeIds.Count >= MaxSelectorNodes) break;
-                if (node.IsFavorite || !IsSafeHotSwitchCandidate(node, nodesSnapshot))
-                    continue;
-
-                EnsureNodeGenerated(node, node.Id);
-                if (selectorTagSet.Add(node.Id))
+                // Pass B: Remaining safe nodes in user's list order
+                foreach (var node in nodesSnapshot)
                 {
-                    selectorNodeIds.Add(node.Id);
-                    if (urlTestNodeIds.Count < MaxUrlTestNodes)
-                        urlTestNodeIds.Add(node.Id);
+                    if (selectorNodeIds.Count >= MaxSelectorNodes) break;
+                    if (node.IsFavorite || !IsSafeHotSwitchCandidate(node, nodesSnapshot))
+                        continue;
+
+                    EnsureNodeGenerated(node, node.Id);
+                    if (selectorTagSet.Add(node.Id))
+                    {
+                        selectorNodeIds.Add(node.Id);
+                        if (urlTestNodeIds.Count < MaxUrlTestNodes)
+                            urlTestNodeIds.Add(node.Id);
+                    }
                 }
             }
 
@@ -871,6 +1014,17 @@ namespace AnywhereWinUI.Services
                 }
                 addedTags.Add("intranet-direct");
                 list.Add(intranetDirect);
+            }
+
+            if (enableTun && !string.IsNullOrEmpty(outboundInterface))
+            {
+                foreach (var wgNode in wgEndpoints)
+                {
+                    if (wgNode is JsonObject wgObj && !wgObj.ContainsKey("detour"))
+                    {
+                        wgObj["bind_interface"] = outboundInterface;
+                    }
+                }
             }
 
             return list;
@@ -1077,30 +1231,37 @@ namespace AnywhereWinUI.Services
                 ["server_port"] = port
             };
 
-            string protoLower = node.Protocol.ToLowerInvariant();
+            string protoLower = (node.Protocol ?? string.Empty).Trim().ToLowerInvariant();
             
             // Common values
-            string uuidVal = !string.IsNullOrEmpty(node.Uuid) ? node.Uuid : "de000000-0000-0000-0000-000000000000";
+            string uuidVal = !string.IsNullOrWhiteSpace(node.Uuid) ? node.Uuid.Trim() : "de000000-0000-4000-8000-000000000000";
             string passwordVal = !string.IsNullOrEmpty(node.Password) ? node.Password : "anywhere-password";
-            string securityVal = !string.IsNullOrEmpty(node.Security) ? node.Security.ToLower() : "none";
-            string networkVal = !string.IsNullOrEmpty(node.Network) ? node.Network.ToLower() : "tcp";
-            string pathVal = !string.IsNullOrEmpty(node.Path) ? node.Path : "";
-            string wsHostVal = !string.IsNullOrEmpty(node.WsHost) ? node.WsHost : "";
-            string sniVal = !string.IsNullOrEmpty(node.Sni) ? node.Sni : host;
-            string fingerprintVal = !string.IsNullOrEmpty(node.Fingerprint) ? node.Fingerprint.ToLower() : "none";
+            string securityVal = !string.IsNullOrWhiteSpace(node.Security) ? node.Security.Trim().ToLowerInvariant() : "none";
+            string networkVal = !string.IsNullOrWhiteSpace(node.Network) ? node.Network.Trim().ToLowerInvariant() : "tcp";
+            string pathVal = !string.IsNullOrEmpty(node.Path) ? node.Path.Trim() : "";
+            string wsHostVal = !string.IsNullOrWhiteSpace(node.WsHost) ? node.WsHost.Trim() : "";
+            string sniVal = !string.IsNullOrWhiteSpace(node.Sni) ? node.Sni.Trim() : CleanHost(host);
+            string fingerprintVal = !string.IsNullOrWhiteSpace(node.Fingerprint) ? node.Fingerprint.Trim().ToLowerInvariant() : "none";
             bool allowInsecureVal = node.AllowInsecure;
 
             if (protoLower.Contains("vless"))
             {
                 proxyOutbound["type"] = "vless";
                 proxyOutbound["uuid"] = uuidVal;
-                if (!string.IsNullOrEmpty(node.Flow))
+                proxyOutbound["packet_encoding"] = "xudp";
+
+                // Normalize Xray flow: sing-box only accepts "xtls-rprx-vision", and only over TCP + TLS/Reality.
+                // NOTE: Do NOT emit "encryption" on sing-box vless outbounds — official sing-box 1.14+ rejects it as an unknown field!
+                string flowVal = !string.IsNullOrWhiteSpace(node.Flow) ? node.Flow.Trim() : string.Empty;
+                if (string.Equals(flowVal, "xtls-rprx-vision-udp443", StringComparison.OrdinalIgnoreCase))
                 {
-                    proxyOutbound["flow"] = node.Flow;
+                    flowVal = "xtls-rprx-vision";
                 }
-                if (!string.IsNullOrEmpty(node.VlessEncryption) && !string.Equals(node.VlessEncryption, "none", StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(flowVal) &&
+                    networkVal == "tcp" &&
+                    (securityVal == "tls" || securityVal == "reality"))
                 {
-                    proxyOutbound["encryption"] = node.VlessEncryption;
+                    proxyOutbound["flow"] = flowVal;
                 }
 
                 if (securityVal == "tls" || securityVal == "reality")
@@ -1113,9 +1274,16 @@ namespace AnywhereWinUI.Services
                         tlsObj["reality"] = new JsonObject
                         {
                             ["enabled"] = true,
-                            ["public_key"] = !string.IsNullOrEmpty(node.PublicKey) ? node.PublicKey : "",
-                            ["short_id"] = !string.IsNullOrEmpty(node.ShortId) ? node.ShortId : ""
+                            ["public_key"] = !string.IsNullOrWhiteSpace(node.PublicKey) ? node.PublicKey.Trim() : "",
+                            ["short_id"] = !string.IsNullOrWhiteSpace(node.ShortId) ? node.ShortId.Trim() : ""
                         };
+
+                        // sing-box requires uTLS on every Reality client ("uTLS is required by reality client");
+                        // default to "chrome" when a subscription omits fp=.
+                        if (string.IsNullOrEmpty(fingerprintVal) || fingerprintVal == "none")
+                        {
+                            fingerprintVal = "chrome";
+                        }
                     }
                     else
                     {
@@ -1123,7 +1291,7 @@ namespace AnywhereWinUI.Services
                         tlsObj["insecure"] = allowInsecureVal;
                     }
 
-                    if (fingerprintVal != "none")
+                    if (!string.IsNullOrEmpty(fingerprintVal) && fingerprintVal != "none")
                     {
                         tlsObj["utls"] = new JsonObject
                         {
@@ -1210,11 +1378,15 @@ namespace AnywhereWinUI.Services
                         tlsObj["reality"] = new JsonObject
                         {
                             ["enabled"] = true,
-                            ["public_key"] = !string.IsNullOrEmpty(node.PublicKey) ? node.PublicKey : "",
-                            ["short_id"] = !string.IsNullOrEmpty(node.ShortId) ? node.ShortId : ""
+                            ["public_key"] = !string.IsNullOrWhiteSpace(node.PublicKey) ? node.PublicKey.Trim() : "",
+                            ["short_id"] = !string.IsNullOrWhiteSpace(node.ShortId) ? node.ShortId.Trim() : ""
                         };
+                        if (string.IsNullOrEmpty(fingerprintVal) || fingerprintVal == "none")
+                        {
+                            fingerprintVal = "chrome";
+                        }
                     }
-                    if (fingerprintVal != "none")
+                    if (!string.IsNullOrEmpty(fingerprintVal) && fingerprintVal != "none")
                     {
                         tlsObj["utls"] = new JsonObject
                         {
@@ -1454,6 +1626,44 @@ namespace AnywhereWinUI.Services
             }
         }
 
+        private static string ExtractWsEarlyData(string rawPath, out int maxEarlyData)
+        {
+            maxEarlyData = 0;
+            if (string.IsNullOrEmpty(rawPath)) return string.Empty;
+
+            int qIdx = rawPath.IndexOf('?');
+            if (qIdx < 0) return rawPath;
+
+            string basePath = qIdx == 0 ? "/" : rawPath.Substring(0, qIdx);
+            string query = rawPath.Substring(qIdx + 1);
+            var keptParams = new List<string>();
+
+            foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                int eqIdx = part.IndexOf('=');
+                if (eqIdx > 0)
+                {
+                    string k = part.Substring(0, eqIdx);
+                    string v = part.Substring(eqIdx + 1);
+                    if (string.Equals(k, "ed", StringComparison.OrdinalIgnoreCase) &&
+                        int.TryParse(v, out int parsedEd) &&
+                        parsedEd > 0)
+                    {
+                        maxEarlyData = parsedEd;
+                        continue;
+                    }
+                }
+                keptParams.Add(part);
+            }
+
+            if (maxEarlyData <= 0)
+                return rawPath;
+
+            return keptParams.Count > 0
+                ? $"{basePath}?{string.Join("&", keptParams)}"
+                : basePath;
+        }
+
         private static void ApplyTransportToOutbound(JsonObject proxyOutbound, string networkVal, string pathVal, string wsHostVal)
         {
             if (networkVal == "ws")
@@ -1462,10 +1672,16 @@ namespace AnywhereWinUI.Services
                 {
                     ["type"] = "ws"
                 };
-                if (!string.IsNullOrEmpty(pathVal))
-                    transportObj["path"] = pathVal;
+                string cleanWsPath = ExtractWsEarlyData(pathVal, out int maxEarlyData);
+                if (!string.IsNullOrEmpty(cleanWsPath))
+                    transportObj["path"] = cleanWsPath;
                 if (!string.IsNullOrEmpty(wsHostVal))
                     transportObj["headers"] = new JsonObject { ["Host"] = wsHostVal };
+                if (maxEarlyData > 0)
+                {
+                    transportObj["max_early_data"] = maxEarlyData;
+                    transportObj["early_data_header_name"] = "Sec-WebSocket-Protocol";
+                }
                 proxyOutbound["transport"] = transportObj;
             }
             else if (networkVal == "httpupgrade")
@@ -1487,12 +1703,11 @@ namespace AnywhereWinUI.Services
                     ["type"] = "grpc"
                 };
                 if (!string.IsNullOrEmpty(pathVal))
-                    transportObj["service_name"] = pathVal;
+                    transportObj["service_name"] = pathVal.TrimStart('/');
                 proxyOutbound["transport"] = transportObj;
             }
-            else if (networkVal == "xhttp" || networkVal == "h2" || networkVal == "http")
+            else if (networkVal == "h2" || networkVal == "http")
             {
-                // sing-box uses "http" as the V2Ray HTTP/2 transport type (mainline sing-box has no "xhttp" transport)
                 var transportObj = new JsonObject
                 {
                     ["type"] = "http"
@@ -1593,6 +1808,14 @@ namespace AnywhereWinUI.Services
                 });
             }
 
+            string resolverStrategy = !string.IsNullOrEmpty(AppSession.Instance.DnsStrategy)
+                ? AppSession.Instance.DnsStrategy
+                : "prefer_ipv4";
+
+            JsonNode MakeDefaultDomainResolver() => isSingbox114OrAbove
+                ? new JsonObject { ["server"] = "local-dns", ["strategy"] = resolverStrategy }
+                : (JsonNode)"local-dns";
+
             var ruleSets = new JsonArray();
 
             if (routingMode == "global")
@@ -1604,7 +1827,7 @@ namespace AnywhereWinUI.Services
                     ["final"] = "proxy",
                     ["auto_detect_interface"] = true,
                     ["find_process"] = true,
-                    ["default_domain_resolver"] = "local-dns"
+                    ["default_domain_resolver"] = MakeDefaultDomainResolver()
                 };
                 if (isSingbox114OrAbove)
                     globalRoute["default_http_client"] = "default-http";
@@ -1622,7 +1845,7 @@ namespace AnywhereWinUI.Services
                     ["final"] = "direct",
                     ["auto_detect_interface"] = true,
                     ["find_process"] = true,
-                    ["default_domain_resolver"] = "local-dns"
+                    ["default_domain_resolver"] = MakeDefaultDomainResolver()
                 };
                 if (isSingbox114OrAbove)
                     directRoute["default_http_client"] = "direct-http";
@@ -1735,7 +1958,7 @@ namespace AnywhereWinUI.Services
                 ["final"] = "proxy",
                 ["auto_detect_interface"] = true,
                 ["find_process"] = true,
-                ["default_domain_resolver"] = "local-dns"
+                ["default_domain_resolver"] = MakeDefaultDomainResolver()
             };
             if (isSingbox114OrAbove)
                 smartRoute["default_http_client"] = "default-http";

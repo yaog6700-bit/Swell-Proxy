@@ -681,5 +681,31 @@ proxies:
             Assert.Equal("2001:db8::1", bareV6);
             Assert.Equal(0, barePort);
         }
+
+        [Fact]
+        public void Parse_XhttpAndSplitHttpTransports_PreservedAsXhttp()
+        {
+            const string yaml = @"
+proxies:
+  - name: vless-xhttp
+    type: vless
+    server: xh.example.com
+    port: 443
+    uuid: 8768c449-f7c7-4cc6-ac53-2d9869ee98f8
+    network: xhttp
+    tls: true
+  - name: vless-splithttp
+    type: vless
+    server: sh.example.com
+    port: 443
+    uuid: 8768c449-f7c7-4cc6-ac53-2d9869ee98f8
+    network: splithttp
+    tls: true
+";
+            var nodes = ClashSubscriptionParser.Parse(yaml, SubA);
+            Assert.Equal(2, nodes.Count);
+            Assert.Equal("xhttp", nodes[0].Network);
+            Assert.Equal("xhttp", nodes[1].Network);
+        }
     }
 }
