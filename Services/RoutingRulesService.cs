@@ -321,6 +321,7 @@ namespace AnywhereWinUI.Services
             {
                 AppSession.Instance.RoutingMode = "smart";
                 LocalSettingsHelper.SetValue("routingMode", "smart");
+                CoreManager.Instance.NotifyModeStateChanged();
             }
 
             string actionLabel = outboundTag switch
@@ -333,10 +334,8 @@ namespace AnywhereWinUI.Services
             if (CoreManager.Instance.IsRunning)
             {
                 CoreManager.Instance.AppendLog($"[快捷分流] 已更新规则 {displayName} ({match}) -> {actionLabel}，正在重载代理引擎...");
-                var selectedId = NodesManager.Instance.SelectedNodeId;
-                var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == selectedId);
+                var node = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
                 string realConfig = node != null ? await ConfigBuilder.BuildAsync(node) : await ConfigBuilder.BuildAsync();
-                await CoreManager.Instance.StopAsync();
                 await CoreManager.Instance.StartAsync(realConfig);
             }
 

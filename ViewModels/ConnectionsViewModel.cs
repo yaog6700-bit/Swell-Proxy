@@ -221,6 +221,10 @@ namespace AnywhereWinUI.ViewModels
                         node = AppSession.Instance.SelectedNodeName;
                         if (string.IsNullOrEmpty(node)) node = "Proxy";
                     }
+                    else if (chainTag.Equals("intranet-direct", StringComparison.OrdinalIgnoreCase))
+                    {
+                        node = "Direct";
+                    }
                     else if (!chainTag.Equals("direct", StringComparison.OrdinalIgnoreCase) &&
                              !chainTag.Equals("block", StringComparison.OrdinalIgnoreCase))
                     {

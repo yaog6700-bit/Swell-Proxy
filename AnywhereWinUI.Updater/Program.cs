@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading;
 
@@ -300,28 +301,36 @@ internal static class Program
     private static void LaunchApp(string exePath, string workingDirectory, string? launchArgs)
     {
         bool needsAdminForTun = !string.IsNullOrEmpty(launchArgs) &&
-                                launchArgs.Contains("--tun", StringComparison.OrdinalIgnoreCase);
+                                (launchArgs.Contains("--tun", StringComparison.OrdinalIgnoreCase) ||
+                                 launchArgs.Contains("--require-admin", StringComparison.OrdinalIgnoreCase));
 
         if (IsElevated() && !needsAdminForTun)
         {
-            try
+            // De-elevate cleanly using the interactive Explorer shell process token so command-line
+            // arguments (e.g. --auto-start-proxy) are passed directly to Swell Proxy.exe!
+            if (TryLaunchUnelevatedViaShellToken(exePath, workingDirectory, launchArgs))
             {
-                string explorerArgs = string.IsNullOrWhiteSpace(launchArgs)
-                    ? QuoteForCommandLine(exePath)
-                    : $"{QuoteForCommandLine(exePath)} {launchArgs}";
-
-                using var p = Process.Start(new ProcessStartInfo
-                {
-                    FileName        = "explorer.exe",
-                    Arguments       = explorerArgs,
-                    WorkingDirectory = workingDirectory,
-                    UseShellExecute = true,
-                });
                 return;
             }
-            catch (Exception ex)
+
+            // Never pass trailing CLI flags to explorer.exe (Explorer parses them as shell paths and opens Documents).
+            if (string.IsNullOrWhiteSpace(launchArgs))
             {
-                Log($"Unelevated launch via Explorer failed: {ex.Message}");
+                try
+                {
+                    using var p = Process.Start(new ProcessStartInfo
+                    {
+                        FileName         = "explorer.exe",
+                        Arguments        = QuoteForCommandLine(exePath),
+                        WorkingDirectory = workingDirectory,
+                        UseShellExecute  = true,
+                    });
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Log($"Unelevated launch via Explorer failed: {ex.Message}");
+                }
             }
         }
 
@@ -338,6 +347,139 @@ internal static class Program
         }
         using var started = Process.Start(psi);
     }
+
+    private static bool TryLaunchUnelevatedViaShellToken(string exePath, string workingDirectory, string? launchArgs)
+    {
+        IntPtr shellProcess = IntPtr.Zero;
+        IntPtr shellToken = IntPtr.Zero;
+        IntPtr primaryToken = IntPtr.Zero;
+        try
+        {
+            IntPtr shellWnd = GetShellWindow();
+            if (shellWnd == IntPtr.Zero) return false;
+
+            GetWindowThreadProcessId(shellWnd, out uint shellPid);
+            if (shellPid == 0) return false;
+
+            // PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+            shellProcess = OpenProcess(0x1000, false, shellPid);
+            if (shellProcess == IntPtr.Zero) return false;
+
+            // TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY = 0x0008 | 0x0002 | 0x0001
+            if (!OpenProcessToken(shellProcess, 0x000B, out shellToken) || shellToken == IntPtr.Zero)
+                return false;
+
+            // MAXIMUM_ALLOWED = 0x02000000, SecurityImpersonation = 2, TokenPrimary = 1
+            if (!DuplicateTokenEx(shellToken, 0x02000000, IntPtr.Zero, 2, 1, out primaryToken) || primaryToken == IntPtr.Zero)
+                return false;
+
+            string cmdLine = string.IsNullOrWhiteSpace(launchArgs)
+                ? QuoteForCommandLine(exePath)
+                : $"{QuoteForCommandLine(exePath)} {launchArgs}";
+
+            var si = new STARTUPINFOW { cb = (uint)Marshal.SizeOf<STARTUPINFOW>() };
+            if (!CreateProcessWithTokenW(
+                    primaryToken,
+                    0,
+                    exePath,
+                    cmdLine,
+                    0,
+                    IntPtr.Zero,
+                    workingDirectory,
+                    ref si,
+                    out var pi))
+            {
+                return false;
+            }
+
+            if (pi.hThread != IntPtr.Zero) CloseHandle(pi.hThread);
+            if (pi.hProcess != IntPtr.Zero) CloseHandle(pi.hProcess);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log($"Shell-token de-elevated launch failed: {ex.Message}");
+            return false;
+        }
+        finally
+        {
+            if (primaryToken != IntPtr.Zero) CloseHandle(primaryToken);
+            if (shellToken != IntPtr.Zero) CloseHandle(shellToken);
+            if (shellProcess != IntPtr.Zero) CloseHandle(shellProcess);
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct STARTUPINFOW
+    {
+        public uint cb;
+        public IntPtr lpReserved;
+        public IntPtr lpDesktop;
+        public IntPtr lpTitle;
+        public uint dwX;
+        public uint dwY;
+        public uint dwXSize;
+        public uint dwYSize;
+        public uint dwXCountChars;
+        public uint dwYCountChars;
+        public uint dwFillAttribute;
+        public uint dwFlags;
+        public ushort wShowWindow;
+        public ushort cbReserved2;
+        public IntPtr lpReserved2;
+        public IntPtr hStdInput;
+        public IntPtr hStdOutput;
+        public IntPtr hStdError;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PROCESS_INFORMATION
+    {
+        public IntPtr hProcess;
+        public IntPtr hThread;
+        public uint dwProcessId;
+        public uint dwThreadId;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetShellWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(uint dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, uint dwProcessId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr hObject);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool OpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, out IntPtr TokenHandle);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DuplicateTokenEx(
+        IntPtr hExistingToken,
+        uint dwDesiredAccess,
+        IntPtr lpTokenAttributes,
+        int ImpersonationLevel,
+        int TokenType,
+        out IntPtr phNewToken);
+
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CreateProcessWithTokenW(
+        IntPtr hToken,
+        uint dwLogonFlags,
+        string lpApplicationName,
+        string lpCommandLine,
+        uint dwCreationFlags,
+        IntPtr lpEnvironment,
+        string lpCurrentDirectory,
+        ref STARTUPINFOW lpStartupInfo,
+        out PROCESS_INFORMATION lpProcessInformation);
 
     private static bool IsElevated()
     {

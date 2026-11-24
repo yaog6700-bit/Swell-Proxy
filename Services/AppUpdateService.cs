@@ -59,11 +59,16 @@ namespace AnywhereWinUI.Services
             string launchArgs = string.Empty;
             if (wasRunning)
             {
+                var activeNode = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
+                bool customNeedsAdmin = CustomConfigService.RequiresTunAdmin(activeNode) ||
+                                        (CustomConfigService.IsCustomNode(activeNode) &&
+                                         AdminHelper.IsAdministrator() &&
+                                         AppSession.Instance.ActiveCustomHasTun);
                 launchArgs = AppSession.Instance.ProxyModeIndex switch
                 {
                     3 => "--tun-system-start",
                     1 => "--tun-start",
-                    _ => "--auto-start-proxy"
+                    _ => customNeedsAdmin ? "--auto-start-proxy --require-admin" : "--auto-start-proxy"
                 };
                 await CoreManager.Instance.StopAsync();
             }

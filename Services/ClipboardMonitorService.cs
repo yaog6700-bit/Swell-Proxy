@@ -82,14 +82,17 @@ namespace AnywhereWinUI.Services
             long nowTick = Environment.TickCount64;
             if (nowTick - _lastTriggerTick < 500)
                 return;
-            _lastTriggerTick = nowTick;
 
             // Fast Win32 pre-check: 0 managed allocations and 0 LOH spikes when user copies images,
             // files, or multi-megabyte logs/spreadsheets in other applications!
             if (!IsClipboardFormatAvailable(CF_UNICODETEXT))
                 return;
 
-            string? candidate = TryExtractProxyCandidateZeroAlloc();
+            string? candidate = TryExtractProxyCandidateZeroAlloc(out bool clipboardOpened);
+            if (clipboardOpened)
+            {
+                _lastTriggerTick = Environment.TickCount64;
+            }
             if (candidate == null)
                 return;
 
@@ -106,9 +109,22 @@ namespace AnywhereWinUI.Services
             }
         }
 
-        private unsafe string? TryExtractProxyCandidateZeroAlloc()
+        private unsafe string? TryExtractProxyCandidateZeroAlloc(out bool opened)
         {
-            if (!OpenClipboard(IntPtr.Zero))
+            opened = false;
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                if (OpenClipboard(IntPtr.Zero))
+                {
+                    opened = true;
+                    break;
+                }
+                if (attempt < 2)
+                {
+                    System.Threading.Thread.Sleep(25);
+                }
+            }
+            if (!opened)
                 return null;
 
             try

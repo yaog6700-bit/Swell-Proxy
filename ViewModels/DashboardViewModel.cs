@@ -48,6 +48,7 @@ namespace AnywhereWinUI.ViewModels
 
             AppSession.Instance.RoutingMode = newMode;
             LocalSettingsHelper.SetValue("routingMode", newMode);
+            CoreManager.Instance.NotifyModeStateChanged();
             
             // Notify ServersPage if it is listening
             if (CoreManager.Instance.IsRunning)
@@ -136,6 +137,21 @@ namespace AnywhereWinUI.ViewModels
             bool running = CoreManager.Instance.IsRunning;
             IsCoreRunning = running;
             CoreStatusText = running ? L.Common_Connected : L.Common_Disconnected;
+
+            int targetRouteIdx = GetInitialRoutingModeIndex();
+            if (_selectedModeIndex != targetRouteIdx)
+            {
+                _selectedModeIndex = targetRouteIdx;
+                OnPropertyChanged(nameof(SelectedModeIndex));
+            }
+
+            int targetProxyIdx = AppSession.Instance.ProxyModeIndex;
+            if (_proxyModeIndex != targetProxyIdx)
+            {
+                _proxyModeIndex = targetProxyIdx;
+                OnPropertyChanged(nameof(ProxyModeIndex));
+            }
+
             UpdateNodeInfo();
             if (running)
             {
@@ -212,7 +228,7 @@ namespace AnywhereWinUI.ViewModels
                 return;
             }
 
-            var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+            var node = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
             if (node != null)
             {
                 CurrentNodeName = node.Name;
@@ -270,6 +286,7 @@ namespace AnywhereWinUI.ViewModels
                 AppSession.Instance.ProxyModeIndex = value;
                 LocalSettingsHelper.SetValue("proxyModeIndex", value);
                 LocalSettingsHelper.SetValue("enableTunMode", false);
+                CoreManager.Instance.NotifyModeStateChanged();
                 _ = TriggerCoreRestartIfNeeded();
             }
         }
@@ -361,6 +378,7 @@ namespace AnywhereWinUI.ViewModels
                 AppSession.Instance.ProxyModeIndex = targetModeIndex;
                 LocalSettingsHelper.SetValue("proxyModeIndex", targetModeIndex);
                 LocalSettingsHelper.SetValue("enableTunMode", true);
+                CoreManager.Instance.NotifyModeStateChanged();
                 _ = TriggerCoreRestartIfNeeded();
             }
         }
@@ -370,9 +388,8 @@ namespace AnywhereWinUI.ViewModels
             if (CoreManager.Instance.IsRunning)
             {
                 CoreManager.Instance.AppendLog("[系统] 检测到代理模式更新，正在自动重启代理引擎...");
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                var node = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
                 string realConfig = node != null ? await ConfigBuilder.BuildAsync(node) : await ConfigBuilder.BuildAsync();
-                await CoreManager.Instance.StopAsync();
                 await CoreManager.Instance.StartAsync(realConfig);
             }
         }
@@ -387,13 +404,17 @@ namespace AnywhereWinUI.ViewModels
             else
             {
                 // Select default node if none selected
-                if (string.IsNullOrEmpty(NodesManager.Instance.SelectedNodeId) && NodesManager.Instance.Nodes.Count > 0)
+                if (string.IsNullOrEmpty(NodesManager.Instance.SelectedNodeId))
                 {
-                    NodesManager.Instance.SelectedNodeId = NodesManager.Instance.Nodes[0].Id;
-                    NodesManager.Instance.Save();
+                    var snap = NodesManager.Instance.GetNodesSnapshot();
+                    if (snap.Count > 0)
+                    {
+                        NodesManager.Instance.SelectedNodeId = snap[0].Id;
+                        NodesManager.Instance.Save();
+                    }
                 }
 
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                var node = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
 
                 if ((AppSession.Instance.EnableTunMode && !CustomConfigService.IsCustomNode(node) && !AdminHelper.IsAdministrator()) ||
                     CustomConfigService.RequiresTunAdmin(node))
@@ -451,6 +472,8 @@ namespace AnywhereWinUI.ViewModels
         {
             CoreManager.Instance.RunningChanged -= CoreManager_RunningChanged;
             CoreManager.Instance.TrafficUpdated -= CoreManager_TrafficUpdated;
+            CoreManager.Instance.ActiveNodeChanged -= CoreManager_ActiveNodeChanged;
+            CoreManager.Instance.ModeStateChanged -= CoreManager_ModeStateChanged;
         }
     }
 }

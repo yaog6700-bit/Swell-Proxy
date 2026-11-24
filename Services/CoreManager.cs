@@ -62,6 +62,8 @@ namespace AnywhereWinUI.Services
         public event EventHandler? ModeStateChanged;
 
         private volatile bool _isTrayPanelOpen;
+        private volatile bool _desiredRunning;
+        private volatile string _activeRunningOutboundTag = string.Empty;
         private int _isHandlingResume;
 
         /// <summary>
@@ -85,14 +87,13 @@ namespace AnywhereWinUI.Services
                     AutostartManager.UpgradeToElevatedTaskIfNeeded();
                 }
 
-                bool shouldBeRunning = _isSimulating || _process != null;
-                if (!shouldBeRunning)
+                if (!_desiredRunning)
                     return;
 
                 if (!_isSimulating && (_process == null || _process.HasExited))
                 {
                     AppendLog("[电源恢复] 检测到系统睡眠唤醒后内核已退出，正在自动重新连接...");
-                    var node = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                    var node = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
                     string cfg = await ConfigBuilder.BuildAsync(node).ConfigureAwait(false);
                     await StartAsync(cfg).ConfigureAwait(false);
                     return;
@@ -261,6 +262,7 @@ namespace AnywhereWinUI.Services
                             activeExePath = shoesExe;
                             activeConfigPath = ShoesConfigPath;
                             AppSession.Instance.ClashApiSecret = ShoesConfigBuilder.TryExtractClashSecret(configJson) ?? string.Empty;
+                            AppSession.Instance.ClearHotSwitchTags();
                         }
                     }
                 }
@@ -272,7 +274,7 @@ namespace AnywhereWinUI.Services
                         AppendLog(string.Format(L.Shoes_FallbackLogFmt, AppSession.Instance.ActiveEngineFallbackReason));
                     }
 
-                    // Sync ClashApiSecret from configJson after StopInternalAsync() may have cleared it
+                    // Sync ClashApiSecret & HotSwitchTags from configJson after StopInternalAsync() cleared them
                     SyncClashApiSecretFromConfig(configJson);
 
                     // Write configuration
@@ -284,6 +286,10 @@ namespace AnywhereWinUI.Services
                     {
                         // Standalone Simulation fallback for visual UI demo when sing-box is not copied yet
                         _isSimulating = true;
+                        _desiredRunning = true;
+                        _activeRunningOutboundTag = AppSession.Instance.IsAutoNodeSelect
+                            ? "urltest"
+                            : NodesManager.Instance.SelectedNodeId;
                         AppendLog("[系统] 未在 Assets 文件夹下检测到 sing-box.exe。启用独立 UI 仿真模式。");
                         AppendLog("[启动] 仿真引擎启动成功...");
                         RunningChanged?.Invoke(this, true);
@@ -352,6 +358,9 @@ namespace AnywhereWinUI.Services
                     {
                         // Ignore stale exit callbacks from a previous process replaced during restart
                         if (!ReferenceEquals(_process, proc)) return;
+                        _process = null;
+                        _activeRunningOutboundTag = string.Empty;
+                        try { proc.Dispose(); } catch { }
 
                         AppendLog($"[{coreTag} 进程已退出]");
                         StopStatsPolling();
@@ -365,9 +374,9 @@ namespace AnywhereWinUI.Services
                         }
                         if (AppSession.Instance.EnableSystemProxy)
                         {
-                            SystemProxyManager.DisableProxy();
-                LastProxyTamperState = SystemProxyTamperResult.Ok();
-                SystemProxyTampered?.Invoke(this, LastProxyTamperState);
+                            SystemProxyManager.DisableProxyIfOwned();
+                            LastProxyTamperState = SystemProxyTamperResult.Ok();
+                            SystemProxyTampered?.Invoke(this, LastProxyTamperState);
                         }
                         RunningChanged?.Invoke(this, false);
                     };
@@ -393,11 +402,18 @@ namespace AnywhereWinUI.Services
 
                     if (signalOutcome == CoreReadySignal.Outcome.Exited || _process.HasExited)
                     {
+                        _desiredRunning = false;
+                        _activeRunningOutboundTag = string.Empty;
+                        int exitCode = 0;
+                        try { exitCode = proc.ExitCode; } catch { }
+                        if (ReferenceEquals(_process, proc)) _process = null;
+                        try { proc.Dispose(); } catch { }
+
                         lock (_startupLogLock)
                         {
                             var rawErr = _startupLog.Length > 0
                                 ? _startupLog.ToString().Trim()
-                                : $"{coreTag} 立即退出（退出码 {_process.ExitCode}）";
+                                : $"{coreTag} 立即退出（退出码 {exitCode}）";
                             _startupLog.Clear();
                             _startupLog.Capacity = 0;
 
@@ -426,6 +442,21 @@ namespace AnywhereWinUI.Services
                         : $"[启动] 等待超时，假设 {coreTag} 已就绪");
 
                     SyncClashApiEndpointFromConfig(configJson, useShoes);
+                    IpInfoService.ResetPooledConnections();
+                    AiUnlockCheckService.ResetPooledConnections();
+
+                    // When FakeDNS cache_file is enabled, sing-box's cache_file restores the previous session's
+                    // selector choice via LoadSelected("proxy"); force-sync it to the user's current node!
+                    if (!useShoes && !isCustom && AppSession.Instance.EnableFakeDns)
+                    {
+                        string expectedTag = AppSession.Instance.IsAutoNodeSelect
+                            ? "urltest"
+                            : NodesManager.Instance.SelectedNodeId;
+                        if (!string.IsNullOrEmpty(expectedTag) && AppSession.Instance.CanHotSwitchTo(expectedTag))
+                        {
+                            _ = await SingboxApiClient.Instance.SelectOutboundAsync("proxy", expectedTag).ConfigureAwait(false);
+                        }
+                    }
 
                     // Configure Windows System Proxy (and DNS cache flush) BEFORE firing RunningChanged,
                     // so OS proxy/DNS state is settled before UI triggers AI unlock & exit IP checks.
@@ -460,6 +491,13 @@ namespace AnywhereWinUI.Services
                         AppendLog("[Local] 仅本地代理运行");
                     }
 
+                    _desiredRunning = true;
+                    _activeRunningOutboundTag = (!useShoes && !isCustom)
+                        ? (AppSession.Instance.IsAutoNodeSelect
+                            ? "urltest"
+                            : (AppSession.Instance.LastBuildNode?.Id ?? NodesManager.Instance.SelectedNodeId))
+                        : (AppSession.Instance.LastBuildNode?.Id ?? NodesManager.Instance.SelectedNodeId);
+
                     StartStatsPolling();
                     if (AdminHelper.IsAdministrator())
                     {
@@ -471,6 +509,11 @@ namespace AnywhereWinUI.Services
                 }
                 catch (Exception ex)
                 {
+                    _desiredRunning = false;
+                    _activeRunningOutboundTag = string.Empty;
+                    var failedProc = _process;
+                    _process = null;
+                    try { failedProc?.Dispose(); } catch { }
                     LastError = ex.Message;
                     AppendLog("[异常] " + ex.Message);
                     return false;
@@ -487,6 +530,7 @@ namespace AnywhereWinUI.Services
             await _stateLock.WaitAsync();
             try
             {
+                _desiredRunning = false;
                 await StopInternalAsync();
             }
             finally
@@ -498,15 +542,14 @@ namespace AnywhereWinUI.Services
         /// <summary>
         /// Switches to <paramref name="node"/> with &lt;5ms zero-drop Clash API selector hot-switch whenever
         /// sing-box is running and has <paramref name="node"/> loaded in its "proxy" selector;
-        /// seamlessly falls back to rebuilding &amp; restarting the core otherwise (e.g. Shoes, Custom JSON, or newly added node).
+        /// seamlessly falls back to rebuilding &amp; restarting the core otherwise (e.g. Shoes, Custom JSON, or newly added/edited node).
         /// </summary>
-        public async Task<bool> SwitchToNodeAsync(PersistedNode node)
+        public async Task<bool> SwitchToNodeAsync(PersistedNode node, bool forceReload = false)
         {
             if (node == null) return false;
 
             var session = AppSession.Instance;
-            bool wasAuto = session.IsAutoNodeSelect;
-            string previousId = NodesManager.Instance.SelectedNodeId;
+            string currentRunningTag = _activeRunningOutboundTag;
 
             session.IsAutoNodeSelect = false;
             LocalSettingsHelper.SetValue("isAutoNodeSelect", false);
@@ -524,13 +567,16 @@ namespace AnywhereWinUI.Services
                 return true;
             }
 
-            if (!wasAuto && string.Equals(previousId, node.Id, StringComparison.Ordinal))
+            if (!forceReload &&
+                !string.IsNullOrEmpty(currentRunningTag) &&
+                string.Equals(currentRunningTag, node.Id, StringComparison.Ordinal))
             {
                 ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
                 return true;
             }
 
             bool canHotSwitch =
+                !forceReload &&
                 string.Equals(session.ActiveCoreEngine, ShoesConfigBuilder.EngineSingBox, StringComparison.OrdinalIgnoreCase) &&
                 !session.IsActiveNodeCustom &&
                 !CustomConfigService.IsCustomNode(node) &&
@@ -542,10 +588,22 @@ namespace AnywhereWinUI.Services
                 bool switched = await SingboxApiClient.Instance.SelectOutboundAsync("proxy", node.Id).ConfigureAwait(false);
                 if (switched)
                 {
-                    session.LastBuildNode = node;
-                    AppendLog($"[热切换] 已无感切换至节点：{node.Name}");
-                    ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
-                    return true;
+                    var verifiedNow = await SingboxApiClient.Instance.GetGroupSelectedAsync("proxy").ConfigureAwait(false);
+                    if (verifiedNow == null || string.Equals(verifiedNow, node.Id, StringComparison.Ordinal))
+                    {
+                        _activeRunningOutboundTag = node.Id;
+
+                        // Immediately close existing HTTP/2, QUIC, DoH & pooled keep-alive tunnels from the old node
+                        // so both browsers and in-app Exit IP / AI checks route through the new node immediately!
+                        await SingboxApiClient.Instance.CloseAllConnectionsAsync().ConfigureAwait(false);
+                        IpInfoService.ResetPooledConnections();
+                        AiUnlockCheckService.ResetPooledConnections();
+
+                        session.LastBuildNode = node;
+                        AppendLog($"[热切换] 已切换至节点：{node.Name}");
+                        ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
+                        return true;
+                    }
                 }
             }
 
@@ -562,7 +620,7 @@ namespace AnywhereWinUI.Services
         public async Task<bool> EnableAutoNodeSelectAsync()
         {
             var session = AppSession.Instance;
-            bool alreadyAuto = session.IsAutoNodeSelect;
+            string currentRunningTag = _activeRunningOutboundTag;
 
             session.IsAutoNodeSelect = true;
             LocalSettingsHelper.SetValue("isAutoNodeSelect", true);
@@ -573,7 +631,7 @@ namespace AnywhereWinUI.Services
                 return true;
             }
 
-            if (alreadyAuto &&
+            if (string.Equals(currentRunningTag, "urltest", StringComparison.Ordinal) &&
                 string.Equals(session.ActiveCoreEngine, ShoesConfigBuilder.EngineSingBox, StringComparison.OrdinalIgnoreCase) &&
                 !session.IsActiveNodeCustom &&
                 session.CanHotSwitchTo("urltest"))
@@ -592,13 +650,18 @@ namespace AnywhereWinUI.Services
                 bool switched = await SingboxApiClient.Instance.SelectOutboundAsync("proxy", "urltest").ConfigureAwait(false);
                 if (switched)
                 {
+                    _activeRunningOutboundTag = "urltest";
+                    await SingboxApiClient.Instance.CloseAllConnectionsAsync().ConfigureAwait(false);
+                    IpInfoService.ResetPooledConnections();
+                    AiUnlockCheckService.ResetPooledConnections();
+
                     AppendLog("[热切换] 已切换至自动选点（最快 + 故障转移）");
                     ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
                     return true;
                 }
             }
 
-            var fallbackNode = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+            var fallbackNode = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
             string configJson = await ConfigBuilder.BuildAsync(fallbackNode).ConfigureAwait(false);
             bool started = await StartAsync(configJson).ConfigureAwait(false);
             ActiveNodeChanged?.Invoke(this, EventArgs.Empty);
@@ -718,7 +781,8 @@ namespace AnywhereWinUI.Services
                     CommentHandling = JsonCommentHandling.Skip,
                     AllowTrailingCommas = true
                 });
-                if (doc.RootElement.TryGetProperty("experimental", out var exp) &&
+                var root = doc.RootElement;
+                if (root.TryGetProperty("experimental", out var exp) &&
                     exp.TryGetProperty("clash_api", out var clashApi))
                 {
                     if (clashApi.TryGetProperty("secret", out var secretProp) &&
@@ -735,6 +799,48 @@ namespace AnywhereWinUI.Services
                     {
                         SingboxApiClient.Instance.UpdateControllerEndpoint("127.0.0.1:9090");
                     }
+                }
+
+                // Re-populate HotSwitchTags directly from the actual "proxy" selector outbound in configJson,
+                // because StopInternalAsync() clears HotSwitchTags when restarting/reloading sing-box!
+                if (!AppSession.Instance.IsActiveNodeCustom &&
+                    root.TryGetProperty("outbounds", out var outboundsEl) &&
+                    outboundsEl.ValueKind == JsonValueKind.Array)
+                {
+                    var extractedTags = new List<string>();
+                    foreach (var ob in outboundsEl.EnumerateArray())
+                    {
+                        if (ob.ValueKind != JsonValueKind.Object) continue;
+                        string? tag = ob.TryGetProperty("tag", out var tProp) ? tProp.GetString() : null;
+                        string? type = ob.TryGetProperty("type", out var tyProp) ? tyProp.GetString() : null;
+                        if (string.Equals(tag, "proxy", StringComparison.Ordinal) &&
+                            string.Equals(type, "selector", StringComparison.OrdinalIgnoreCase) &&
+                            ob.TryGetProperty("outbounds", out var members) &&
+                            members.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var m in members.EnumerateArray())
+                            {
+                                if (m.ValueKind == JsonValueKind.String && m.GetString() is { Length: > 0 } memberTag)
+                                {
+                                    extractedTags.Add(memberTag);
+                                }
+                            }
+                            break;
+                        }
+                    }
+
+                    if (extractedTags.Count > 0)
+                    {
+                        AppSession.Instance.SetHotSwitchTags(extractedTags);
+                    }
+                    else
+                    {
+                        AppSession.Instance.ClearHotSwitchTags();
+                    }
+                }
+                else
+                {
+                    AppSession.Instance.ClearHotSwitchTags();
                 }
             }
             catch { }
@@ -756,6 +862,7 @@ namespace AnywhereWinUI.Services
         {
             var proc = _process;
             _process = null;
+            _activeRunningOutboundTag = string.Empty;
             bool wasSimulating = _isSimulating;
             _isSimulating = false;
 

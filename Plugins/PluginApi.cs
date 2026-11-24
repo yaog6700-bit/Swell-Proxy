@@ -23,8 +23,7 @@ namespace AnywhereWinUI.Plugins
         private static readonly HttpClient _http = new(new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-            AllowAutoRedirect = true,
-            MaxAutomaticRedirections = 5
+            AllowAutoRedirect = false
         })
         {
             Timeout = TimeSpan.FromSeconds(30),
@@ -64,44 +63,69 @@ namespace AnywhereWinUI.Plugins
 
         // ── Configuration ───────────────────────────────────────────
 
-        public string GetConfig(string key)
-        {
-            foreach (var item in _manifest.Configuration)
-            {
-                if (item.Key == key)
-                    return item.Value;
-            }
-            return string.Empty;
-        }
+        public string GetConfig(string key) =>
+            PluginManager.Instance.GetConfigValue(_manifest, key);
 
         public void SetConfig(string key, string value)
         {
             if (string.IsNullOrWhiteSpace(key)) return;
-            var existing = _manifest.Configuration.Find(c => string.Equals(c.Key, key, StringComparison.Ordinal));
-            if (existing != null)
-            {
-                existing.Value = value ?? string.Empty;
-            }
-            else
-            {
-                _manifest.Configuration.Add(new PluginConfigItem
-                {
-                    Key = key.Trim(),
-                    Label = key.Trim(),
-                    Value = value ?? string.Empty
-                });
-            }
-            _ = PluginManager.Instance.SaveAsync();
+            _ = PluginManager.Instance.SetConfigValueAsync(_manifest, key, value);
         }
 
         // ── HTTP ────────────────────────────────────────────────────
+
+        internal static async System.Threading.Tasks.Task<string> FetchValidatedTextAsync(string url, CancellationToken ct = default)
+        {
+            using var response = await SendWithValidatedRedirectsAsync(
+                u => new HttpRequestMessage(HttpMethod.Get, u),
+                url,
+                HttpCompletionOption.ResponseContentRead,
+                ct).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        }
+
+        private static async System.Threading.Tasks.Task<HttpResponseMessage> SendWithValidatedRedirectsAsync(
+            Func<Uri, HttpRequestMessage> requestFactory,
+            string initialUrl,
+            HttpCompletionOption completionOption,
+            CancellationToken ct)
+        {
+            Uri currentUri = ValidateOutboundUrl(initialUrl);
+            for (int hop = 0; hop <= 5; hop++)
+            {
+                using var req = requestFactory(currentUri);
+                var resp = await _http.SendAsync(req, completionOption, ct).ConfigureAwait(false);
+                int code = (int)resp.StatusCode;
+                if (code is 301 or 302 or 303 or 307 or 308 && resp.Headers.Location is Uri loc)
+                {
+                    Uri nextUri = loc.IsAbsoluteUri ? loc : new Uri(currentUri, loc);
+                    resp.Dispose();
+                    if (hop == 5)
+                    {
+                        throw new InvalidOperationException("Too many HTTP redirects.");
+                    }
+                    currentUri = ValidateOutboundUrl(nextUri.ToString());
+                    if (code is 301 or 302 or 303)
+                    {
+                        requestFactory = u => new HttpRequestMessage(HttpMethod.Get, u);
+                    }
+                    continue;
+                }
+                return resp;
+            }
+            throw new InvalidOperationException("Too many HTTP redirects.");
+        }
 
         public string HttpGet(string url)
         {
             try
             {
-                ValidateOutboundUrl(url);
-                using var response = _http.GetAsync(url).GetAwaiter().GetResult();
+                using var response = SendWithValidatedRedirectsAsync(
+                    u => new HttpRequestMessage(HttpMethod.Get, u),
+                    url,
+                    HttpCompletionOption.ResponseContentRead,
+                    CancellationToken.None).GetAwaiter().GetResult();
                 if (!response.IsSuccessStatusCode)
                 {
                     throw new Exception($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
@@ -119,9 +143,14 @@ namespace AnywhereWinUI.Plugins
         {
             try
             {
-                ValidateOutboundUrl(url);
-                using var content = new StringContent(body ?? string.Empty, System.Text.Encoding.UTF8, contentType);
-                using var response = _http.PostAsync(url, content).GetAwaiter().GetResult();
+                using var response = SendWithValidatedRedirectsAsync(
+                    u => new HttpRequestMessage(HttpMethod.Post, u)
+                    {
+                        Content = new StringContent(body ?? string.Empty, System.Text.Encoding.UTF8, contentType)
+                    },
+                    url,
+                    HttpCompletionOption.ResponseContentRead,
+                    CancellationToken.None).GetAwaiter().GetResult();
                 if (!response.IsSuccessStatusCode)
                 {
                     throw new Exception($"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
@@ -139,12 +168,15 @@ namespace AnywhereWinUI.Plugins
         {
             try
             {
-                ValidateOutboundUrl(url);
                 var fullPath = ResolveJailedPath(destPath, isWriteOrDelete: true);
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-                using var response = _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token).GetAwaiter().GetResult();
+                using var response = SendWithValidatedRedirectsAsync(
+                    u => new HttpRequestMessage(HttpMethod.Get, u),
+                    url,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cts.Token).GetAwaiter().GetResult();
                 response.EnsureSuccessStatusCode();
 
                 if (response.Content.Headers.ContentLength is long contentLen && contentLen > MaxDownloadFileBytes)
@@ -282,7 +314,7 @@ namespace AnywhereWinUI.Plugins
             return new string(chars);
         }
 
-        private static void ValidateOutboundUrl(string url)
+        internal static Uri ValidateOutboundUrl(string url)
         {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 throw new ArgumentException("Invalid URL.");
@@ -309,6 +341,8 @@ namespace AnywhereWinUI.Plugins
                     throw new UnauthorizedAccessException("Plugins are not allowed to access loopback or link-local addresses.");
                 }
             }
+
+            return uri;
         }
 
         private static bool IsLinkLocal(IPAddress ip)

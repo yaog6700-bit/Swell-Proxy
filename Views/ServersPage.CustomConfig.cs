@@ -295,7 +295,7 @@ namespace AnywhereWinUI.Views
                 }
                 else
                 {
-                    var found = NodesManager.Instance.Nodes.Find(n => n.Id == _editingNodeId);
+                    var found = NodesManager.Instance.FindNode(_editingNodeId);
                     if (found == null)
                     {
                         targetNode = new PersistedNode
@@ -320,8 +320,10 @@ namespace AnywhereWinUI.Views
                     }
                 }
 
+                _editingNodeId = string.Empty;
                 _lastSelectedNodeId = targetNode.Id;
                 LoadServersList();
+                RefreshSelectedDetailPanel();
 
                 // Hot-reload core if currently connected to this exact custom profile
                 if (CoreManager.Instance.IsRunning && NodesManager.Instance.SelectedNodeId == targetNode.Id)

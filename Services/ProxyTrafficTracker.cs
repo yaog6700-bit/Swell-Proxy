@@ -352,6 +352,8 @@ namespace AnywhereWinUI.Services
                 return false;
 
             if (finalHop.Equals("direct".AsSpan(), StringComparison.OrdinalIgnoreCase)) return false;
+            if (finalHop.Equals("intranet-direct".AsSpan(), StringComparison.OrdinalIgnoreCase)) return false;
+            if (finalHop.Equals("tailscale-ep".AsSpan(), StringComparison.OrdinalIgnoreCase)) return false;
             if (finalHop.Equals("block".AsSpan(), StringComparison.OrdinalIgnoreCase)) return false;
             if (finalHop.Equals("dns-out".AsSpan(), StringComparison.OrdinalIgnoreCase)) return false;
             if (finalHop.Equals("dns_out".AsSpan(), StringComparison.OrdinalIgnoreCase)) return false;

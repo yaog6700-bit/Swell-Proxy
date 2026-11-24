@@ -119,7 +119,6 @@ namespace AnywhereWinUI.Services
             var coreVersion = CoreUpdateService.GetLocalSingboxNumericVersion();
             bool isSingbox114OrAbove = coreVersion == null || coreVersion >= new System.Version(1, 14, 0);
             bool isSingbox115OrAbove = coreVersion != null && coreVersion >= new System.Version(1, 15, 0);
-            bool allowNowhereProtocol = !System.IO.File.Exists(CoreUpdateService.SingboxUserExePath);
 
             // Per-session bearer secret (synced into AppSession inside CoreManager.StartAsync after old core stops)
             var apiSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
@@ -128,9 +127,9 @@ namespace AnywhereWinUI.Services
                 selectedNode,
                 nodesSnapshot,
                 session.IsAutoNodeSelect,
-                allowNowhereProtocol,
                 enableTun,
                 outboundInterface,
+                intranet,
                 hasIntranetTunnelRoutes,
                 isSingbox114OrAbove,
                 out var wireGuardEndpoints,
@@ -140,6 +139,36 @@ namespace AnywhereWinUI.Services
 
             session.SetHotSwitchTags(hotSwitchTags);
 
+            var experimentalObj = new JsonObject
+            {
+                ["clash_api"] = new JsonObject
+                {
+                    ["external_controller"] = "127.0.0.1:9090",
+                    ["external_ui"] = "",
+                    ["external_ui_download_url"] = "",
+                    ["external_ui_download_detour"] = "direct",
+                    ["secret"] = apiSecret,
+                    ["default_mode"] = "rule"
+                }
+            };
+
+            // Only attach cache_file when FakeDNS is explicitly enabled!
+            // In sing-box, an enabled cache_file automatically runs LoadSelected("proxy") on startup
+            // and overrides selector's "default" outbound with stale cached selections from previous runs.
+            if (session.EnableFakeDns)
+            {
+                experimentalObj["cache_file"] = new JsonObject
+                {
+                    ["enabled"] = true,
+                    ["path"] = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "SwellProxy",
+                        "swell_fakeip.db"),
+                    ["store_fakeip"] = true,
+                    ["store_rdrc"] = false
+                };
+            }
+
             var config = new JsonObject
             {
                 ["log"] = new JsonObject
@@ -148,31 +177,10 @@ namespace AnywhereWinUI.Services
                     ["timestamp"] = true
                 },
                 ["dns"] = BuildDns(bypassChina, blockIPv6, routingMode, intranet, enableTun),
-                ["inbounds"] = await BuildInboundsAsync(enableTun, nodesSnapshot, isSingbox115OrAbove),
+                ["inbounds"] = await BuildInboundsAsync(enableTun, nodesSnapshot, intranet, isSingbox115OrAbove),
                 ["outbounds"] = outbounds,
                 ["route"] = BuildRoute(routingMode, bypassChina, blockAds, intranet, validOutboundTags, enableTun, outboundInterface, isSingbox114OrAbove),
-                ["experimental"] = new JsonObject
-                {
-                    ["cache_file"] = new JsonObject
-                    {
-                        ["enabled"] = true,
-                        ["path"] = System.IO.Path.Combine(
-                            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                            "SwellProxy",
-                            "swell_cache_v2.db"),
-                        ["store_fakeip"] = session.EnableFakeDns,
-                        ["store_rdrc"] = false
-                    },
-                    ["clash_api"] = new JsonObject
-                    {
-                        ["external_controller"] = "127.0.0.1:9090",
-                        ["external_ui"] = "",
-                        ["external_ui_download_url"] = "",
-                        ["external_ui_download_detour"] = "direct",
-                        ["secret"] = apiSecret,
-                        ["default_mode"] = "rule"
-                    }
-                }
+                ["experimental"] = experimentalObj
             };
 
             if (isSingbox114OrAbove)
@@ -190,30 +198,11 @@ namespace AnywhereWinUI.Services
                         ["detour"] = "direct"
                     }
                 };
-
-                config["services"] = new JsonArray
-                {
-                    new JsonObject
-                    {
-                        ["type"] = "api",
-                        ["tag"] = "sing-box dashboard",
-                        ["listen"] = "127.0.0.1",
-                        ["listen_port"] = 9091,
-                        ["secret"] = apiSecret,
-                        ["access_control_allow_origin"] = new JsonArray
-                        {
-                            (JsonNode)"https://sing-box-dashboard.sagernet.org",
-                            (JsonNode)"https://dash.sing-box.app"
-                        },
-                        ["access_control_allow_private_network"] = false,
-                        ["dashboard"] = false
-                    }
-                };
-                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 检测到 sing-box {coreVersionStr}，已启用 http_clients 与受保护的原生 API（端口 9091），1.15 原生 TUN={isSingbox115OrAbove}");
+                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 检测到 sing-box {coreVersionStr}，已启用 http_clients，1.15 原生 TUN={isSingbox115OrAbove}");
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 检测到 sing-box {coreVersionStr}（< 1.14.0），跳过 http_clients 与原生 API 注入");
+                System.Diagnostics.Debug.WriteLine($"[ConfigBuilder] 检测到 sing-box {coreVersionStr}（< 1.14.0），跳过 http_clients 注入");
             }
 
             // 汇总所有 endpoints（WireGuard 节点端点 + Tailscale 端点）
@@ -322,16 +311,24 @@ namespace AnywhereWinUI.Services
             var rules = new JsonArray();
 
             int intranetDnsIdx = 0;
+            string? singleTunnelNic = enableTun && intranet.TunnelInterfaceNames.Count == 1
+                ? intranet.TunnelInterfaceNames[0]
+                : null;
             foreach (var kv in intranet.SplitDnsServerToDomains)
             {
                 if (kv.Value.Count == 0) continue;
                 string tag = $"intranet-dns-{intranetDnsIdx++}";
-                servers.Add(new JsonObject
+                var intranetDnsObj = new JsonObject
                 {
                     ["tag"] = tag,
                     ["type"] = "udp",
                     ["server"] = kv.Key
-                });
+                };
+                if (!string.IsNullOrEmpty(singleTunnelNic))
+                {
+                    intranetDnsObj["bind_interface"] = singleTunnelNic;
+                }
+                servers.Add(intranetDnsObj);
                 var domArr = new JsonArray();
                 foreach (var d in kv.Value) domArr.Add((JsonNode)d);
                 rules.Add(new JsonObject
@@ -464,6 +461,7 @@ namespace AnywhereWinUI.Services
         private static async System.Threading.Tasks.Task<JsonArray> BuildInboundsAsync(
             bool enableTun,
             List<PersistedNode> nodesSnapshot,
+            Helpers.WindowsIntranetDetector.IntranetDetectionResult intranet,
             bool isSingbox115OrAbove = false)
         {
             var list = new JsonArray();
@@ -508,10 +506,28 @@ namespace AnywhereWinUI.Services
                 excludeAddresses.Add((JsonNode)"1.1.1.1/32");
                 excludeAddresses.Add((JsonNode)"2400:3200::1/128");
 
-                // Exclude ALL valid IPv4/IPv6 proxy server addresses so neither startup nor hot-switching ever loops into TUN
+                // Exclude ALL valid IPv4/IPv6 proxy server addresses & corporate VPN split-tunnel CIDRs/DNS so TUN never captures them
                 var resolvedCidrs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var uniqueDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var excludeLock = new object();
+
+                foreach (var intranetCidr in intranet.DirectIpCidrs)
+                {
+                    if (!string.IsNullOrWhiteSpace(intranetCidr) && !string.Equals(intranetCidr, "100.64.0.0/10", StringComparison.Ordinal))
+                    {
+                        resolvedCidrs.Add(intranetCidr);
+                    }
+                }
+                foreach (var splitDnsIp in intranet.SplitDnsServerToDomains.Keys)
+                {
+                    if (System.Net.IPAddress.TryParse(splitDnsIp, out var dnsIp) && IsValidRoutableServerIp(dnsIp))
+                    {
+                        string cidr = dnsIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6
+                            ? $"{dnsIp}/128"
+                            : $"{dnsIp}/32";
+                        resolvedCidrs.Add(cidr);
+                    }
+                }
 
                 foreach (var node in nodesSnapshot)
                 {
@@ -647,13 +663,15 @@ namespace AnywhereWinUI.Services
             return false;
         }
 
-        private static bool IsSafeHotSwitchCandidate(PersistedNode node, List<PersistedNode> nodesSnapshot, bool allowNowhereProtocol)
+        private static bool IsSafeHotSwitchCandidate(PersistedNode node, List<PersistedNode> nodesSnapshot)
         {
             if (IsInformationalPseudoNode(node) || IsWireGuardNode(node))
                 return false;
 
+            // Never preload "nowhere" outbounds into the shared selector: official sing-box 1.14+ exits with
+            // "unknown outbound type: nowhere" if even a single unselected nowhere outbound exists in outbounds!
             string proto = node.Protocol?.ToLowerInvariant() ?? string.Empty;
-            if (!allowNowhereProtocol && proto == "nowhere")
+            if (proto == "nowhere")
                 return false;
 
             if (!string.IsNullOrEmpty(node.ProxyChainId))
@@ -661,7 +679,7 @@ namespace AnywhereWinUI.Services
                 var chainNode = nodesSnapshot.Find(n => n.Id == node.ProxyChainId);
                 if (chainNode == null || IsInformationalPseudoNode(chainNode) || IsWireGuardNode(chainNode))
                     return false;
-                if (!allowNowhereProtocol && string.Equals(chainNode.Protocol, "nowhere", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(chainNode.Protocol, "nowhere", StringComparison.OrdinalIgnoreCase))
                     return false;
             }
 
@@ -672,9 +690,9 @@ namespace AnywhereWinUI.Services
             PersistedNode selectedNode,
             List<PersistedNode> nodesSnapshot,
             bool isAutoSelect,
-            bool allowNowhereProtocol,
             bool enableTun,
             string? outboundInterface,
+            Helpers.WindowsIntranetDetector.IntranetDetectionResult intranet,
             bool hasIntranetTunnelRoutes,
             bool isSingbox114OrAbove,
             out JsonArray wireGuardEndpoints,
@@ -732,7 +750,7 @@ namespace AnywhereWinUI.Services
             foreach (var node in nodesSnapshot)
             {
                 if (selectorNodeIds.Count >= MaxSelectorNodes) break;
-                if (!node.IsFavorite || !IsSafeHotSwitchCandidate(node, nodesSnapshot, allowNowhereProtocol))
+                if (!node.IsFavorite || !IsSafeHotSwitchCandidate(node, nodesSnapshot))
                     continue;
 
                 EnsureNodeGenerated(node, node.Id);
@@ -748,7 +766,7 @@ namespace AnywhereWinUI.Services
             foreach (var node in nodesSnapshot)
             {
                 if (selectorNodeIds.Count >= MaxSelectorNodes) break;
-                if (node.IsFavorite || !IsSafeHotSwitchCandidate(node, nodesSnapshot, allowNowhereProtocol))
+                if (node.IsFavorite || !IsSafeHotSwitchCandidate(node, nodesSnapshot))
                     continue;
 
                 EnsureNodeGenerated(node, node.Id);
@@ -805,7 +823,8 @@ namespace AnywhereWinUI.Services
                     ["url"] = "https://www.gstatic.com/generate_204",
                     ["interval"] = "3m",
                     ["tolerance"] = 50,
-                    ["idle_timeout"] = "30m"
+                    ["idle_timeout"] = "30m",
+                    ["interrupt_exist_connections"] = true
                 });
             }
 
@@ -831,7 +850,7 @@ namespace AnywhereWinUI.Services
                 ["tag"] = "proxy",
                 ["outbounds"] = selectorOutbounds,
                 ["default"] = defaultTarget,
-                ["interrupt_exist_connections"] = false
+                ["interrupt_exist_connections"] = true
             });
 
             var directOutbound = new JsonObject { ["type"] = "direct", ["tag"] = "direct" };
@@ -844,9 +863,14 @@ namespace AnywhereWinUI.Services
 
             if (hasIntranetTunnelRoutes)
             {
-                // Unbound direct outbound used ONLY for corporate VPN / intranet split-tunnel CIDRs & domains
+                // Dedicated direct outbound for corporate VPN / intranet split-tunnel CIDRs & domains
+                var intranetDirect = new JsonObject { ["type"] = "direct", ["tag"] = "intranet-direct" };
+                if (enableTun && intranet.TunnelInterfaceNames.Count == 1)
+                {
+                    intranetDirect["bind_interface"] = intranet.TunnelInterfaceNames[0];
+                }
                 addedTags.Add("intranet-direct");
-                list.Add(new JsonObject { ["type"] = "direct", ["tag"] = "intranet-direct" });
+                list.Add(intranetDirect);
             }
 
             return list;

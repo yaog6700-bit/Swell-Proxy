@@ -440,7 +440,7 @@ namespace AnywhereWinUI.Views
             }
         }
 
-        private void SaveServer_Click(object sender, RoutedEventArgs e)
+        private async void SaveServer_Click(object sender, RoutedEventArgs e)
         {
             string name = ServerNameInput.Text.Trim();
             string host = ServerHostInput.Text.Trim();
@@ -556,6 +556,7 @@ namespace AnywhereWinUI.Views
             }
             string snellObfsHost = ServerSnellObfsHostInput.Text.Trim();
 
+            PersistedNode? savedNode = null;
             if (string.IsNullOrEmpty(_editingNodeId))
             {
                 // Create manual server
@@ -597,11 +598,12 @@ namespace AnywhereWinUI.Views
                     SnellMode = proto == "SNELL" && snellVersion == 6 ? snellMode : null
                 };
                 NodesManager.Instance.AddManualNode(node);
+                savedNode = node;
             }
             else
             {
-                // Update manual server
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == _editingNodeId);
+                // Update server
+                var node = NodesManager.Instance.FindNode(_editingNodeId);
                 if (node != null)
                 {
                     node.Name = name;
@@ -642,11 +644,47 @@ namespace AnywhereWinUI.Views
                     node.SnellVersion = snellVersion;
                     node.SnellMode = proto == "SNELL" && snellVersion == 6 ? snellMode : null;
                     NodesManager.Instance.Save();
+                    savedNode = node;
                 }
             }
 
+            _editingNodeId = string.Empty;
+            if (savedNode != null)
+            {
+                _lastSelectedNodeId = savedNode.Id;
+                if (string.Equals(NodesManager.Instance.SelectedNodeId, savedNode.Id, StringComparison.Ordinal))
+                {
+                    AppSession.Instance.SelectedNodeName = savedNode.Name;
+                    AppSession.Instance.SelectedNodeProtocol = savedNode.Protocol;
+                    AppSession.Instance.SelectedNodeHost = savedNode.Host;
+                }
+            }
+
+            // Invalidate hot-switch cache so edited outbound credentials/ports never reuse stale sing-box config
+            AppSession.Instance.ClearHotSwitchTags();
+
             LoadServersList();
-            ShowPanel("empty");
+            RefreshSelectedDetailPanel();
+
+            if (savedNode != null && CoreManager.Instance.IsRunning)
+            {
+                var activeNode = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
+                bool affectsRunningCore = AppSession.Instance.IsAutoNodeSelect ||
+                                          string.Equals(NodesManager.Instance.SelectedNodeId, savedNode.Id, StringComparison.Ordinal) ||
+                                          (activeNode != null && string.Equals(activeNode.ProxyChainId, savedNode.Id, StringComparison.Ordinal));
+                if (affectsRunningCore)
+                {
+                    try
+                    {
+                        string runtimeCfg = await ConfigBuilder.BuildAsync(activeNode ?? savedNode);
+                        await CoreManager.Instance.StartAsync(runtimeCfg);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[SaveServer_Click] Core reload failed: {ex.Message}");
+                    }
+                }
+            }
         }
 
         private void CancelEdit_Click(object sender, RoutedEventArgs e)

@@ -318,6 +318,21 @@ namespace AnywhereWinUI.ViewModels
         {
             AppSession.Instance.EnablePlugins = value;
             Helpers.LocalSettingsHelper.SetValue("enablePlugins", value);
+            if (!_isLoading)
+            {
+                if (value)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try { await Plugins.PluginManager.Instance.LoadAllAsync().ConfigureAwait(false); }
+                        catch { }
+                    });
+                }
+                else
+                {
+                    Plugins.PluginManager.Instance.UnloadAllRuntimes();
+                }
+            }
             MainWindow.Instance?.UpdatePluginsNavVisibility();
         }
 

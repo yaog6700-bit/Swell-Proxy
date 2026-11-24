@@ -701,6 +701,9 @@ namespace AnywhereWinUI
                 contextMenuFactory: BuildTrayContextMenu,
                 dynamicTooltipProvider: () =>
                 {
+                    if (ViewModel.IsPrivacyLocked)
+                        return "Swell Proxy";
+
                     if (!CoreManager.Instance.IsRunning)
                         return null;
 
@@ -713,12 +716,20 @@ namespace AnywhereWinUI
                     else
                     {
                         string selectedId = NodesManager.Instance.SelectedNodeId;
-                        nodeName = NodesManager.Instance.GetNodesSnapshot().Find(n => n.Id == selectedId)?.Name ?? "Swell Proxy";
+                        nodeName = NodesManager.Instance.FindNode(selectedId)?.Name ?? "Swell Proxy";
                     }
                     if (nodeName.Length > 32) nodeName = nodeName[..31] + "…";
                     return $"Swell Proxy · {nodeName}\n↑ {FormatTraySpeed(stats.UpSpeed)}  ↓ {FormatTraySpeed(stats.DownSpeed)}";
                 },
-                leftClickPanelFactory: GetOrCreateTrayPanelFlyout,
+                leftClickPanelFactory: () =>
+                {
+                    if (ViewModel.IsPrivacyLocked)
+                    {
+                        RestoreFromTray();
+                        return null;
+                    }
+                    return GetOrCreateTrayPanelFlyout();
+                },
                 onFlyoutIdleReclaim: OnTrayFlyoutIdleReclaim);
 
             UpdateAppIcon();
@@ -1114,6 +1125,12 @@ namespace AnywhereWinUI
         private void HideToTray()
         {
             if (_isHiddenToTray) return;
+
+            if (ViewModel.IsPrivacyLocked)
+            {
+                _trayManager?.CloseFlyout();
+                _trayManager?.UpdateTooltip("Swell Proxy");
+            }
 
             _trayManager?.EnsureVisible();
             _isHiddenToTray = true;
@@ -1594,52 +1611,18 @@ namespace AnywhereWinUI
 
         private async void MiniStartStopButton_Click(object sender, RoutedEventArgs e)
         {
-            if (CoreManager.Instance.IsRunning)
+            try
             {
-                await CoreManager.Instance.StopAsync();
+                await ToggleCoreFromTrayAsync();
             }
-            else
+            catch
             {
-                var activeNode = AnywhereWinUI.Services.NodesManager.Instance.Nodes.Find(n => n.Id == AnywhereWinUI.Services.NodesManager.Instance.SelectedNodeId);
-                bool needsAdmin = (AppSession.Instance.EnableTunMode && !AnywhereWinUI.Services.CustomConfigService.IsCustomNode(activeNode) && !AnywhereWinUI.Helpers.AdminHelper.IsAdministrator())
-                               || AnywhereWinUI.Services.CustomConfigService.RequiresTunAdmin(activeNode);
-
-                if (needsAdmin)
-                {
-                    MiniStartStopButton.IsChecked = false;
-                    SetMiniMode(false); // Expand to full mode
-                    // Find DashboardViewModel and trigger TUN toggle
-                    var dashboardVm = ((App)Application.Current).Services.GetService(typeof(DashboardViewModel)) as DashboardViewModel;
-                    if (dashboardVm != null)
-                    {
-                        // Set the selected mode in navigation to Dashboard to show the dialog
-                        MainNav.SelectedItem = DashboardNavItem;
-                        // The ToggleCoreAsync logic in DashboardViewModel will handle the prompt
-                        if (dashboardVm.ToggleCoreCommand.CanExecute(null))
-                        {
-                            dashboardVm.ToggleCoreCommand.Execute(null);
-                        }
-                    }
-                    return;
-                }
-
-                try
-                {
-                    if (activeNode != null)
-                    {
-                        var config = await AnywhereWinUI.Services.ConfigBuilder.BuildAsync(activeNode);
-                        bool success = await CoreManager.Instance.StartAsync(config);
-                        if (!success)
-                        {
-                            MiniStartStopButton.IsChecked = false;
-                            // Optionally show error to user in mini mode
-                        }
-                    }
-                }
-                catch
-                {
-                    MiniStartStopButton.IsChecked = false;
-                }
+                // Handled inside ToggleCoreFromTrayAsync / CoreManager
+            }
+            finally
+            {
+                MiniStartStopButton.IsChecked = CoreManager.Instance.IsRunning;
+                UpdateMiniModeUI();
             }
         }
 
@@ -1700,7 +1683,7 @@ namespace AnywhereWinUI
         {
             if (!_isMiniMode) return;
             
-            var activeNode = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+            var activeNode = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
             var nodeName = AppSession.Instance.IsAutoNodeSelect
                 ? $"{L.TrayPanel_AutoTitle} ({L.TrayPanel_AutoSubtitle})"
                 : (activeNode?.Name ?? L.Common_NoNodeSelected);
@@ -1726,29 +1709,28 @@ namespace AnywhereWinUI
             bool isRunning = CoreManager.Instance.IsRunning;
             MiniStartStopButton.IsChecked = isRunning;
             
+            bool isDark = ContentDialogExtensions.IsElementDark(MiniModeGrid);
             string pingText = isRunning ? L.Common_Connected : L.Common_Disconnected;
-            Microsoft.UI.Xaml.Media.Brush statusBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Colors.Gray);
+            Microsoft.UI.Xaml.Media.Brush statusBrush = ContentDialogExtensions.LookupThemeBrush(
+                "TextFillColorSecondaryBrush", isDark, Colors.Gray);
 
             if (isRunning)
             {
                 var serversVm = ((App)Application.Current).Services.GetService(typeof(ServersViewModel)) as ServersViewModel;
-                var serverItem = serversVm?.AllServers != null ? System.Linq.Enumerable.FirstOrDefault(serversVm.AllServers, s => s.Id == NodesManager.Instance.SelectedNodeId) : null;
+                var serverItem = (!AppSession.Instance.IsAutoNodeSelect && serversVm?.AllServers != null)
+                    ? System.Linq.Enumerable.FirstOrDefault(serversVm.AllServers, s => s.Id == NodesManager.Instance.SelectedNodeId)
+                    : null;
                 
                 if (serverItem != null && serverItem.LatencyMs is > 0)
                 {
                     pingText = serverItem.PingText;
-                    statusBrush = serverItem.PingColor ?? new Microsoft.UI.Xaml.Media.SolidColorBrush(Colors.Green);
+                    statusBrush = serverItem.PingColor ?? ContentDialogExtensions.LookupThemeBrush(
+                        "SystemFillColorSuccessBrush", isDark, Colors.Green);
                 }
                 else
                 {
-                    if (Application.Current.Resources.TryGetValue("StateSuccessBrush", out var resBrush) && resBrush is Microsoft.UI.Xaml.Media.Brush brush)
-                    {
-                        statusBrush = brush;
-                    }
-                    else
-                    {
-                        statusBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Colors.Green);
-                    }
+                    statusBrush = ContentDialogExtensions.LookupThemeBrush(
+                        "SystemFillColorSuccessBrush", isDark, Colors.Green);
                 }
             }
             

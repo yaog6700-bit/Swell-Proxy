@@ -72,7 +72,7 @@ namespace AnywhereWinUI.Helpers
         private readonly DispatcherQueue _dispatcherQueue;
         private readonly Action _onOpenRequested;
         private readonly Func<FlyoutBase> _contextMenuFactory;
-        private readonly Func<FlyoutBase>? _leftClickPanelFactory;
+        private readonly Func<FlyoutBase?>? _leftClickPanelFactory;
         private readonly Func<string?>? _dynamicTooltipProvider;
         private readonly Action? _onFlyoutIdleReclaim;
 
@@ -82,9 +82,7 @@ namespace AnywhereWinUI.Helpers
         private readonly uint _wmTaskbarCreated;
         private readonly uint _wmShowMainWindow;
         private DispatcherQueueTimer? _bootRetryTimer;
-        private DispatcherQueueTimer? _leftClickTimer;
         private DispatcherQueueTimer? _idleReclaimTimer;
-        private RECT _pendingLeftClickRect;
         private long _ignoreNextLButtonUpUntilTick;
         private long _lastHoverTooltipTick;
         private long _lastPowerResumeTick;
@@ -96,6 +94,7 @@ namespace AnywhereWinUI.Helpers
         private bool _ownsInactiveIcon;
         private int _loadedIconWidth;
         private int _loadedIconHeight;
+        private bool _loadedTaskbarLightTheme;
         private string? _customTooltip;
         private bool _isActive;
         private bool _isAdded;
@@ -114,7 +113,7 @@ namespace AnywhereWinUI.Helpers
             Action onOpenRequested,
             Func<FlyoutBase> contextMenuFactory,
             Func<string?>? dynamicTooltipProvider = null,
-            Func<FlyoutBase>? leftClickPanelFactory = null,
+            Func<FlyoutBase?>? leftClickPanelFactory = null,
             Action? onFlyoutIdleReclaim = null)
         {
             _dispatcherQueue = dispatcherQueue ?? throw new ArgumentNullException(nameof(dispatcherQueue));
@@ -340,9 +339,10 @@ namespace AnywhereWinUI.Helpers
         {
             int cx = Math.Max(16, GetSystemMetrics(SM_CXSMICON));
             int cy = Math.Max(16, GetSystemMetrics(SM_CYSMICON));
+            bool lightTaskbar = IsTaskbarLightTheme();
 
             (IntPtr newActive, bool ownsActive) = LoadSingleIcon("output.ico", cx, cy);
-            (IntPtr newInactive, bool ownsInactive) = LoadSingleIcon("output_grey.ico", cx, cy);
+            (IntPtr newInactive, bool ownsInactive) = LoadAdaptiveInactiveIcon(newActive, cx, cy, lightTaskbar);
 
             IntPtr oldActive = _activeIcon;
             IntPtr oldInactive = _inactiveIcon;
@@ -355,6 +355,7 @@ namespace AnywhereWinUI.Helpers
             _ownsInactiveIcon = ownsInactive;
             _loadedIconWidth = cx;
             _loadedIconHeight = cy;
+            _loadedTaskbarLightTheme = lightTaskbar;
 
             if (ownedOldActive && oldActive != IntPtr.Zero && oldActive != _activeIcon)
             {
@@ -364,6 +365,120 @@ namespace AnywhereWinUI.Helpers
             {
                 DestroyIcon(oldInactive);
             }
+        }
+
+        private static bool IsTaskbarLightTheme()
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                    writable: false);
+                if (key?.GetValue("SystemUsesLightTheme") is int v)
+                {
+                    return v != 0;
+                }
+            }
+            catch { }
+            return false;
+        }
+
+        private static unsafe (IntPtr Handle, bool Owned) LoadAdaptiveInactiveIcon(IntPtr activeIcon, int cx, int cy, bool lightTaskbar)
+        {
+            // Render a crisp monochrome-grey HICON from the active icon's alpha mask tuned to taskbar contrast:
+            // dark slate on Light taskbar, silver-grey on Dark taskbar — never invisible on either!
+            if (activeIcon != IntPtr.Zero)
+            {
+                IntPtr screenDc = GetDC(IntPtr.Zero);
+                if (screenDc != IntPtr.Zero)
+                {
+                    try
+                    {
+                        var bmi = new BITMAPINFOHEADER
+                        {
+                            biSize = (uint)sizeof(BITMAPINFOHEADER),
+                            biWidth = cx,
+                            biHeight = -cy, // top-down 32bpp ARGB
+                            biPlanes = 1,
+                            biBitCount = 32,
+                            biCompression = 0
+                        };
+
+                        IntPtr colorDib = CreateDIBSection(screenDc, ref bmi, 0, out IntPtr bits, IntPtr.Zero, 0);
+                        if (colorDib != IntPtr.Zero && bits != IntPtr.Zero)
+                        {
+                            IntPtr memDc = CreateCompatibleDC(screenDc);
+                            IntPtr maskBmp = CreateBitmap(cx, cy, 1, 1, IntPtr.Zero);
+                            try
+                            {
+                                if (memDc != IntPtr.Zero && maskBmp != IntPtr.Zero)
+                                {
+                                    IntPtr oldBmp = SelectObject(memDc, colorDib);
+                                    // DI_NORMAL = 0x0003
+                                    bool drawn = DrawIconEx(memDc, 0, 0, activeIcon, cx, cy, 0, IntPtr.Zero, 0x0003);
+                                    SelectObject(memDc, oldBmp);
+
+                                    if (drawn)
+                                    {
+                                        byte targetTone = lightTaskbar ? (byte)86 : (byte)184;
+                                        uint* px = (uint*)bits;
+                                        int total = cx * cy;
+                                        bool anyVisible = false;
+                                        for (int i = 0; i < total; i++)
+                                        {
+                                            uint argb = px[i];
+                                            uint a = (argb >> 24) & 0xFF;
+                                            if (a == 0)
+                                            {
+                                                px[i] = 0;
+                                                continue;
+                                            }
+                                            anyVisible = true;
+                                            uint r = (argb >> 16) & 0xFF;
+                                            uint g = (argb >> 8) & 0xFF;
+                                            uint b = argb & 0xFF;
+                                            // Unpremultiply slightly to preserve edge shading, then blend with targetTone
+                                            uint lum = (r * 77 + g * 150 + b * 29) >> 8;
+                                            uint shaded = ((lum * 35 + (uint)targetTone * 65) / 100);
+                                            // Premultiply back for Win32 32bpp alpha icon
+                                            uint pm = (shaded * a) / 255;
+                                            px[i] = (a << 24) | (pm << 16) | (pm << 8) | pm;
+                                        }
+
+                                        if (anyVisible)
+                                        {
+                                            var ii = new ICONINFO
+                                            {
+                                                fIcon = true,
+                                                hbmMask = maskBmp,
+                                                hbmColor = colorDib
+                                            };
+                                            IntPtr generated = CreateIconIndirect(ref ii);
+                                            if (generated != IntPtr.Zero)
+                                            {
+                                                return (generated, true);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            finally
+                            {
+                                if (maskBmp != IntPtr.Zero) DeleteObject(maskBmp);
+                                if (memDc != IntPtr.Zero) DeleteDC(memDc);
+                                DeleteObject(colorDib);
+                            }
+                        }
+                    }
+                    catch { }
+                    finally
+                    {
+                        ReleaseDC(IntPtr.Zero, screenDc);
+                    }
+                }
+            }
+
+            return LoadSingleIcon("output_grey.ico", cx, cy);
         }
 
         private static (IntPtr Handle, bool Owned) LoadSingleIcon(string fileName, int cx, int cy)
@@ -385,7 +500,9 @@ namespace AnywhereWinUI.Helpers
         {
             int cx = Math.Max(16, GetSystemMetrics(SM_CXSMICON));
             int cy = Math.Max(16, GetSystemMetrics(SM_CYSMICON));
+            bool lightTaskbar = IsTaskbarLightTheme();
             if (cx != _loadedIconWidth || cy != _loadedIconHeight ||
+                lightTaskbar != _loadedTaskbarLightTheme ||
                 _activeIcon == IntPtr.Zero || _inactiveIcon == IntPtr.Zero)
             {
                 LoadIcons();
@@ -472,7 +589,6 @@ namespace AnywhereWinUI.Helpers
                             _ignoreNextLButtonUpUntilTick = Environment.TickCount64 + 360;
                             _dispatcherQueue.TryEnqueue(() =>
                             {
-                                _leftClickTimer?.Stop();
                                 CloseFlyout();
                                 _onOpenRequested();
                             });
@@ -500,24 +616,11 @@ namespace AnywhereWinUI.Helpers
                             {
                                 if (_currentFlyout != null && _currentFlyout.IsOpen)
                                 {
-                                    _leftClickTimer?.Stop();
                                     CloseFlyout();
                                     return;
                                 }
 
-                                _pendingLeftClickRect = leftTargetRect;
-                                if (_leftClickTimer == null)
-                                {
-                                    _leftClickTimer = _dispatcherQueue.CreateTimer();
-                                    _leftClickTimer.Interval = TimeSpan.FromMilliseconds(180);
-                                    _leftClickTimer.IsRepeating = false;
-                                    _leftClickTimer.Tick += (_, _) =>
-                                    {
-                                        ShowWinUIFlyout(_pendingLeftClickRect, isLeftPanel: true);
-                                    };
-                                }
-                                _leftClickTimer.Stop();
-                                _leftClickTimer.Start();
+                                ShowWinUIFlyout(leftTargetRect, isLeftPanel: true);
                             });
                             return IntPtr.Zero;
 
@@ -525,7 +628,6 @@ namespace AnywhereWinUI.Helpers
                             var targetRect = GetTrayAnchorRect();
                             _dispatcherQueue.TryEnqueue(() =>
                             {
-                                _leftClickTimer?.Stop();
                                 ShowWinUIFlyout(targetRect, isLeftPanel: false);
                             });
                             return IntPtr.Zero;
@@ -608,6 +710,11 @@ namespace AnywhereWinUI.Helpers
         {
             if (_disposed) return;
 
+            var flyout = isLeftPanel
+                ? _leftClickPanelFactory?.Invoke()
+                : _contextMenuFactory();
+            if (flyout == null) return;
+
             _idleReclaimTimer?.Stop();
 
             // Lift GUI EcoQoS briefly while the user interacts with the tray flyout
@@ -620,11 +727,6 @@ namespace AnywhereWinUI.Helpers
             }
 
             CloseFlyout(scheduleReclaim: false);
-
-            var flyout = isLeftPanel
-                ? _leftClickPanelFactory?.Invoke()
-                : _contextMenuFactory();
-            if (flyout == null) return;
 
             // Sync WinUI 3 Flyout theme with main window (Light / Dark / System)
             var activeTheme = MainWindow.Instance?.GetActiveTheme() ?? ElementTheme.Default;
@@ -825,7 +927,6 @@ namespace AnywhereWinUI.Helpers
             _disposed = true;
 
             try { _bootRetryTimer?.Stop(); _bootRetryTimer = null; } catch { }
-            try { _leftClickTimer?.Stop(); _leftClickTimer = null; } catch { }
             try { _idleReclaimTimer?.Stop(); _idleReclaimTimer = null; } catch { }
 
             try
@@ -1026,6 +1127,79 @@ namespace AnywhereWinUI.Helpers
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr GetModuleHandleW(string? lpModuleName);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BITMAPINFOHEADER
+        {
+            public uint biSize;
+            public int biWidth;
+            public int biHeight;
+            public ushort biPlanes;
+            public ushort biBitCount;
+            public uint biCompression;
+            public uint biSizeImage;
+            public int biXPelsPerMeter;
+            public int biYPelsPerMeter;
+            public uint biClrUsed;
+            public uint biClrImportant;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct ICONINFO
+        {
+            [MarshalAs(UnmanagedType.Bool)]
+            public bool fIcon;
+            public uint xHotspot;
+            public uint yHotspot;
+            public IntPtr hbmMask;
+            public IntPtr hbmColor;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetDC(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool DrawIconEx(
+            IntPtr hdc,
+            int xLeft,
+            int yTop,
+            IntPtr hIcon,
+            int cxWidth,
+            int cyWidth,
+            uint istepIfAniCur,
+            IntPtr hbrFlickerFreeDraw,
+            uint diFlags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr CreateIconIndirect(ref ICONINFO piconinfo);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool DeleteDC(IntPtr hdc);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateDIBSection(
+            IntPtr hdc,
+            ref BITMAPINFOHEADER pbmi,
+            uint usage,
+            out IntPtr ppvBits,
+            IntPtr hSection,
+            uint offset);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateBitmap(int nWidth, int nHeight, uint nPlanes, uint nBitCount, IntPtr lpBits);
+
+        [DllImport("gdi32.dll")]
+        private static extern IntPtr SelectObject(IntPtr hdc, IntPtr h);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool DeleteObject(IntPtr ho);
 
         #endregion
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -81,11 +82,10 @@ namespace AnywhereWinUI.Helpers
                     if (kvp.Value is bool b) node[kvp.Key] = b;
                     else if (kvp.Value is int i) node[kvp.Key] = i;
                     else if (kvp.Value is long l) node[kvp.Key] = l;
+                    else if (kvp.Value is float f) node[kvp.Key] = f;
                     else if (kvp.Value is double d) node[kvp.Key] = d;
-                    else if (kvp.Value is string s)
-                    {
-                        node[kvp.Key] = s;
-                    }
+                    else if (kvp.Value is string s) node[kvp.Key] = s;
+                    else if (kvp.Value is IFormattable fmt) node[kvp.Key] = fmt.ToString(null, CultureInfo.InvariantCulture);
                     else node[kvp.Key] = kvp.Value?.ToString();
                 }
 
@@ -153,7 +153,7 @@ namespace AnywhereWinUI.Helpers
                         value = (T)(object)(int)l;
                         return true;
                     }
-                    if (rawVal is string si && int.TryParse(si, out var ires))
+                    if (rawVal is string si && int.TryParse(si, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ires))
                     {
                         value = (T)(object)ires;
                         return true;
@@ -166,7 +166,7 @@ namespace AnywhereWinUI.Helpers
                         value = (T)(object)(long)i;
                         return true;
                     }
-                    if (rawVal is string sl && long.TryParse(sl, out var lres))
+                    if (rawVal is string sl && long.TryParse(sl, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lres))
                     {
                         value = (T)(object)lres;
                         return true;
@@ -184,7 +184,7 @@ namespace AnywhereWinUI.Helpers
                         value = (T)(object)(double)di;
                         return true;
                     }
-                    if (rawVal is string sd && double.TryParse(sd, out var dres))
+                    if (rawVal is string sd && double.TryParse(sd, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var dres))
                     {
                         value = (T)(object)dres;
                         return true;

@@ -45,6 +45,65 @@ namespace AnywhereWinUI.Services
             }
         }
 
+        public PersistedNode? FindNode(string? id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            lock (_sync)
+            {
+                return Nodes.Find(n => string.Equals(n.Id, id, StringComparison.Ordinal));
+            }
+        }
+
+        public void AddNodes(IEnumerable<PersistedNode> nodesToAdd)
+        {
+            if (nodesToAdd == null) return;
+            lock (_sync)
+            {
+                Nodes.AddRange(nodesToAdd);
+                if (string.IsNullOrEmpty(SelectedNodeId) && Nodes.Count > 0)
+                {
+                    SelectedNodeId = Nodes[0].Id;
+                }
+                Save();
+            }
+        }
+
+        public void ReplaceAllNodes(IEnumerable<PersistedNode> orderedNodes)
+        {
+            if (orderedNodes == null) return;
+            lock (_sync)
+            {
+                Nodes.Clear();
+                Nodes.AddRange(orderedNodes);
+                if (!string.IsNullOrEmpty(SelectedNodeId) && !Nodes.Exists(n => n.Id == SelectedNodeId))
+                {
+                    SelectedNodeId = Nodes.Count > 0 ? Nodes[0].Id : string.Empty;
+                }
+                Save();
+            }
+        }
+
+        public void SetNodeFavorite(string id, bool isFavorite)
+        {
+            lock (_sync)
+            {
+                var node = Nodes.Find(n => n.Id == id);
+                if (node != null)
+                {
+                    node.IsFavorite = isFavorite;
+                    Save();
+                }
+            }
+        }
+
+        public string? GetLastSubscriptionId()
+        {
+            lock (_sync)
+            {
+                return Subscriptions.Count > 0 ? Subscriptions[^1].Id : null;
+            }
+        }
+
         // Expose personalized settings as properties
         public string ThemeSetting { get; set; } = "Default";
         public string BackdropSetting { get; set; } = "Mica";
@@ -373,11 +432,20 @@ namespace AnywhereWinUI.Services
                     newEndpointKeys.Add($"{n.Protocol}|{n.Host}");
                 }
 
+                bool activeAffected = false;
+                int remainingCount = 0;
                 lock (_sync)
                 {
                     // Re-verify subscription wasn't deleted while network request was in flight
                     var currentSub = Subscriptions.Find(s => s.Id == subId);
                     if (currentSub == null) return null;
+
+                    var activeNodeBefore = Nodes.Find(n => n.Id == SelectedNodeId);
+                    bool activeWasInSub = activeNodeBefore != null &&
+                                          (string.Equals(activeNodeBefore.SubscriptionId, subId, StringComparison.Ordinal) ||
+                                           (!string.IsNullOrEmpty(activeNodeBefore.ProxyChainId) &&
+                                            Nodes.Exists(c => c.Id == activeNodeBefore.ProxyChainId &&
+                                                              string.Equals(c.SubscriptionId, subId, StringComparison.Ordinal))));
 
                     int insertIndex = Nodes.FindIndex(n => n.SubscriptionId == subId);
                     if (insertIndex < 0)
@@ -395,8 +463,30 @@ namespace AnywhereWinUI.Services
                     if (insertIndex < 0 || insertIndex > Nodes.Count)
                         insertIndex = Nodes.Count;
                     Nodes.InsertRange(insertIndex, newNodes);
+                    if (string.IsNullOrEmpty(SelectedNodeId) || !Nodes.Exists(n => n.Id == SelectedNodeId))
+                    {
+                        SelectedNodeId = Nodes.Count > 0 ? Nodes[0].Id : string.Empty;
+                    }
                     currentSub.LastUpdated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    remainingCount = Nodes.Count;
+                    activeAffected = activeWasInSub || AppSession.Instance.IsAutoNodeSelect;
                     Save();
+                }
+
+                // Clear cached hot-switch tags so updated credentials/ports never reuse stale sing-box outbounds
+                AppSession.Instance.ClearHotSwitchTags();
+                if (CoreManager.Instance.IsRunning && activeAffected)
+                {
+                    if (remainingCount == 0)
+                    {
+                        await CoreManager.Instance.StopAsync().ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        var activeNode = FindNode(SelectedNodeId);
+                        string cfg = await ConfigBuilder.BuildAsync(activeNode).ConfigureAwait(false);
+                        await CoreManager.Instance.StartAsync(cfg).ConfigureAwait(false);
+                    }
                 }
                 return null;
             }

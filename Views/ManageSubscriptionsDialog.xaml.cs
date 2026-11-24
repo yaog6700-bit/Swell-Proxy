@@ -347,10 +347,13 @@ namespace AnywhereWinUI.Views
             if (subtleBtnStyle != null) deleteBtn.Style = subtleBtnStyle;
             ToolTipService.SetToolTip(deleteBtn, L.SubDialog_DelTooltip);
 
-            confirmDeleteBtn.Click += (_, _) =>
+            confirmDeleteBtn.Click += async (_, _) =>
             {
                 flyout.Hide();
-                try { NodesManager.Instance.DeleteSubscription(sub.Id); }
+                try
+                {
+                    await ViewModels.ServersViewModel.DeleteSubscriptionAndSyncCoreAsync(sub.Id);
+                }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[ManageSubDialog] Delete failed: {ex.Message}");

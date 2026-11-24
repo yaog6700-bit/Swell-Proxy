@@ -15,11 +15,12 @@ namespace AnywhereWinUI.Plugins
     {
         private readonly Engine _engine;
         private readonly SemaphoreSlim _engineLock = new(1, 1);
-        private bool _disposed;
+        private int _disposedInt;
         private bool _initialized;
 
+        private bool IsDisposed => Volatile.Read(ref _disposedInt) != 0;
         public PluginManifest Manifest { get; }
-        public bool IsEnabled => !Manifest.Disabled && !_disposed;
+        public bool IsEnabled => !Manifest.Disabled && !IsDisposed;
 
         internal PluginRuntime(PluginManifest manifest)
         {
@@ -42,11 +43,11 @@ namespace AnywhereWinUI.Plugins
 
         public async Task InitAsync(string code)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
             await _engineLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                if (_disposed) return;
+                if (IsDisposed) return;
                 await Task.Run(() => _engine.Execute(code)).ConfigureAwait(false);
                 _initialized = true;
             }
@@ -58,13 +59,13 @@ namespace AnywhereWinUI.Plugins
 
         public async Task<JsValue?> CallAsync(string functionName, params object[] args)
         {
-            if (!_initialized || _disposed || Manifest.Disabled)
+            if (!_initialized || IsDisposed || Manifest.Disabled)
                 return null;
 
             await _engineLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                if (!_initialized || _disposed || Manifest.Disabled)
+                if (!_initialized || IsDisposed || Manifest.Disabled)
                     return null;
 
                 return await Task.Run(() =>
@@ -99,17 +100,25 @@ namespace AnywhereWinUI.Plugins
 
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
-            _engineLock.Wait();
+            if (Interlocked.Exchange(ref _disposedInt, 1) != 0)
+                return;
+
+            // Never block the UI thread synchronously waiting for an active JS call, and do not dispose
+            // _engineLock while queued async waiters may still be resuming!
+            _ = DisposeEngineAsync();
+        }
+
+        private async Task DisposeEngineAsync()
+        {
+            await _engineLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 _engine.Dispose();
             }
+            catch { }
             finally
             {
                 _engineLock.Release();
-                _engineLock.Dispose();
             }
         }
     }

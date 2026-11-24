@@ -1,6 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Security;
+using System.Security.Principal;
+using System.Text;
 using Microsoft.Win32;
 using AnywhereWinUI.Helpers;
 
@@ -47,21 +50,30 @@ namespace AnywhereWinUI.Services
 
         /// <summary>
         /// Automatically upgrades an existing standard HKCU Run autostart entry to a UAC-free
-        /// HIGHEST Scheduled Task whenever the app is running with Administrator privileges.
+        /// HIGHEST Scheduled Task whenever the app is running with Administrator privileges,
+        /// and self-heals existing tasks if the exe path moved or lacked battery/time-limit overrides.
         /// </summary>
         public static void UpgradeToElevatedTaskIfNeeded()
         {
             try
             {
                 if (!AdminHelper.IsAdministrator()) return;
-                if (!IsRegistryAutostartPresent()) return;
 
                 string? exePath = Environment.ProcessPath;
                 if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath)) return;
 
-                if (TryRegisterScheduledTask(exePath, allowUacPrompt: false))
+                if (IsRegistryAutostartPresent())
                 {
-                    DeleteRegistryAutostart();
+                    if (TryRegisterScheduledTask(exePath, allowUacPrompt: false))
+                    {
+                        DeleteRegistryAutostart();
+                    }
+                    return;
+                }
+
+                if (IsScheduledTaskPresent() && !IsScheduledTaskUpToDate(exePath))
+                {
+                    TryRegisterScheduledTask(exePath, allowUacPrompt: false);
                 }
             }
             catch { }
@@ -114,7 +126,11 @@ namespace AnywhereWinUI.Services
 
                 using var proc = Process.Start(psi);
                 if (proc == null) return false;
-                proc.WaitForExit(2500);
+                if (!proc.WaitForExit(2500))
+                {
+                    try { proc.Kill(); } catch { }
+                    return false;
+                }
                 return proc.ExitCode == 0;
             }
             catch
@@ -123,11 +139,106 @@ namespace AnywhereWinUI.Services
             }
         }
 
-        private static bool TryRegisterScheduledTask(string exePath, bool allowUacPrompt)
+        private static bool IsScheduledTaskUpToDate(string exePath)
         {
             try
             {
-                string trCommand = $"\"{exePath}\" {AutostartLaunchArgs}";
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "schtasks.exe",
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                psi.ArgumentList.Add("/Query");
+                psi.ArgumentList.Add("/TN");
+                psi.ArgumentList.Add(ScheduledTaskName);
+                psi.ArgumentList.Add("/XML");
+
+                using var proc = Process.Start(psi);
+                if (proc == null) return false;
+                string xml = proc.StandardOutput.ReadToEnd();
+                if (!proc.WaitForExit(2500))
+                {
+                    try { proc.Kill(); } catch { }
+                    return false;
+                }
+                if (proc.ExitCode != 0 || string.IsNullOrWhiteSpace(xml))
+                    return false;
+
+                string escapedExe = SecurityElement.Escape(exePath) ?? exePath;
+                return xml.Contains(escapedExe, StringComparison.OrdinalIgnoreCase) &&
+                       xml.Contains("<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>", StringComparison.OrdinalIgnoreCase) &&
+                       xml.Contains("<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>", StringComparison.OrdinalIgnoreCase) &&
+                       xml.Contains("<ExecutionTimeLimit>PT0S</ExecutionTimeLimit>", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static string BuildTaskDefinitionXml(string exePath)
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            string userId = identity.User?.Value ?? identity.Name;
+            string workingDir = Path.GetDirectoryName(exePath) ?? AppContext.BaseDirectory;
+
+            string safeUser = SecurityElement.Escape(userId) ?? userId;
+            string safeCmd  = SecurityElement.Escape(exePath) ?? exePath;
+            string safeArgs = SecurityElement.Escape(AutostartLaunchArgs) ?? AutostartLaunchArgs;
+            string safeDir  = SecurityElement.Escape(workingDir) ?? workingDir;
+
+            return $"""
+                <?xml version="1.0" encoding="UTF-16"?>
+                <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+                  <Triggers>
+                    <LogonTrigger>
+                      <Enabled>true</Enabled>
+                      <UserId>{safeUser}</UserId>
+                    </LogonTrigger>
+                  </Triggers>
+                  <Principals>
+                    <Principal id="Author">
+                      <UserId>{safeUser}</UserId>
+                      <LogonType>InteractiveToken</LogonType>
+                      <RunLevel>HighestAvailable</RunLevel>
+                    </Principal>
+                  </Principals>
+                  <Settings>
+                    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+                    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+                    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+                    <AllowHardTerminate>true</AllowHardTerminate>
+                    <StartWhenAvailable>true</StartWhenAvailable>
+                    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+                    <AllowStartOnDemand>true</AllowStartOnDemand>
+                    <Enabled>true</Enabled>
+                    <Hidden>false</Hidden>
+                    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+                    <WakeToRun>false</WakeToRun>
+                    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+                    <Priority>7</Priority>
+                  </Settings>
+                  <Actions Context="Author">
+                    <Exec>
+                      <Command>{safeCmd}</Command>
+                      <Arguments>{safeArgs}</Arguments>
+                      <WorkingDirectory>{safeDir}</WorkingDirectory>
+                    </Exec>
+                  </Actions>
+                </Task>
+                """;
+        }
+
+        private static bool TryRegisterScheduledTask(string exePath, bool allowUacPrompt)
+        {
+            string tempXmlPath = Path.Combine(Path.GetTempPath(), $"swell_autostart_{Guid.NewGuid():N}.xml");
+            try
+            {
+                string xml = BuildTaskDefinitionXml(exePath);
+                File.WriteAllText(tempXmlPath, xml, Encoding.Unicode);
 
                 if (AdminHelper.IsAdministrator())
                 {
@@ -143,39 +254,45 @@ namespace AnywhereWinUI.Services
                     psi.ArgumentList.Add("/F");
                     psi.ArgumentList.Add("/TN");
                     psi.ArgumentList.Add(ScheduledTaskName);
-                    psi.ArgumentList.Add("/TR");
-                    psi.ArgumentList.Add(trCommand);
-                    psi.ArgumentList.Add("/SC");
-                    psi.ArgumentList.Add("ONLOGON");
-                    psi.ArgumentList.Add("/RL");
-                    psi.ArgumentList.Add("HIGHEST");
-                    psi.ArgumentList.Add("/IT");
+                    psi.ArgumentList.Add("/XML");
+                    psi.ArgumentList.Add(tempXmlPath);
 
                     using var proc = Process.Start(psi);
                     if (proc == null) return false;
-                    proc.WaitForExit(4000);
+                    if (!proc.WaitForExit(5000))
+                    {
+                        try { proc.Kill(); } catch { }
+                        return false;
+                    }
                     return proc.ExitCode == 0;
                 }
 
                 if (!allowUacPrompt) return false;
 
-                string escapedTr = trCommand.Replace("\"", "\\\"");
                 var elevatedPsi = new ProcessStartInfo
                 {
                     FileName = "schtasks.exe",
-                    Arguments = $"/Create /F /TN \"{ScheduledTaskName}\" /TR \"{escapedTr}\" /SC ONLOGON /RL HIGHEST /IT",
+                    Arguments = $"/Create /F /TN \"{ScheduledTaskName}\" /XML \"{tempXmlPath}\"",
                     Verb = "runas",
                     UseShellExecute = true,
                     WindowStyle = ProcessWindowStyle.Hidden
                 };
                 using var elevatedProc = Process.Start(elevatedPsi);
                 if (elevatedProc == null) return false;
-                elevatedProc.WaitForExit(5000);
+                if (!elevatedProc.WaitForExit(8000))
+                {
+                    try { elevatedProc.Kill(); } catch { }
+                    return false;
+                }
                 return elevatedProc.ExitCode == 0;
             }
             catch
             {
                 return false;
+            }
+            finally
+            {
+                try { if (File.Exists(tempXmlPath)) File.Delete(tempXmlPath); } catch { }
             }
         }
 

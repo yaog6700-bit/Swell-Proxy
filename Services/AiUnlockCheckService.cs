@@ -25,6 +25,26 @@ namespace AnywhereWinUI.Services
         private static readonly int[] RetryDelaysMs = { 500, 1000 };
         private static readonly ConcurrentDictionary<int, HttpClient> SharedClients = new();
 
+        public static void ResetPooledConnections()
+        {
+            foreach (var kv in SharedClients)
+            {
+                if (SharedClients.TryRemove(kv.Key, out var client))
+                {
+                    RetireClientGracefully(client);
+                }
+            }
+        }
+
+        private static void RetireClientGracefully(HttpClient client)
+        {
+            _ = Task.Run(async () =>
+            {
+                try { await Task.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false); } catch { }
+                try { client.Dispose(); } catch { }
+            });
+        }
+
         public Task<AiUnlockStatus> CheckOpenAiAsync(int? httpProxyPort, CancellationToken ct = default)
             => ExecuteWithRetryAsync(httpProxyPort, ct, async (client, token) =>
             {

@@ -53,6 +53,7 @@ namespace AnywhereWinUI.Helpers
         {
             public List<string> DirectDomainSuffixes { get; } = new();
             public List<string> DirectIpCidrs { get; } = new();
+            public List<string> TunnelInterfaceNames { get; } = new();
             public Dictionary<string, List<string>> SplitDnsServerToDomains { get; } = new(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -151,6 +152,12 @@ namespace AnywhereWinUI.Helpers
                     }
                 }
                 if (isOwnTunAddress) continue;
+
+                if (!string.IsNullOrWhiteSpace(nic.Name) &&
+                    !result.TunnelInterfaceNames.Exists(x => string.Equals(x, nic.Name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    result.TunnelInterfaceNames.Add(nic.Name);
+                }
 
                 string suffix = NormalizeDomainSuffix(props.DnsSuffix);
                 if (!string.IsNullOrEmpty(suffix))

@@ -130,7 +130,7 @@ namespace AnywhereWinUI.ViewModels
         public void LoadSubscriptions()
         {
             Subscriptions.Clear();
-            foreach (var s in NodesManager.Instance.Subscriptions)
+            foreach (var s in NodesManager.Instance.GetSubscriptionsSnapshot())
             {
                 Subscriptions.Add(s);
             }
@@ -175,7 +175,7 @@ namespace AnywhereWinUI.ViewModels
             }
 
             AllServers.Clear();
-            var nodes = NodesManager.Instance.Nodes;
+            var nodes = NodesManager.Instance.GetNodesSnapshot();
             string currentSelectedId = NodesManager.Instance.SelectedNodeId;
             bool isRunning = CoreManager.Instance.IsRunning;
             bool isAuto = AppSession.Instance.IsAutoNodeSelect;
@@ -541,12 +541,11 @@ namespace AnywhereWinUI.ViewModels
         {
             if (server == null) return;
 
-            string previousActiveId = NodesManager.Instance.SelectedNodeId;
-            bool wasAuto = AppSession.Instance.IsAutoNodeSelect;
             bool isRunning = CoreManager.Instance.IsRunning;
+            var node = NodesManager.Instance.FindNode(server.Id);
+            if (node == null) return;
 
-            var node = NodesManager.Instance.Nodes.Find(n => n.Id == server.Id);
-            if (node != null && isRunning && CustomConfigService.RequiresTunAdmin(node))
+            if (isRunning && CustomConfigService.RequiresTunAdmin(node))
             {
                 var xamlRoot = MainWindow.Instance?.Content?.XamlRoot;
                 if (xamlRoot != null)
@@ -571,37 +570,17 @@ namespace AnywhereWinUI.ViewModels
                 return;
             }
 
-            AppSession.Instance.IsAutoNodeSelect = false;
-            Helpers.LocalSettingsHelper.SetValue("isAutoNodeSelect", false);
+            try
+            {
+                await CoreManager.Instance.SwitchToNodeAsync(node);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error switching node: {ex}");
+            }
 
-            // Set as active selected node in NodesManager
-            NodesManager.Instance.SelectedNodeId = server.Id;
-            SelectedNodeId = server.Id;
-            NodesManager.Instance.Save();
-
+            SelectedNodeId = NodesManager.Instance.SelectedNodeId;
             SyncActiveNodeIndicators();
-
-            // Sync with AppSession active properties
-            AppSession.Instance.SelectedNodeName = server.Name;
-            AppSession.Instance.SelectedNodeProtocol = server.Protocol;
-            AppSession.Instance.SelectedNodeHost = server.HostPortDisplay;
-
-            if (isRunning && !wasAuto && previousActiveId == server.Id)
-            {
-                return;
-            }
-
-            if (node != null && isRunning)
-            {
-                try
-                {
-                    await CoreManager.Instance.SwitchToNodeAsync(node);
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error switching node: {ex}");
-                }
-            }
         }
 
         [RelayCommand]
@@ -609,18 +588,20 @@ namespace AnywhereWinUI.ViewModels
         {
             if (server == null) return;
 
-            bool wasActiveNode = !AppSession.Instance.IsAutoNodeSelect &&
+            bool wasAuto = AppSession.Instance.IsAutoNodeSelect;
+            bool wasActiveNode = !wasAuto &&
                                  string.Equals(NodesManager.Instance.SelectedNodeId, server.Id, StringComparison.Ordinal);
             bool hadSub = !string.IsNullOrEmpty(server.SubscriptionId);
 
             NodesManager.Instance.DeleteNode(server.Id);
+            AppSession.Instance.ClearHotSwitchTags();
             if (hadSub) LoadSubscriptions();
             LoadServersList();
             SelectedServer = null;
 
             if (CoreManager.Instance.IsRunning)
             {
-                var remaining = NodesManager.Instance.Nodes;
+                var remaining = NodesManager.Instance.GetNodesSnapshot();
                 if (remaining.Count == 0)
                 {
                     await CoreManager.Instance.StopAsync();
@@ -628,7 +609,13 @@ namespace AnywhereWinUI.ViewModels
                 else if (wasActiveNode)
                 {
                     var nextNode = remaining.Find(n => n.Id == NodesManager.Instance.SelectedNodeId) ?? remaining[0];
-                    await CoreManager.Instance.SwitchToNodeAsync(nextNode);
+                    await CoreManager.Instance.SwitchToNodeAsync(nextNode, forceReload: true);
+                }
+                else if (wasAuto)
+                {
+                    var fallback = remaining.Find(n => n.Id == NodesManager.Instance.SelectedNodeId) ?? remaining[0];
+                    string cfg = await ConfigBuilder.BuildAsync(fallback);
+                    await CoreManager.Instance.StartAsync(cfg);
                 }
             }
             else if (wasActiveNode)
@@ -643,12 +630,7 @@ namespace AnywhereWinUI.ViewModels
             if (server != null)
             {
                 server.IsFavorite = !server.IsFavorite;
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == server.Id);
-                if (node != null)
-                {
-                    node.IsFavorite = server.IsFavorite;
-                    NodesManager.Instance.Save();
-                }
+                NodesManager.Instance.SetNodeFavorite(server.Id, server.IsFavorite);
 
                 if (SelectedGroupFilterId == FavoritesFilterId)
                 {
@@ -674,29 +656,28 @@ namespace AnywhereWinUI.ViewModels
         /// </summary>
         public void ApplyNodeOrder(System.Collections.Generic.IList<string> orderedIds)
         {
-            var newNodesList = new System.Collections.Generic.List<PersistedNode>();
+            var existingSnapshot = NodesManager.Instance.GetNodesSnapshot();
+            var newNodesList = new System.Collections.Generic.List<PersistedNode>(existingSnapshot.Count);
 
             // 1. Add nodes in the explicit new order (visible items only)
             foreach (var id in orderedIds)
             {
-                var node = NodesManager.Instance.Nodes.Find(n => n.Id == id);
+                var node = existingSnapshot.Find(n => n.Id == id);
                 if (node != null) newNodesList.Add(node);
             }
 
             // 2. Append any nodes that were filtered out (not visible in the list)
-            foreach (var node in NodesManager.Instance.Nodes)
+            foreach (var node in existingSnapshot)
             {
                 if (!newNodesList.Exists(n => n.Id == node.Id)) newNodesList.Add(node);
             }
 
             // 3. Commit to NodesManager and persist to disk
-            NodesManager.Instance.Nodes.Clear();
-            NodesManager.Instance.Nodes.AddRange(newNodesList);
-            NodesManager.Instance.Save();
+            NodesManager.Instance.ReplaceAllNodes(newNodesList);
 
             // 4. Rebuild AllServers to reflect the new order in the UI
-            var newAllServers = new System.Collections.Generic.List<ServerEntryItem>();
-            foreach (var node in NodesManager.Instance.Nodes)
+            var newAllServers = new System.Collections.Generic.List<ServerEntryItem>(newNodesList.Count);
+            foreach (var node in newNodesList)
             {
                 var item = AllServers.FirstOrDefault(s => s.Id == node.Id);
                 if (item != null) newAllServers.Add(item);
@@ -736,13 +717,53 @@ namespace AnywhereWinUI.ViewModels
         }
 
         [RelayCommand]
-        private void DeleteSubscription(PersistedSubscription sub)
+        private async Task DeleteSubscriptionAsync(PersistedSubscription sub)
         {
             if (sub != null)
             {
-                NodesManager.Instance.DeleteSubscription(sub.Id);
+                await DeleteSubscriptionAndSyncCoreAsync(sub.Id);
                 LoadSubscriptions();
                 LoadServersList();
+            }
+        }
+
+        public static async Task DeleteSubscriptionAndSyncCoreAsync(string subId)
+        {
+            if (string.IsNullOrEmpty(subId)) return;
+
+            var activeBefore = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
+            bool wasAuto = AppSession.Instance.IsAutoNodeSelect;
+            bool wasActiveInSub = !wasAuto && activeBefore != null &&
+                                  string.Equals(activeBefore.SubscriptionId, subId, StringComparison.Ordinal);
+
+            NodesManager.Instance.DeleteSubscription(subId);
+            AppSession.Instance.ClearHotSwitchTags();
+
+            if (CoreManager.Instance.IsRunning)
+            {
+                var remaining = NodesManager.Instance.GetNodesSnapshot();
+                if (remaining.Count == 0)
+                {
+                    await CoreManager.Instance.StopAsync();
+                }
+                else if (wasActiveInSub)
+                {
+                    var nextNode = remaining.Find(n => n.Id == NodesManager.Instance.SelectedNodeId) ?? remaining[0];
+                    await CoreManager.Instance.SwitchToNodeAsync(nextNode, forceReload: true);
+                }
+                else if (wasAuto)
+                {
+                    var fallback = remaining.Find(n => n.Id == NodesManager.Instance.SelectedNodeId) ?? remaining[0];
+                    string cfg = await ConfigBuilder.BuildAsync(fallback);
+                    await CoreManager.Instance.StartAsync(cfg);
+                }
+            }
+            else if (wasActiveInSub)
+            {
+                var nextNode = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
+                AppSession.Instance.SelectedNodeName = nextNode?.Name ?? string.Empty;
+                AppSession.Instance.SelectedNodeProtocol = nextNode?.Protocol ?? string.Empty;
+                AppSession.Instance.SelectedNodeHost = nextNode?.Host ?? string.Empty;
             }
         }
 
@@ -764,8 +785,7 @@ namespace AnywhereWinUI.ViewModels
                 var docNodes = NodesManager.Instance.ParseSubscriptionContent(trimmedWhole, string.Empty);
                 if (docNodes.Count > 0)
                 {
-                    NodesManager.Instance.Nodes.AddRange(docNodes);
-                    NodesManager.Instance.Save();
+                    NodesManager.Instance.AddNodes(docNodes);
                     LoadSubscriptions();
                     LoadServersList();
                     return (docNodes.Count, 0);
@@ -775,6 +795,7 @@ namespace AnywhereWinUI.ViewModels
             var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             int addedNodesCount = 0;
             int addedSubsCount = 0;
+            var pendingManualNodes = new System.Collections.Generic.List<PersistedNode>();
 
             foreach (var rawLine in lines)
             {
@@ -792,9 +813,9 @@ namespace AnywhereWinUI.ViewModels
                     }
                     NodesManager.Instance.AddSubscription(subName, line);
                     
-                    if (NodesManager.Instance.Subscriptions.Count > 0)
+                    var lastSubId = NodesManager.Instance.GetLastSubscriptionId();
+                    if (!string.IsNullOrEmpty(lastSubId))
                     {
-                        var lastSubId = NodesManager.Instance.Subscriptions.Last().Id;
                         string? err = await NodesManager.Instance.UpdateSubscriptionAsync(lastSubId);
                         if (err != null)
                         {
@@ -813,7 +834,7 @@ namespace AnywhereWinUI.ViewModels
                     var parsedNode = NodesManager.ParseShareUrl(line);
                     if (parsedNode != null)
                     {
-                        NodesManager.Instance.Nodes.Add(parsedNode);
+                        pendingManualNodes.Add(parsedNode);
                         addedNodesCount++;
                     }
                 }
@@ -825,14 +846,18 @@ namespace AnywhereWinUI.ViewModels
                 var b64Nodes = NodesManager.Instance.ParseSubscriptionContent(trimmedWhole, string.Empty);
                 if (b64Nodes.Count > 0)
                 {
-                    NodesManager.Instance.Nodes.AddRange(b64Nodes);
+                    pendingManualNodes.AddRange(b64Nodes);
                     addedNodesCount = b64Nodes.Count;
                 }
             }
 
+            if (pendingManualNodes.Count > 0)
+            {
+                NodesManager.Instance.AddNodes(pendingManualNodes);
+            }
+
             if (addedNodesCount > 0 || addedSubsCount > 0)
             {
-                NodesManager.Instance.Save();
                 LoadSubscriptions();
                 LoadServersList();
             }
@@ -845,9 +870,10 @@ namespace AnywhereWinUI.ViewModels
 
             NodesManager.Instance.AddSubscription(name, url);
             
-            if (NodesManager.Instance.Subscriptions.Count > 0)
+            var lastSubId = NodesManager.Instance.GetLastSubscriptionId();
+            if (!string.IsNullOrEmpty(lastSubId))
             {
-                await NodesManager.Instance.UpdateSubscriptionAsync(NodesManager.Instance.Subscriptions.Last().Id);
+                await NodesManager.Instance.UpdateSubscriptionAsync(lastSubId);
             }
             
             LoadSubscriptions();

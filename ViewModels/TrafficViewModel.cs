@@ -106,7 +106,7 @@ namespace AnywhereWinUI.ViewModels
         private string _sessionTotalText = "0.0 B";
 
         [ObservableProperty]
-        private string _activeConnectionsText = "0.0 B/s   ↑ 0.0 B/s";
+        private string _activeConnectionsText = "↓ 0.0 B/s   ↑ 0.0 B/s";
 
         [ObservableProperty]
         private string _monthUploadText = "0.0 B";
@@ -189,6 +189,7 @@ namespace AnywhereWinUI.ViewModels
                     ChartItems.Clear();
                     HeatmapCellList = Array.Empty<HeatmapCellViewModel>();
                     MonthLabelList = Array.Empty<string>();
+                    HeatmapUpdated?.Invoke(this, EventArgs.Empty);
                 }
                 else
                 {
@@ -212,6 +213,10 @@ namespace AnywhereWinUI.ViewModels
             if (includeSpeed)
             {
                 ActiveConnectionsText = $"↓ {FormatBytes(downSpeed)}/s   ↑ {FormatBytes(upSpeed)}/s";
+            }
+            else
+            {
+                ActiveConnectionsText = "↓ 0.0 B/s   ↑ 0.0 B/s";
             }
         }
 
@@ -382,7 +387,10 @@ namespace AnywhereWinUI.ViewModels
         public void OnPageActivated()
         {
             _isPageActive = true;
-            RefreshSessionStrings(0, 0, includeSpeed: false);
+            bool running = CoreManager.Instance.IsRunning;
+            UpdateStatusUI(running);
+            var latest = CoreManager.Instance.LatestTrafficStats;
+            RefreshSessionStrings(latest.DownSpeed, latest.UpSpeed, includeSpeed: running);
             UpdateMonthAndChartUI();
             UpdateHeatmapUI();
         }
@@ -393,6 +401,7 @@ namespace AnywhereWinUI.ViewModels
             ChartItems.Clear();
             HeatmapCellList = Array.Empty<HeatmapCellViewModel>();
             MonthLabelList = Array.Empty<string>();
+            HeatmapUpdated?.Invoke(this, EventArgs.Empty);
         }
 
         private void PersistTodayInMemoryLocked(long sessionUpload, long sessionDownload)

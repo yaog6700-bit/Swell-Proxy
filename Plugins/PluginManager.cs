@@ -27,7 +27,9 @@ namespace AnywhereWinUI.Plugins
 
         // ── State ────────────────────────────────────────────────────
         private readonly object _sync = new();
+        private readonly System.Threading.SemaphoreSlim _loadGate = new(1, 1);
         private readonly Dictionary<string, PluginRuntime> _runtimes = [];
+        private bool _manifestsLoaded;
 
         public List<PluginManifest> Manifests { get; private set; } = [];
 
@@ -59,39 +61,129 @@ namespace AnywhereWinUI.Plugins
         // ── Lifecycle ────────────────────────────────────────────────
 
         /// <summary>
-        /// Called once at app startup. Loads manifests and initialises enabled plugins.
-        /// On first run (no plugins.json), seeds bundled example plugins from Assets/plugins/.
+        /// Loads manifests from disk (seeding built-in plugins on first run) and initialises enabled runtimes.
+        /// Safe to call multiple times (e.g. startup or toggling EnablePlugins ON at runtime).
         /// </summary>
         public async Task LoadAllAsync()
         {
-            Directory.CreateDirectory(PluginsDir);
+            await EnsureManifestsLoadedAsync().ConfigureAwait(false);
 
-            // ── First-run: seed built-in plugins from Assets/plugins/ ────
-            if (!File.Exists(ManifestsPath))
+            List<PluginManifest> snapshot;
+            lock (_sync)
             {
-                await SeedBuiltInPluginsAsync();
+                snapshot = new List<PluginManifest>(Manifests);
             }
 
-            if (!File.Exists(ManifestsPath))
-                return;
-
-            try
-            {
-                var json = await File.ReadAllTextAsync(ManifestsPath);
-                var list = JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.ListPluginManifest);
-                if (list != null) Manifests = list;
-            }
-            catch (Exception ex)
-            {
-                Log($"Failed to load plugins.json: {ex.Message}");
-                return;
-            }
-
-            foreach (var manifest in Manifests)
+            foreach (var manifest in snapshot)
             {
                 if (!manifest.Disabled)
-                    await LoadPluginAsync(manifest);
+                {
+                    bool alreadyLoaded;
+                    lock (_sync)
+                    {
+                        alreadyLoaded = _runtimes.ContainsKey(manifest.Id);
+                    }
+                    if (!alreadyLoaded)
+                    {
+                        await LoadPluginAsync(manifest).ConfigureAwait(false);
+                    }
+                }
             }
+        }
+
+        public async Task EnsureManifestsLoadedAsync()
+        {
+            if (_manifestsLoaded) return;
+
+            await _loadGate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (_manifestsLoaded) return;
+
+                Directory.CreateDirectory(PluginsDir);
+
+                if (!File.Exists(ManifestsPath))
+                {
+                    await SeedBuiltInPluginsAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    try
+                    {
+                        var json = await File.ReadAllTextAsync(ManifestsPath).ConfigureAwait(false);
+                        var list = JsonSerializer.Deserialize(json, AnywhereWinUI.Models.AppJsonContext.Default.ListPluginManifest);
+                        if (list != null)
+                        {
+                            lock (_sync)
+                            {
+                                Manifests = list;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"Failed to load plugins.json: {ex.Message}");
+                        Helpers.LocalSettingsHelper.BackupCorruptFileBestEffort(ManifestsPath);
+                    }
+                }
+
+                _manifestsLoaded = true;
+            }
+            finally
+            {
+                _loadGate.Release();
+            }
+        }
+
+        public void UnloadAllRuntimes()
+        {
+            List<PluginRuntime> toDispose;
+            lock (_sync)
+            {
+                toDispose = new List<PluginRuntime>(_runtimes.Values);
+                _runtimes.Clear();
+            }
+            foreach (var rt in toDispose)
+            {
+                rt.Dispose();
+            }
+        }
+
+        internal string GetConfigValue(PluginManifest manifest, string key)
+        {
+            lock (_sync)
+            {
+                foreach (var item in manifest.Configuration)
+                {
+                    if (string.Equals(item.Key, key, StringComparison.Ordinal))
+                        return item.Value;
+                }
+                return string.Empty;
+            }
+        }
+
+        internal Task SetConfigValueAsync(PluginManifest manifest, string key, string value)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return Task.CompletedTask;
+            string trimmedKey = key.Trim();
+            lock (_sync)
+            {
+                var existing = manifest.Configuration.Find(c => string.Equals(c.Key, trimmedKey, StringComparison.Ordinal));
+                if (existing != null)
+                {
+                    existing.Value = value ?? string.Empty;
+                }
+                else
+                {
+                    manifest.Configuration.Add(new PluginConfigItem
+                    {
+                        Key = trimmedKey,
+                        Label = trimmedKey,
+                        Value = value ?? string.Empty
+                    });
+                }
+            }
+            return SaveAsync();
         }
 
         /// <summary>
@@ -142,8 +234,11 @@ namespace AnywhereWinUI.Plugins
 
                 if (seeded.Count > 0)
                 {
-                    Manifests = seeded;
-                    await SaveAsync();
+                    lock (_sync)
+                    {
+                        Manifests = seeded;
+                    }
+                    SaveManifestsCore();
                 }
             }
             catch (Exception ex)
@@ -231,6 +326,7 @@ namespace AnywhereWinUI.Plugins
 
         public async Task UpdateConfigurationAsync(string id, List<PluginConfigItem> items)
         {
+            await EnsureManifestsLoadedAsync().ConfigureAwait(false);
             PluginManifest? manifest;
             lock (_sync)
             {
@@ -239,7 +335,7 @@ namespace AnywhereWinUI.Plugins
                 manifest.Configuration = items ?? [];
             }
 
-            if (!manifest.Disabled)
+            if (!manifest.Disabled && Services.AppSession.Instance.EnablePlugins)
             {
                 await LoadPluginAsync(manifest);
             }
@@ -247,7 +343,13 @@ namespace AnywhereWinUI.Plugins
             await SaveAsync();
         }
 
-        public Task SaveAsync()
+        public async Task SaveAsync()
+        {
+            await EnsureManifestsLoadedAsync().ConfigureAwait(false);
+            SaveManifestsCore();
+        }
+
+        private void SaveManifestsCore()
         {
             List<PluginManifest> snapshot;
             lock (_sync)
@@ -258,24 +360,25 @@ namespace AnywhereWinUI.Plugins
                 new JsonSerializerOptions { WriteIndented = true });
             var json = JsonSerializer.Serialize(snapshot, ctx.ListPluginManifest);
             Helpers.LocalSettingsHelper.WriteAllTextAtomic(ManifestsPath, json);
-            return Task.CompletedTask;
         }
 
         // ── CRUD ─────────────────────────────────────────────────────
 
         public async Task AddPluginAsync(PluginManifest manifest)
         {
+            await EnsureManifestsLoadedAsync().ConfigureAwait(false);
             lock (_sync)
             {
                 Manifests.Add(manifest);
             }
-            if (!manifest.Disabled)
+            if (!manifest.Disabled && Services.AppSession.Instance.EnablePlugins)
                 await LoadPluginAsync(manifest);
             await SaveAsync();
         }
 
         public async Task SetEnabledAsync(string id, bool enabled)
         {
+            await EnsureManifestsLoadedAsync().ConfigureAwait(false);
             PluginManifest? manifest;
             lock (_sync)
             {
@@ -284,7 +387,7 @@ namespace AnywhereWinUI.Plugins
                 manifest.Disabled = !enabled;
             }
 
-            if (enabled)
+            if (enabled && Services.AppSession.Instance.EnablePlugins)
                 await LoadPluginAsync(manifest);
             else
                 UnloadPlugin(id);
@@ -294,6 +397,7 @@ namespace AnywhereWinUI.Plugins
 
         public async Task RemovePluginAsync(string id)
         {
+            await EnsureManifestsLoadedAsync().ConfigureAwait(false);
             UnloadPlugin(id);
 
             PluginManifest? manifest;
@@ -313,6 +417,7 @@ namespace AnywhereWinUI.Plugins
 
         public async Task UpdatePluginAsync(string id)
         {
+            await EnsureManifestsLoadedAsync().ConfigureAwait(false);
             PluginManifest? manifest;
             lock (_sync)
             {
@@ -330,13 +435,12 @@ namespace AnywhereWinUI.Plugins
             manifest.IsUpdating = true;
             try
             {
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30), MaxResponseContentBufferSize = 4 * 1024 * 1024 };
-                var code = await http.GetStringAsync(manifest.Url);
+                var code = await PluginApi.FetchValidatedTextAsync(manifest.Url).ConfigureAwait(false);
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
                 Helpers.LocalSettingsHelper.WriteAllTextAtomic(fullPath, code);
 
                 UnloadPlugin(id);
-                if (!manifest.Disabled)
+                if (!manifest.Disabled && Services.AppSession.Instance.EnablePlugins)
                     await LoadPluginAsync(manifest);
             }
             finally

@@ -84,7 +84,7 @@ namespace AnywhereWinUI
             {
                 if (arg == "--tun" || arg == "--tun-start" || arg == "--tun-system" || arg == "--tun-system-start")
                 {
-                    isAutoStart = (arg == "--tun-start" || arg == "--tun-system-start");
+                    isAutoStart |= (arg == "--tun-start" || arg == "--tun-system-start");
                     int proxyModeIndex = arg.StartsWith("--tun-system", StringComparison.Ordinal) ? 3 : 1;
                     AppSession.Instance.ProxyModeIndex = proxyModeIndex;
                     Helpers.LocalSettingsHelper.SetValue("proxyModeIndex", proxyModeIndex);
@@ -93,10 +93,14 @@ namespace AnywhereWinUI
                 {
                     isAutoStart = true;
                 }
-                else if (arg == "--autostart" || arg == "-silent")
+                else if (arg == "--autostart")
                 {
                     isSilentBoot = true;
                     isAutoStart = true;
+                }
+                else if (arg == "-silent")
+                {
+                    isSilentBoot = true;
                 }
                 else if (arg.StartsWith("--parent-pid="))
                 {
@@ -134,14 +138,10 @@ namespace AnywhereWinUI
                 // ── One-time migration: rename AnywhereProxy folder → SwellProxy ────────
                 MigrateDataFolder();
 
-                // ── Cleanup leftover staged update packages on startup (skip if --parent-pid restart) ──
+                // ── Cleanup leftover staged update packages & stale crash system-proxy state on cold startup ──
                 if (parentPid == 0)
                 {
                     new Services.AppUpdateService().CleanupOldStagingDirs();
-                }
-
-                if (!isAutoStart)
-                {
                     SystemProxyManager.RecoverCrashLeftoversOnStartup();
                 }
 

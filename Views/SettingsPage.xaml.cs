@@ -68,6 +68,7 @@ namespace AnywhereWinUI.Views
             MainViewModel = ((App)Application.Current).Services.GetService(typeof(ViewModels.MainViewModel)) as ViewModels.MainViewModel;
             if (ViewModel != null)
             {
+                ViewModel.LoadSettings();
                 ViewModel.PropertyChanged += ViewModel_PropertyChanged;
             }
             this.InitializeComponent();
@@ -222,6 +223,7 @@ namespace AnywhereWinUI.Views
                         if (RoutingPanel == null)
                         {
                             FindName(nameof(RoutingPanel));
+                            this.Bindings.Update();
                             RefreshCoreVersionUI();
                         }
                         if (RoutingPanel != null) RoutingPanel.Visibility = Visibility.Visible;
@@ -232,6 +234,7 @@ namespace AnywhereWinUI.Views
                         if (DnsSettingsPanel == null)
                         {
                             FindName(nameof(DnsSettingsPanel));
+                            this.Bindings.Update();
                             RefreshCoreVersionUI();
                         }
                         if (DnsSettingsPanel != null) DnsSettingsPanel.Visibility = Visibility.Visible;
@@ -239,19 +242,31 @@ namespace AnywhereWinUI.Views
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatDnsSub;
                         break;
                     case "Tailscale":
-                        if (TailscalePanel == null) FindName(nameof(TailscalePanel));
+                        if (TailscalePanel == null)
+                        {
+                            FindName(nameof(TailscalePanel));
+                            this.Bindings.Update();
+                        }
                         if (TailscalePanel != null) TailscalePanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatTailscaleTitle;
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatTailscaleSub;
                         break;
                     case "Backup":
-                        if (BackupPanel == null) FindName(nameof(BackupPanel));
+                        if (BackupPanel == null)
+                        {
+                            FindName(nameof(BackupPanel));
+                            this.Bindings.Update();
+                        }
                         if (BackupPanel != null) BackupPanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatBackupTitle;
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatBackupSub;
                         break;
                     case "Autostart":
-                        if (AutostartPanel == null) FindName(nameof(AutostartPanel));
+                        if (AutostartPanel == null)
+                        {
+                            FindName(nameof(AutostartPanel));
+                            this.Bindings.Update();
+                        }
                         if (AutostartPanel != null) AutostartPanel.Visibility = Visibility.Visible;
                         if (DetailCategoryTitle != null) DetailCategoryTitle.Text = L.Settings_CatAutostartTitle;
                         if (DetailCategorySubtitle != null) DetailCategorySubtitle.Text = L.Settings_CatAutostartSub;
@@ -260,6 +275,11 @@ namespace AnywhereWinUI.Views
                         if (AboutPanel == null)
                         {
                             FindName(nameof(AboutPanel));
+                            this.Bindings.Update();
+                            if (GitHubStarTeachingTip != null && GitHubLinkButton != null)
+                            {
+                                GitHubStarTeachingTip.Target = GitHubLinkButton;
+                            }
                             SetCoreEngineComboSelection(AppSession.Instance.CoreEngine);
                             RefreshCoreVersionUI();
                         }
@@ -550,10 +570,20 @@ namespace AnywhereWinUI.Views
                     ImportBackupButton.Content = L.Settings_ImportingBtn;
 
                     await NodesManager.Instance.ImportBackupAsync(backupFilePath);
+                    AppSession.Instance.ClearHotSwitchTags();
 
-                    // Re-load UI states from newly imported config
-                    ViewModel.LoadSettings();
+                    // Re-load UI states & ServersViewModel from newly imported config
+                    ViewModel?.LoadSettings();
+                    if (((App)Application.Current).Services.GetService(typeof(ViewModels.ServersViewModel)) is ViewModels.ServersViewModel serversVm)
+                    {
+                        serversVm.LoadSubscriptions();
+                        serversVm.LoadServersList();
+                    }
+                    MainWindow.Instance?.UpdateRoutingNavVisibility();
+                    MainWindow.Instance?.UpdateDashboardNavVisibility();
+                    MainWindow.Instance?.UpdatePluginsNavVisibility();
                     InitializeSettings();
+                    this.Bindings.Update();
 
                     var dialog = new ContentDialog
                     {
@@ -639,9 +669,8 @@ namespace AnywhereWinUI.Views
                 try
                 {
                     CoreManager.Instance.AppendLog(string.Format(L.Shoes_EngineSwitchedRestartFmt, targetEngine));
-                    var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                    var node = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
                     string runtimeCfg = await ConfigBuilder.BuildAsync(node);
-                    await CoreManager.Instance.StopAsync();
                     await CoreManager.Instance.StartAsync(runtimeCfg);
                 }
                 catch (Exception ex)
@@ -1081,31 +1110,42 @@ namespace AnywhereWinUI.Views
                 }
                 catch (Exception ex)
                 {
-                    var errDialog = new ContentDialog
+                    var dialogRoot = this.XamlRoot ?? MainWindow.Instance?.Content?.XamlRoot;
+                    if (dialogRoot != null)
                     {
-                        Title = L.Settings_UpdateFailTitle,
-                        Content = ex.Message,
-                        CloseButtonText = L.Dialog_OK,
-                        XamlRoot = this.XamlRoot
-                    };
-                    await errDialog.WithAppTheme().ShowAsync();
+                        var errDialog = new ContentDialog
+                        {
+                            Title = L.Settings_UpdateFailTitle,
+                            Content = ex.Message,
+                            CloseButtonText = L.Dialog_OK,
+                            XamlRoot = dialogRoot
+                        };
+                        await errDialog.WithAppTheme().ShowAsync();
+                    }
                 }
             }
             catch (Exception ex)
             {
-                var dialog = new ContentDialog
+                var dialogRoot = this.XamlRoot ?? MainWindow.Instance?.Content?.XamlRoot;
+                if (dialogRoot != null)
                 {
-                    Title = L.Settings_CheckFailTitle,
-                    Content = string.Format(L.Settings_CheckFailFmt, ex.Message),
-                    CloseButtonText = L.Dialog_OK,
-                    XamlRoot = this.XamlRoot
-                };
-                await dialog.WithAppTheme().ShowAsync();
+                    var dialog = new ContentDialog
+                    {
+                        Title = L.Settings_CheckFailTitle,
+                        Content = string.Format(L.Settings_CheckFailFmt, ex.Message),
+                        CloseButtonText = L.Dialog_OK,
+                        XamlRoot = dialogRoot
+                    };
+                    await dialog.WithAppTheme().ShowAsync();
+                }
             }
             finally
             {
-                CheckAppUpdateButton.IsEnabled = true;
-                CheckAppUpdateButton.Content = L.Settings_CheckUpdateBtnText;
+                if (CheckAppUpdateButton != null)
+                {
+                    CheckAppUpdateButton.IsEnabled = true;
+                    CheckAppUpdateButton.Content = L.Settings_CheckUpdateBtnText;
+                }
             }
         }
 
@@ -1156,15 +1196,8 @@ namespace AnywhereWinUI.Views
                 await Task.Delay(500);
             }
 
-            // 确保无残留 sing-box 进程占用文件锁
-            try
-            {
-                foreach (var p in Process.GetProcessesByName("sing-box"))
-                {
-                    try { p.Kill(); } catch { }
-                }
-            }
-            catch { }
+            // 确保无残留本应用所属 sing-box 进程占用文件锁
+            CoreManager.KillOwnedOrphanedCoreProcesses();
 
             try
             {
@@ -1175,6 +1208,16 @@ namespace AnywhereWinUI.Views
                 }
 
                 File.Copy(filePath, targetPath, overwrite: true);
+                var sourceDir = Path.GetDirectoryName(filePath);
+                if (sourceDir != null && dir != null)
+                {
+                    var cronetSrc = Path.Combine(sourceDir, "libcronet.dll");
+                    if (File.Exists(cronetSrc))
+                    {
+                        try { File.Copy(cronetSrc, Path.Combine(dir, "libcronet.dll"), overwrite: true); } catch { }
+                    }
+                }
+                Services.CoreUpdateService.InvalidateVersionProbeCache();
 
                 RefreshCoreVersionUI();
 
@@ -1215,20 +1258,18 @@ namespace AnywhereWinUI.Views
                 await Task.Delay(500);
             }
 
-            try
-            {
-                foreach (var p in Process.GetProcessesByName("sing-box"))
-                {
-                    try { p.Kill(); } catch { }
-                }
-            }
-            catch { }
+            CoreManager.KillOwnedOrphanedCoreProcesses();
 
             try
             {
                 if (File.Exists(Services.CoreUpdateService.SingboxUserExePath))
                 {
                     File.Delete(Services.CoreUpdateService.SingboxUserExePath);
+                }
+                var userBakPath = Services.CoreUpdateService.SingboxUserExePath + ".bak";
+                if (File.Exists(userBakPath))
+                {
+                    try { File.Delete(userBakPath); } catch { }
                 }
                 if (File.Exists(Services.CoreUpdateService.BundledBackupExePath))
                 {
@@ -1238,6 +1279,7 @@ namespace AnywhereWinUI.Views
                     }
                     try { File.Delete(Services.CoreUpdateService.BundledBackupExePath); } catch { }
                 }
+                Services.CoreUpdateService.InvalidateVersionProbeCache();
 
                 RefreshCoreVersionUI();
 

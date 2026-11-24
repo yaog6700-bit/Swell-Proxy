@@ -27,6 +27,26 @@ namespace AnywhereWinUI.Services
         private const string BrowserUserAgent =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
+        public static void ResetPooledConnections()
+        {
+            foreach (var kv in SharedClients)
+            {
+                if (SharedClients.TryRemove(kv.Key, out var client))
+                {
+                    RetireClientGracefully(client);
+                }
+            }
+        }
+
+        private static void RetireClientGracefully(HttpClient client)
+        {
+            _ = Task.Run(async () =>
+            {
+                try { await Task.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false); } catch { }
+                try { client.Dispose(); } catch { }
+            });
+        }
+
         public async Task<IpInfoResponse?> GetIpInfoAsync(int? httpProxyPort, CancellationToken ct = default)
         {
             int maxAttempts = httpProxyPort.HasValue ? RetryDelaysMs.Length + 1 : 1;

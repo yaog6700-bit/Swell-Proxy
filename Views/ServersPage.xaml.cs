@@ -180,6 +180,7 @@ namespace AnywhereWinUI.Views
         private int _trafficTickCount = 0;
         private bool _isTopSheetOpen = false;
         private bool _isLatencyProbing = false;
+        private bool _pendingAiAndIpCheckOnShow = false;
 
         private static readonly SolidColorBrush _topSheetWarnBrush = new(Color.FromArgb(255, 251, 146, 60));
         private static readonly SolidColorBrush _topSheetErrorBrush = new(Color.FromArgb(255, 248, 113, 113));
@@ -241,7 +242,7 @@ namespace AnywhereWinUI.Views
                 {
                     var nodeName = AppSession.Instance.IsAutoNodeSelect
                         ? $"{L.TrayPanel_AutoTitle} ({L.TrayPanel_AutoSubtitle})"
-                        : (NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId)?.Name ?? "---");
+                        : (NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId)?.Name ?? "---");
                     TopSheetNodeNameText.Text = nodeName;
                     if (!_isLatencyProbing)
                         _ = RefreshTopSheetLatencyAsync();
@@ -282,8 +283,8 @@ namespace AnywhereWinUI.Views
             bool isTun = AppSession.Instance.EnableTunMode;
 
             var currentNode = ServersListView?.SelectedItem is ServerEntryItem selItem
-                ? NodesManager.Instance.Nodes.Find(n => n.Id == selItem.Id)
-                : NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                ? NodesManager.Instance.FindNode(selItem.Id)
+                : NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
 
             if (CustomConfigService.IsCustomNode(currentNode))
             {
@@ -320,7 +321,9 @@ namespace AnywhereWinUI.Views
                     _realUpTraffic.Clear();
                     _realDownTraffic.Clear();
                     // 更新节点名称
-                    var nodeName = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId)?.Name ?? "---";
+                    var nodeName = AppSession.Instance.IsAutoNodeSelect
+                        ? $"{L.TrayPanel_AutoTitle} ({L.TrayPanel_AutoSubtitle})"
+                        : (NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId)?.Name ?? "---");
                     TopSheetNodeNameText.Text = nodeName;
                 }
                 else
@@ -333,15 +336,7 @@ namespace AnywhereWinUI.Views
                     TopSheetNodeNameText.Text = "---";
                 }
 
-                string selectedId = NodesManager.Instance.SelectedNodeId;
-                foreach (var s in AllServers)
-                {
-                    s.ActiveIndicatorVisibility = (s.Id == selectedId && isRunning) ? Visibility.Visible : Visibility.Collapsed;
-                }
-                if (ViewModel.SortMode == ServerSortMode.Active)
-                {
-                    ViewModel.ApplyFilters();
-                }
+                ViewModel.SyncActiveNodeIndicators();
                 UpdateControlBarUI();
             });
         }
@@ -383,7 +378,7 @@ namespace AnywhereWinUI.Views
 
                 string selectedName = AppSession.Instance.IsAutoNodeSelect
                     ? $"{L.TrayPanel_AutoTitle} · {L.TrayPanel_AutoSubtitle}"
-                    : (NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId)?.Name ?? L.Common_UnknownNode);
+                    : (NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId)?.Name ?? L.Common_UnknownNode);
                 ActiveNodeText.Text = selectedName;
 
                 _ = TriggerAiAndIpChecksAsync();
@@ -413,13 +408,17 @@ namespace AnywhereWinUI.Views
                         NodesManager.Instance.SelectedNodeId = selectedItem.Id;
                         NodesManager.Instance.Save();
                     }
-                    else if (string.IsNullOrEmpty(NodesManager.Instance.SelectedNodeId) && NodesManager.Instance.Nodes.Count > 0)
+                    else if (string.IsNullOrEmpty(NodesManager.Instance.SelectedNodeId))
                     {
-                        NodesManager.Instance.SelectedNodeId = NodesManager.Instance.Nodes[0].Id;
-                        NodesManager.Instance.Save();
+                        var snap = NodesManager.Instance.GetNodesSnapshot();
+                        if (snap.Count > 0)
+                        {
+                            NodesManager.Instance.SelectedNodeId = snap[0].Id;
+                            NodesManager.Instance.Save();
+                        }
                     }
 
-                    var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
+                    var node = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
                     bool isCustomNode = CustomConfigService.IsCustomNode(node);
                     bool needsGlobalTunAdmin = AppSession.Instance.EnableTunMode && !isCustomNode && !Helpers.AdminHelper.IsAdministrator();
                     bool needsCustomTunAdmin = CustomConfigService.RequiresTunAdmin(node);
@@ -517,22 +516,8 @@ namespace AnywhereWinUI.Views
         {
             if (sender is MenuFlyoutItem item && item.Tag is string mode)
             {
-                AppSession.Instance.RoutingMode = mode;
-                Helpers.LocalSettingsHelper.SetValue("routingMode", mode);
+                await CoreManager.Instance.SetRoutingModeAsync(mode);
                 UpdateRoutingModeUI();
-
-                if (CoreManager.Instance.IsRunning)
-                {
-                    CoreManager.Instance.AppendLog("[系统] 检测到路由模式更新，正在自动重启代理引擎以重新加载配置...");
-                    
-                    var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
-                    if (node != null)
-                    {
-                        string realConfig = await ConfigBuilder.BuildAsync(node);
-                        await CoreManager.Instance.StopAsync();
-                        await CoreManager.Instance.StartAsync(realConfig);
-                    }
-                }
             }
         }
 
@@ -552,6 +537,10 @@ namespace AnywhereWinUI.Views
                     {
                         TopSheetDownText.Text = DownSpeedText.Text;
                         TopSheetUpText.Text = UpSpeedText.Text;
+                    }
+                    if (_pendingAiAndIpCheckOnShow)
+                    {
+                        _ = TriggerAiAndIpChecksAsync();
                     }
                 }
             });

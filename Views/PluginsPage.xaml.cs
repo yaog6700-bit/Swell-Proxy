@@ -36,9 +36,13 @@ namespace AnywhereWinUI.Views
             }
         }
 
-        private void PluginsPage_Loaded(object sender, RoutedEventArgs e)
+        private async void PluginsPage_Loaded(object sender, RoutedEventArgs e)
         {
-            RefreshList();
+            await PluginManager.Instance.EnsureManifestsLoadedAsync();
+            if (IsLoaded)
+            {
+                RefreshList();
+            }
         }
 
         private void PluginsPage_ActualThemeChanged(FrameworkElement sender, object args)

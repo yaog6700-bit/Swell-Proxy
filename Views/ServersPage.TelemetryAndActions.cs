@@ -66,7 +66,9 @@ namespace AnywhereWinUI.Views
             _isTopSheetOpen = true;
 
             // 打开时更新节点名称
-            var nodeName = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId)?.Name ?? "---";
+            var nodeName = AppSession.Instance.IsAutoNodeSelect
+                ? $"{L.TrayPanel_AutoTitle} ({L.TrayPanel_AutoSubtitle})"
+                : (NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId)?.Name ?? "---");
             TopSheetNodeNameText.Text = nodeName;
 
             // 打开时立刻探测一次延迟
@@ -739,11 +741,12 @@ namespace AnywhereWinUI.Views
 
                 UpdateProxyModeUI();
                 UpdateRoutingModeUI();
+                CoreManager.Instance.NotifyModeStateChanged();
 
                 if (wasRunning)
                 {
-                    var node = NodesManager.Instance.Nodes.Find(n => n.Id == NodesManager.Instance.SelectedNodeId);
-                    if (node != null)
+                    var node = NodesManager.Instance.FindNode(NodesManager.Instance.SelectedNodeId);
+                    if (node != null || AppSession.Instance.IsAutoNodeSelect)
                     {
                         string realConfig = await ConfigBuilder.BuildAsync(node);
                         await CoreManager.Instance.StartAsync(realConfig);
@@ -804,7 +807,19 @@ namespace AnywhereWinUI.Views
 
         // ================= Selection & Navigation Switcher =================
 
-        private void ServersListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void RefreshSelectedDetailPanel()
+        {
+            if (ServersListView.SelectedItem is ServerEntryItem selected)
+            {
+                ServersListView_SelectionChanged(ServersListView, null!);
+            }
+            else
+            {
+                ShowPanel("empty");
+            }
+        }
+
+        private void ServersListView_SelectionChanged(object sender, SelectionChangedEventArgs? e)
         {
             try
             {
@@ -823,7 +838,7 @@ namespace AnywhereWinUI.Views
 
                     if (selected.IsCustom)
                     {
-                        var customNode = NodesManager.Instance.Nodes.Find(n => n.Id == selected.Id);
+                        var customNode = NodesManager.Instance.FindNode(selected.Id);
                         DetailSubtitle.Text = L.CustomCfg_DetailSubtitle;
                         if (DetailEditCustomJsonButton != null) DetailEditCustomJsonButton.Visibility = Visibility.Visible;
                         if (TestSingleLatencyButton != null) TestSingleLatencyButton.Visibility = Visibility.Collapsed;
@@ -908,6 +923,11 @@ namespace AnywhereWinUI.Views
 
         private void ShowPanel(string name)
         {
+            if (name != "edit" && name != "custom_edit")
+            {
+                _editingNodeId = string.Empty;
+            }
+
             EmptyViewPanel.Visibility = (name == "empty") ? Visibility.Visible : Visibility.Collapsed;
             ServerDetailsPanel.Visibility = (name == "detail") ? Visibility.Visible : Visibility.Collapsed;
             EditFormPanel.Visibility = (name == "edit") ? Visibility.Visible : Visibility.Collapsed;
@@ -1078,6 +1098,13 @@ namespace AnywhereWinUI.Views
 
         private async Task TriggerAiAndIpChecksAsync()
         {
+            if (!MainWindow.IsVisibleToUser)
+            {
+                _pendingAiAndIpCheckOnShow = true;
+                return;
+            }
+            _pendingAiAndIpCheckOnShow = false;
+
             _aiCheckCts?.Cancel();
             _aiCheckCts = new CancellationTokenSource();
             var token = _aiCheckCts.Token;
