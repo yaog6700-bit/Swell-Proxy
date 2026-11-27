@@ -38,6 +38,9 @@ namespace AnywhereWinUI.ViewModels
         [ObservableProperty]
         private string _updateBannerText = "";
 
+        private int _isCheckingUpdates;
+        private DateTime _lastUpdateCheckUtc = DateTime.MinValue;
+
         public MainViewModel()
         {
             // Cache UI dispatcher at construction time — after await, GetForCurrentThread() is often null.
@@ -50,19 +53,49 @@ namespace AnywhereWinUI.ViewModels
                 IsPrivacyLocked = true;
             }
 
-            // Background check for app updates on startup
-            _ = CheckForUpdatesAsync();
+            // Re-check once through the proxy if startup direct check ran before proxy was connected
+            CoreManager.Instance.RunningChanged += (_, isRunning) =>
+            {
+                if (isRunning && AvailableUpdate == null && (DateTime.UtcNow - _lastUpdateCheckUtc).TotalSeconds >= 10)
+                {
+                    _ = CheckForUpdatesAsync(delayMs: 1500);
+                }
+            };
+
+            // Background check for app updates on startup + periodic check for long-running tray sessions
+            _ = CheckForUpdatesAsync(delayMs: 2000);
+            _ = RunPeriodicUpdateCheckLoopAsync();
         }
 
-        private async Task CheckForUpdatesAsync()
+        private async Task RunPeriodicUpdateCheckLoopAsync()
         {
+            using var timer = new PeriodicTimer(TimeSpan.FromHours(6));
+            while (await timer.WaitForNextTickAsync())
+            {
+                if (AvailableUpdate == null && !AppUpdateService.HasPendingUpdate)
+                {
+                    await CheckForUpdatesAsync(delayMs: 0);
+                }
+            }
+        }
+
+        private async Task CheckForUpdatesAsync(int delayMs = 0)
+        {
+            if (Interlocked.CompareExchange(ref _isCheckingUpdates, 1, 0) != 0)
+                return;
+
             try
             {
-                // Delay slightly to not block startup
-                await Task.Delay(2000);
+                if (delayMs > 0)
+                {
+                    await Task.Delay(delayMs);
+                }
 
+                _lastUpdateCheckUtc = DateTime.UtcNow;
                 var updater = new AppUpdateService();
-                var proxyUrl = CoreManager.Instance.IsRunning ? $"socks5://127.0.0.1:{AppSession.Instance.MixedPort}" : null;
+                var proxyUrl = CoreManager.Instance.IsRunning && AppSession.Instance.EffectiveHttpProxyPort is int p && p > 0
+                    ? $"http://127.0.0.1:{p}"
+                    : null;
                 var info = await updater.CheckAsync(proxyUrl, CancellationToken.None);
 
                 if (info != null)
@@ -84,6 +117,10 @@ namespace AnywhereWinUI.ViewModels
             catch
             {
                 // Silent fail for background check
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isCheckingUpdates, 0);
             }
         }
 
