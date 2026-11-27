@@ -1031,6 +1031,11 @@ namespace AnywhereWinUI.Views
 
         private async void CheckAppUpdateButton_Click(object sender, RoutedEventArgs e)
         {
+            if (AppUpdateService.CurrentStage is AppUpdateStage.Downloading or AppUpdateStage.Installing)
+            {
+                return;
+            }
+
             if (AppUpdateService.HasPendingUpdate)
             {
                 var readyDialog = new ContentDialog
@@ -1054,7 +1059,9 @@ namespace AnywhereWinUI.Views
             try
             {
                 var updater = new AppUpdateService();
-                var proxyUrl = CoreManager.Instance.IsRunning ? $"socks5://127.0.0.1:{AppSession.Instance.MixedPort}" : null;
+                var proxyUrl = CoreManager.Instance.IsRunning && AppSession.Instance.EffectiveHttpProxyPort is int p && p > 0
+                    ? $"http://127.0.0.1:{p}"
+                    : null;
                 var info = await updater.CheckAsync(proxyUrl, CancellationToken.None);
 
                 if (info == null)
@@ -1070,6 +1077,8 @@ namespace AnywhereWinUI.Views
                     return;
                 }
 
+                AppUpdateService.SetAvailableUpdate(info);
+
                 var confirmDialog = new ContentDialog
                 {
                     Title = L.Settings_NewVerTitle,
@@ -1084,44 +1093,56 @@ namespace AnywhereWinUI.Views
                     return;
                 }
 
-                // Silent background download — does not block UI or interrupt active network traffic.
-                CheckAppUpdateButton.Content = L.Settings_PreparingDownload;
-                var progress = new Progress<AnywhereWinUI.Models.ProgressDialogUpdate>(msg =>
+                // Delegate to unified AppUpdateService background downloader so Tray Panel & Settings stay synced
+                var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                void OnState(object? _, EventArgs __)
                 {
+                    var stage = AppUpdateService.CurrentStage;
                     DispatcherQueue.TryEnqueue(() =>
                     {
-                        if (msg.PercentComplete.HasValue)
+                        if (CheckAppUpdateButton == null) return;
+                        if (stage == AppUpdateStage.Downloading)
                         {
-                            CheckAppUpdateButton.Content = string.Format(
-                                L.Settings_AppDownloadingBtnFmt,
-                                (int)Math.Round(msg.PercentComplete.Value));
+                            int pct = Math.Max(0, AppUpdateService.DownloadPercent);
+                            CheckAppUpdateButton.Content = string.Format(L.Settings_AppDownloadingBtnFmt, pct);
                         }
-                        else if (!string.IsNullOrWhiteSpace(msg.StatusText))
+                        else if (stage == AppUpdateStage.Installing)
                         {
-                            CheckAppUpdateButton.Content = msg.StatusText;
+                            CheckAppUpdateButton.Content = L.Update_Extracting;
                         }
                     });
-                });
 
+                    if (stage is AppUpdateStage.Ready or AppUpdateStage.Failed or AppUpdateStage.Available or AppUpdateStage.Idle)
+                    {
+                        tcs.TrySetResult(stage == AppUpdateStage.Ready);
+                    }
+                }
+
+                AppUpdateService.StateChanged += OnState;
                 try
                 {
-                    var staging = await updater.DownloadVerifyAndExtractAsync(info, proxyUrl, progress, CancellationToken.None);
-                    AppUpdateService.MarkPendingUpdateReady(info.TagName, staging);
-                }
-                catch (Exception ex)
-                {
-                    var dialogRoot = this.XamlRoot ?? MainWindow.Instance?.Content?.XamlRoot;
-                    if (dialogRoot != null)
+                    AppUpdateService.StartBackgroundDownload(info);
+                    await tcs.Task;
+
+                    if (AppUpdateService.CurrentStage == AppUpdateStage.Failed && !string.IsNullOrEmpty(AppUpdateService.LastError))
                     {
-                        var errDialog = new ContentDialog
+                        var dialogRoot = this.XamlRoot ?? MainWindow.Instance?.Content?.XamlRoot;
+                        if (dialogRoot != null)
                         {
-                            Title = L.Settings_UpdateFailTitle,
-                            Content = ex.Message,
-                            CloseButtonText = L.Dialog_OK,
-                            XamlRoot = dialogRoot
-                        };
-                        await errDialog.WithAppTheme().ShowAsync();
+                            var errDialog = new ContentDialog
+                            {
+                                Title = L.Settings_UpdateFailTitle,
+                                Content = AppUpdateService.LastError,
+                                CloseButtonText = L.Dialog_OK,
+                                XamlRoot = dialogRoot
+                            };
+                            await errDialog.WithAppTheme().ShowAsync();
+                        }
                     }
+                }
+                finally
+                {
+                    AppUpdateService.StateChanged -= OnState;
                 }
             }
             catch (Exception ex)

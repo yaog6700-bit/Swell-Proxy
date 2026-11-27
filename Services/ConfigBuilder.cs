@@ -963,7 +963,7 @@ namespace AnywhereWinUI.Services
                     ["type"] = "urltest",
                     ["tag"] = "urltest",
                     ["outbounds"] = urlTestOutbounds,
-                    ["url"] = "https://www.gstatic.com/generate_204",
+                    ["url"] = "http://www.gstatic.com/generate_204",
                     ["interval"] = "3m",
                     ["tolerance"] = 50,
                     ["idle_timeout"] = "30m",

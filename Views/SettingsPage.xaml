@@ -501,13 +501,23 @@
                                 </Grid>
 
                                 <!-- Rule 3: Advanced Routing -->
-                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,4">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,12" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <FontIcon Grid.Column="0" Glyph="&#xE8B1;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock x:Uid="Settings_AdvRoutingTitle" Text="启用高级分流模块 (Enable advanced routing module)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         <TextBlock x:Uid="Settings_AdvRoutingDesc" Text="开启后侧边栏将显示「分流规则」，允许配置各个应用策略及自定义域名、进程代理规则" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                     <ToggleSwitch x:Name="SettingsAdvancedRoutingSwitch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnableAdvancedRouting, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                                <!-- Rule 4: True URL-Test Latency vs Classic TCP Handshake -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" HorizontalAlignment="Stretch" Padding="0,12,0,4">
+                                    <FontIcon Grid.Column="0" Glyph="&#xE945;" FontSize="20" Foreground="{ThemeResource SystemAccentColor}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock x:Uid="Settings_UrlTestLatencyTitle" Text="真连接延迟测试 (HTTP 204 URL-Test)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock x:Uid="Settings_UrlTestLatencyDesc" Text="默认关闭（采用轻快一致的单次 TCP 握手延迟）；开启后在内核运行时测量完整代理握手 + HTTP 204 往返延迟" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="SettingsUrlTestLatencySwitch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" IsOn="{x:Bind ViewModel.EnableUrlTestLatency, Mode=TwoWay}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                 </Grid>
                             </StackPanel>
                         </Border>

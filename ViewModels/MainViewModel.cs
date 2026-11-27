@@ -100,6 +100,8 @@ namespace AnywhereWinUI.ViewModels
 
                 if (info != null)
                 {
+                    AppUpdateService.SetAvailableUpdate(info);
+
                     void Apply()
                     {
                         AvailableUpdate = info;

@@ -2723,6 +2723,39 @@ Download the latest Shoes binary online now?
   <data name="TrayPanel_UpdateViewBtn" xml:space="preserve">
     <value>View</value>
   </data>
+  <data name="TrayPanel_UpdateStartBtn" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="TrayPanel_UpdateDownloadingFmt" xml:space="preserve">
+    <value>Downloading {0}%</value>
+  </data>
+  <data name="TrayPanel_UpdateInstalling" xml:space="preserve">
+    <value>Installing…</value>
+  </data>
+  <data name="TrayPanel_UpdateRestarting" xml:space="preserve">
+    <value>Restarting…</value>
+  </data>
+  <data name="TrayPanel_UpdateFailed" xml:space="preserve">
+    <value>Update failed</value>
+  </data>
+  <data name="TrayPanel_UpdateRetryBtn" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="TrayPanel_UpdateInstallTip" xml:space="preserve">
+    <value>Downloads and verifies in the background without interrupting your network; restart whenever ready</value>
+  </data>
+  <data name="TrayPanel_UpdateRestartTip" xml:space="preserve">
+    <value>Network drops briefly for a few seconds while restarting</value>
+  </data>
+  <data name="TrayPanel_UpdateNotesTip" xml:space="preserve">
+    <value>Open About page for version details</value>
+  </data>
+  <data name="Settings_UrlTestLatencyTitle.Text" xml:space="preserve">
+    <value>True End-to-End URL-Test Latency (HTTP 204)</value>
+  </data>
+  <data name="Settings_UrlTestLatencyDesc.Text" xml:space="preserve">
+    <value>Off by default (uses fast, consistent 1-RTT TCP handshake latency); when enabled, measures full proxy handshake + HTTP 204 round-trip while running</value>
+  </data>
   <data name="TrayPanel_TodayFmt" xml:space="preserve">
     <value>Today {0}</value>
   </data>

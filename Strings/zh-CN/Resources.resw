@@ -2723,6 +2723,39 @@ URL: {1}
   <data name="TrayPanel_UpdateViewBtn" xml:space="preserve">
     <value>查看</value>
   </data>
+  <data name="TrayPanel_UpdateStartBtn" xml:space="preserve">
+    <value>升级</value>
+  </data>
+  <data name="TrayPanel_UpdateDownloadingFmt" xml:space="preserve">
+    <value>下载 {0}%</value>
+  </data>
+  <data name="TrayPanel_UpdateInstalling" xml:space="preserve">
+    <value>正在安装…</value>
+  </data>
+  <data name="TrayPanel_UpdateRestarting" xml:space="preserve">
+    <value>正在重启…</value>
+  </data>
+  <data name="TrayPanel_UpdateFailed" xml:space="preserve">
+    <value>升级失败</value>
+  </data>
+  <data name="TrayPanel_UpdateRetryBtn" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="TrayPanel_UpdateInstallTip" xml:space="preserve">
+    <value>在后台下载并校验装好，期间网络不受影响；就绪后再决定何时重启</value>
+  </data>
+  <data name="TrayPanel_UpdateRestartTip" xml:space="preserve">
+    <value>重启时网络会短暂中断几秒</value>
+  </data>
+  <data name="TrayPanel_UpdateNotesTip" xml:space="preserve">
+    <value>打开关于页面查看版本信息</value>
+  </data>
+  <data name="Settings_UrlTestLatencyTitle.Text" xml:space="preserve">
+    <value>真连接延迟测试 (HTTP 204 URL-Test)</value>
+  </data>
+  <data name="Settings_UrlTestLatencyDesc.Text" xml:space="preserve">
+    <value>默认关闭（采用轻快一致的单次 TCP 握手延迟）；开启后在内核运行时测量完整代理握手 + HTTP 204 往返延迟</value>
+  </data>
   <data name="TrayPanel_TodayFmt" xml:space="preserve">
     <value>今日 {0}</value>
   </data>

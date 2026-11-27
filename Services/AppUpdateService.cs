@@ -14,11 +14,25 @@ using AnywhereWinUI.Models;
 
 namespace AnywhereWinUI.Services
 {
+    public enum AppUpdateStage
+    {
+        Idle,
+        Available,
+        Downloading,
+        Installing,
+        Ready,
+        Failed,
+        Restarting
+    }
+
     public sealed class AppUpdateService
     {
         private const string ReleaseApiUrl = "https://api.github.com/repos/yaog6700-bit/Swell-Proxy/releases/latest";
         private const string AppExeName     = "Swell Proxy.exe";
         private const string UpdaterExeName = "Swell.Updater.exe";
+
+        private static readonly object _stateLock = new();
+        private static CancellationTokenSource? _downloadCts;
 
         public static Version CurrentVersion
         {
@@ -36,23 +50,195 @@ namespace AnywhereWinUI.Services
             }
         }
 
+        public static AppUpdateStage CurrentStage { get; private set; } = AppUpdateStage.Idle;
+        public static UpdateInfo? AvailableInfo { get; private set; }
+        public static int DownloadPercent { get; private set; } = -1;
+        public static string? LastError { get; private set; }
+
         public static UpdateStaging? PendingStaging { get; private set; }
         public static string? PendingVersionTag { get; private set; }
         public static bool HasPendingUpdate => PendingStaging != null;
 
         public static event EventHandler<string>? PendingUpdateReady;
+        public static event EventHandler? StateChanged;
+
+        public static void SetAvailableUpdate(UpdateInfo info)
+        {
+            if (info == null) return;
+            bool changed = false;
+            lock (_stateLock)
+            {
+                AvailableInfo = info;
+                if (CurrentStage == AppUpdateStage.Idle)
+                {
+                    CurrentStage = AppUpdateStage.Available;
+                    changed = true;
+                }
+            }
+            if (changed)
+            {
+                StateChanged?.Invoke(null, EventArgs.Empty);
+            }
+        }
 
         public static void MarkPendingUpdateReady(string versionTag, UpdateStaging staging)
         {
-            PendingVersionTag = versionTag;
-            PendingStaging = staging;
+            lock (_stateLock)
+            {
+                PendingVersionTag = versionTag;
+                PendingStaging = staging;
+                DownloadPercent = 100;
+                LastError = null;
+                CurrentStage = AppUpdateStage.Ready;
+            }
             PendingUpdateReady?.Invoke(null, versionTag);
+            StateChanged?.Invoke(null, EventArgs.Empty);
+        }
+
+        public static void StartBackgroundDownload(UpdateInfo? info = null)
+        {
+            UpdateInfo? targetInfo;
+            CancellationTokenSource cts;
+            lock (_stateLock)
+            {
+                if (CurrentStage is AppUpdateStage.Downloading or AppUpdateStage.Installing or AppUpdateStage.Restarting or AppUpdateStage.Ready)
+                    return;
+
+                if (info != null)
+                    AvailableInfo = info;
+
+                targetInfo = AvailableInfo;
+                if (targetInfo == null)
+                    return;
+
+                _downloadCts?.Cancel();
+                _downloadCts?.Dispose();
+                cts = new CancellationTokenSource();
+                _downloadCts = cts;
+
+                CurrentStage = AppUpdateStage.Downloading;
+                DownloadPercent = 0;
+                LastError = null;
+            }
+
+            StateChanged?.Invoke(null, EventArgs.Empty);
+
+            _ = Task.Run(async () =>
+            {
+                var token = cts.Token;
+                var updater = new AppUpdateService();
+                string? proxyUrl = CoreManager.Instance.IsRunning && AppSession.Instance.EffectiveHttpProxyPort is int p && p > 0
+                    ? $"http://127.0.0.1:{p}"
+                    : null;
+
+                int lastReportedPct = 0;
+                var progress = new Progress<ProgressDialogUpdate>(msg =>
+                {
+                    if (token.IsCancellationRequested) return;
+                    bool shouldNotify = false;
+                    lock (_stateLock)
+                    {
+                        if (CurrentStage is not (AppUpdateStage.Downloading or AppUpdateStage.Installing))
+                            return;
+
+                        if (msg.PercentComplete.HasValue)
+                        {
+                            int pct = Math.Clamp((int)Math.Round(msg.PercentComplete.Value), 0, 100);
+                            if (pct >= 100 && CurrentStage == AppUpdateStage.Downloading)
+                            {
+                                DownloadPercent = 100;
+                                CurrentStage = AppUpdateStage.Installing;
+                                shouldNotify = true;
+                            }
+                            else if (pct != lastReportedPct)
+                            {
+                                lastReportedPct = pct;
+                                DownloadPercent = pct;
+                                shouldNotify = true;
+                            }
+                        }
+                        else if (!string.IsNullOrEmpty(msg.StatusText) &&
+                                 DownloadPercent >= 100 &&
+                                 CurrentStage != AppUpdateStage.Installing)
+                        {
+                            CurrentStage = AppUpdateStage.Installing;
+                            shouldNotify = true;
+                        }
+                    }
+
+                    if (shouldNotify)
+                    {
+                        StateChanged?.Invoke(null, EventArgs.Empty);
+                    }
+                });
+
+                try
+                {
+                    var staging = await updater.DownloadVerifyAndExtractAsync(targetInfo, proxyUrl, progress, token).ConfigureAwait(false);
+                    MarkPendingUpdateReady(targetInfo.TagName, staging);
+                }
+                catch (OperationCanceledException)
+                {
+                    lock (_stateLock)
+                    {
+                        if (ReferenceEquals(_downloadCts, cts))
+                        {
+                            CurrentStage = AvailableInfo != null ? AppUpdateStage.Available : AppUpdateStage.Idle;
+                            DownloadPercent = -1;
+                            LastError = null;
+                        }
+                    }
+                    StateChanged?.Invoke(null, EventArgs.Empty);
+                }
+                catch (Exception ex)
+                {
+                    lock (_stateLock)
+                    {
+                        if (ReferenceEquals(_downloadCts, cts))
+                        {
+                            CurrentStage = AppUpdateStage.Failed;
+                            DownloadPercent = -1;
+                            LastError = ex.Message;
+                        }
+                    }
+                    StateChanged?.Invoke(null, EventArgs.Empty);
+                }
+            });
+        }
+
+        public static void CancelBackgroundDownload()
+        {
+            CancellationTokenSource? ctsToCancel = null;
+            lock (_stateLock)
+            {
+                if (CurrentStage == AppUpdateStage.Downloading)
+                {
+                    ctsToCancel = _downloadCts;
+                    _downloadCts = null;
+                    CurrentStage = AvailableInfo != null ? AppUpdateStage.Available : AppUpdateStage.Idle;
+                    DownloadPercent = -1;
+                    LastError = null;
+                }
+            }
+
+            try { ctsToCancel?.Cancel(); } catch { }
+            try { ctsToCancel?.Dispose(); } catch { }
+            if (ctsToCancel != null)
+            {
+                StateChanged?.Invoke(null, EventArgs.Empty);
+            }
         }
 
         public static async Task ApplyPendingUpdateAndRestartAsync()
         {
             if (PendingStaging == null)
                 return;
+
+            lock (_stateLock)
+            {
+                CurrentStage = AppUpdateStage.Restarting;
+            }
+            StateChanged?.Invoke(null, EventArgs.Empty);
 
             var staging = PendingStaging;
             bool wasRunning = CoreManager.Instance.IsRunning;

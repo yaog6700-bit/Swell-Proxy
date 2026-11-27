@@ -81,6 +81,7 @@ namespace AnywhereWinUI.Controls
                 CoreManager.Instance.ActiveNodeChanged += OnCoreStateChanged;
                 CoreManager.Instance.ModeStateChanged += OnCoreStateChanged;
                 CoreManager.Instance.SystemProxyTampered += OnSystemProxyTampered;
+                AppUpdateService.StateChanged += OnAppUpdateStateChanged;
             }
 
             // Temporarily wake 1s live speed polling ONLY while this quick panel is visibly open
@@ -108,6 +109,7 @@ namespace AnywhereWinUI.Controls
                 CoreManager.Instance.ActiveNodeChanged -= OnCoreStateChanged;
                 CoreManager.Instance.ModeStateChanged -= OnCoreStateChanged;
                 CoreManager.Instance.SystemProxyTampered -= OnSystemProxyTampered;
+                AppUpdateService.StateChanged -= OnAppUpdateStateChanged;
             }
 
             try
@@ -189,6 +191,16 @@ namespace AnywhereWinUI.Controls
             });
         }
 
+        private void OnAppUpdateStateChanged(object? sender, EventArgs e)
+        {
+            if (!_isAttached) return;
+            DispatcherQueue?.TryEnqueue(() =>
+            {
+                if (!_isAttached) return;
+                RefreshHeaderAndBanners();
+            });
+        }
+
         private async Task RefreshAutoResolvedNodeAsync(CancellationToken ct)
         {
             var nowTag = await SingboxApiClient.Instance.GetGroupSelectedAsync("urltest", ct).ConfigureAwait(false);
@@ -260,22 +272,112 @@ namespace AnywhereWinUI.Controls
             TamperBannerText.Text = L.TrayPanel_ProxyTamperedShort;
             TamperBanner.Visibility = isTampered ? Visibility.Visible : Visibility.Collapsed;
 
-            if (AppUpdateService.HasPendingUpdate && !string.IsNullOrEmpty(AppUpdateService.PendingVersionTag))
+            RefreshUpdateBanner();
+        }
+
+        private void RefreshUpdateBanner()
+        {
+            var stage = AppUpdateService.CurrentStage;
+            var availInfo = AppUpdateService.AvailableInfo ?? MainWindow.Instance?.ViewModel?.AvailableUpdate;
+            if (stage == AppUpdateStage.Idle && availInfo != null)
             {
-                UpdateBannerText.Text = string.Format(L.TrayPanel_UpdateReadyFmt, AppUpdateService.PendingVersionTag);
-                UpdateActionBtn.Content = L.Settings_RestartNowBtn;
-                UpdateBanner.Visibility = Visibility.Visible;
+                AppUpdateService.SetAvailableUpdate(availInfo);
+                stage = AppUpdateService.CurrentStage;
             }
-            else if (MainWindow.Instance?.ViewModel?.AvailableUpdate is { } avail && !string.IsNullOrEmpty(avail.TagName))
-            {
-                UpdateBannerText.Text = string.Format(L.TrayPanel_UpdateAvailFmt, avail.TagName);
-                UpdateActionBtn.Content = L.TrayPanel_UpdateViewBtn;
-                UpdateBanner.Visibility = Visibility.Visible;
-            }
-            else
+
+            if (stage == AppUpdateStage.Idle || (availInfo == null && !AppUpdateService.HasPendingUpdate))
             {
                 UpdateBanner.Visibility = Visibility.Collapsed;
+                return;
             }
+
+            string versionTag = AppUpdateService.PendingVersionTag ?? availInfo?.TagName ?? string.Empty;
+            bool isFailed = stage == AppUpdateStage.Failed;
+
+            UpdateBanner.Background = isFailed
+                ? LookupBrush("SystemFillColorCriticalBackgroundBrush", Color.FromArgb(32, 239, 68, 68))
+                : LookupBrush("SystemFillColorAttentionBackgroundBrush", Color.FromArgb(32, 0, 120, 212));
+            UpdateBannerIcon.Glyph = isFailed ? "\uE783" : "\uE895";
+            UpdateBannerIcon.Foreground = isFailed
+                ? LookupBrush("SystemFillColorCriticalBrush", Color.FromArgb(255, 239, 68, 68))
+                : LookupBrush("SystemFillColorAttentionBrush", Color.FromArgb(255, 0, 120, 212));
+
+            Style? accentStyle = Application.Current.Resources.TryGetValue("AccentButtonStyle", out var acc) ? acc as Style : null;
+            Style? subtleStyle = Application.Current.Resources.TryGetValue("SubtleButtonStyle", out var sub) ? sub as Style : null;
+
+            switch (stage)
+            {
+                case AppUpdateStage.Available:
+                    UpdateBannerText.Text = string.Format(L.TrayPanel_UpdateAvailFmt, versionTag);
+                    ToolTipService.SetToolTip(UpdateTextBtn, L.TrayPanel_UpdateNotesTip);
+                    UpdateTextBtn.IsHitTestVisible = true;
+                    UpdateMiniProgressBar.Visibility = Visibility.Collapsed;
+                    UpdateActionBtn.Visibility = Visibility.Visible;
+                    UpdateActionBtn.IsEnabled = true;
+                    if (accentStyle != null) UpdateActionBtn.Style = accentStyle;
+                    UpdateActionBtn.Content = L.TrayPanel_UpdateStartBtn;
+                    ToolTipService.SetToolTip(UpdateActionBtn, L.TrayPanel_UpdateInstallTip);
+                    break;
+
+                case AppUpdateStage.Downloading:
+                    int pct = Math.Clamp(AppUpdateService.DownloadPercent, 0, 99);
+                    UpdateBannerText.Text = string.Format(L.TrayPanel_UpdateDownloadingFmt, pct);
+                    ToolTipService.SetToolTip(UpdateTextBtn, null);
+                    UpdateTextBtn.IsHitTestVisible = false;
+                    UpdateMiniProgressBar.Visibility = Visibility.Visible;
+                    UpdateMiniProgressBar.IsIndeterminate = AppUpdateService.DownloadPercent < 0;
+                    UpdateMiniProgressBar.Value = pct;
+                    UpdateActionBtn.Visibility = Visibility.Visible;
+                    UpdateActionBtn.IsEnabled = true;
+                    if (subtleStyle != null) UpdateActionBtn.Style = subtleStyle;
+                    UpdateActionBtn.Content = L.Dialog_Cancel;
+                    ToolTipService.SetToolTip(UpdateActionBtn, null);
+                    break;
+
+                case AppUpdateStage.Installing:
+                    UpdateBannerText.Text = L.TrayPanel_UpdateInstalling;
+                    ToolTipService.SetToolTip(UpdateTextBtn, null);
+                    UpdateTextBtn.IsHitTestVisible = false;
+                    UpdateMiniProgressBar.Visibility = Visibility.Visible;
+                    UpdateMiniProgressBar.IsIndeterminate = true;
+                    UpdateActionBtn.Visibility = Visibility.Collapsed;
+                    break;
+
+                case AppUpdateStage.Ready:
+                    UpdateBannerText.Text = string.Format(L.TrayPanel_UpdateReadyFmt, versionTag);
+                    ToolTipService.SetToolTip(UpdateTextBtn, L.TrayPanel_UpdateNotesTip);
+                    UpdateTextBtn.IsHitTestVisible = true;
+                    UpdateMiniProgressBar.Visibility = Visibility.Collapsed;
+                    UpdateActionBtn.Visibility = Visibility.Visible;
+                    UpdateActionBtn.IsEnabled = true;
+                    if (accentStyle != null) UpdateActionBtn.Style = accentStyle;
+                    UpdateActionBtn.Content = L.Settings_RestartNowBtn;
+                    ToolTipService.SetToolTip(UpdateActionBtn, L.TrayPanel_UpdateRestartTip);
+                    break;
+
+                case AppUpdateStage.Failed:
+                    UpdateBannerText.Text = L.TrayPanel_UpdateFailed;
+                    ToolTipService.SetToolTip(UpdateTextBtn, AppUpdateService.LastError);
+                    UpdateTextBtn.IsHitTestVisible = true;
+                    UpdateMiniProgressBar.Visibility = Visibility.Collapsed;
+                    UpdateActionBtn.Visibility = Visibility.Visible;
+                    UpdateActionBtn.IsEnabled = true;
+                    if (accentStyle != null) UpdateActionBtn.Style = accentStyle;
+                    UpdateActionBtn.Content = L.TrayPanel_UpdateRetryBtn;
+                    ToolTipService.SetToolTip(UpdateActionBtn, AppUpdateService.LastError ?? L.TrayPanel_UpdateInstallTip);
+                    break;
+
+                case AppUpdateStage.Restarting:
+                    UpdateBannerText.Text = L.TrayPanel_UpdateRestarting;
+                    ToolTipService.SetToolTip(UpdateTextBtn, null);
+                    UpdateTextBtn.IsHitTestVisible = false;
+                    UpdateMiniProgressBar.Visibility = Visibility.Visible;
+                    UpdateMiniProgressBar.IsIndeterminate = true;
+                    UpdateActionBtn.Visibility = Visibility.Collapsed;
+                    break;
+            }
+
+            UpdateBanner.Visibility = Visibility.Visible;
         }
 
         private void RefreshTelemetryUI(long downSpeed, long upSpeed)
@@ -774,16 +876,43 @@ namespace AnywhereWinUI.Controls
             RefreshHeaderAndBanners();
         }
 
+        private void UpdateTextBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (AppUpdateService.CurrentStage is AppUpdateStage.Available or AppUpdateStage.Ready or AppUpdateStage.Failed)
+            {
+                _onCloseFlyout();
+                _onOpenSettingsAbout();
+            }
+        }
+
         private async void UpdateActionBtn_Click(object sender, RoutedEventArgs e)
         {
-            _onCloseFlyout();
-            if (AppUpdateService.HasPendingUpdate)
+            switch (AppUpdateService.CurrentStage)
             {
-                await AppUpdateService.ApplyPendingUpdateAndRestartAsync();
-            }
-            else
-            {
-                _onOpenSettingsAbout();
+                case AppUpdateStage.Available:
+                case AppUpdateStage.Failed:
+                    // Start silent background download right inside the tray panel without opening MainWindow!
+                    AppUpdateService.StartBackgroundDownload(MainWindow.Instance?.ViewModel?.AvailableUpdate);
+                    RefreshUpdateBanner();
+                    break;
+
+                case AppUpdateStage.Downloading:
+                    AppUpdateService.CancelBackgroundDownload();
+                    RefreshUpdateBanner();
+                    break;
+
+                case AppUpdateStage.Ready:
+                    _onCloseFlyout();
+                    await AppUpdateService.ApplyPendingUpdateAndRestartAsync();
+                    break;
+
+                default:
+                    if (AppUpdateService.HasPendingUpdate)
+                    {
+                        _onCloseFlyout();
+                        await AppUpdateService.ApplyPendingUpdateAndRestartAsync();
+                    }
+                    break;
             }
         }
 

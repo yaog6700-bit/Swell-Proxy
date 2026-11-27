@@ -51,6 +51,9 @@ namespace AnywhereWinUI.ViewModels
         private bool _enableAdvancedRouting;
 
         [ObservableProperty]
+        private bool _enableUrlTestLatency;
+
+        [ObservableProperty]
         private string _directDns = "223.5.5.5";
 
         [ObservableProperty]
@@ -152,6 +155,7 @@ namespace AnywhereWinUI.ViewModels
             _allowIPv6Dns = AppSession.Instance.AllowIPv6Dns;
             _flushDNS = AppSession.Instance.FlushDNS;
             _enableAdvancedRouting = AppSession.Instance.EnableAdvancedRouting;
+            _enableUrlTestLatency = AppSession.Instance.EnableUrlTestLatency;
 
             _directDns = AppSession.Instance.DirectDns;
             _proxyDns = AppSession.Instance.ProxyDns;
@@ -262,6 +266,12 @@ namespace AnywhereWinUI.ViewModels
             Helpers.LocalSettingsHelper.SetValue("enableAdvancedRouting", value);
             MainWindow.Instance?.UpdateRoutingNavVisibility();
             _ = TriggerCoreRestartIfNeeded();
+        }
+
+        partial void OnEnableUrlTestLatencyChanged(bool value)
+        {
+            AppSession.Instance.EnableUrlTestLatency = value;
+            Helpers.LocalSettingsHelper.SetValue("enableUrlTestLatency", value);
         }
 
         partial void OnDirectDnsChanged(string value)

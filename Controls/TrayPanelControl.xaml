@@ -84,19 +84,38 @@
                 Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                <FontIcon Glyph="&#xE895;"
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                <FontIcon x:Name="UpdateBannerIcon"
+                          Glyph="&#xE895;"
                           FontSize="14"
                           Foreground="{ThemeResource SystemFillColorAttentionBrush}"
                           VerticalAlignment="Center" />
-                <TextBlock x:Name="UpdateBannerText"
-                           Grid.Column="1"
-                           Style="{StaticResource CaptionTextBlockStyle}"
-                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"
-                           VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis" />
+                <Button x:Name="UpdateTextBtn"
+                        Grid.Column="1"
+                        Style="{StaticResource SubtleButtonStyle}"
+                        Padding="2,1"
+                        MinHeight="0"
+                        MinWidth="0"
+                        HorizontalAlignment="Left"
+                        HorizontalContentAlignment="Left"
+                        VerticalAlignment="Center"
+                        Click="UpdateTextBtn_Click">
+                    <TextBlock x:Name="UpdateBannerText"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                </Button>
+                <ProgressBar x:Name="UpdateMiniProgressBar"
+                             Grid.Column="2"
+                             Visibility="Collapsed"
+                             Width="54"
+                             Height="4"
+                             Minimum="0"
+                             Maximum="100"
+                             VerticalAlignment="Center" />
                 <Button x:Name="UpdateActionBtn"
-                        Grid.Column="2"
+                        Grid.Column="3"
                         Style="{StaticResource AccentButtonStyle}"
                         Padding="8,3"
                         MinHeight="24"

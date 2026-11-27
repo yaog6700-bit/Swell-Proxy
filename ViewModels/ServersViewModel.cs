@@ -434,9 +434,10 @@ namespace AnywhereWinUI.ViewModels
         {
             var snapshot = FilteredServers.ToArray();
             _isBatchPinging = true;
+            int maxParallel = AppSession.Instance.EnableUrlTestLatency && CoreManager.Instance.IsRunning ? 6 : 12;
             try
             {
-                using var semaphore = new System.Threading.SemaphoreSlim(10);
+                using var semaphore = new System.Threading.SemaphoreSlim(maxParallel);
                 var tasks = snapshot.Select(async item =>
                 {
                     await semaphore.WaitAsync();
@@ -477,23 +478,30 @@ namespace AnywhereWinUI.ViewModels
                 item.PingColor = ResolveSemanticPingBrush("SystemFillColorCautionBrush", Colors.Orange);
             });
 
+            bool usedUrlTest = false;
             int? trueUrlTestDelay = null;
-            if (CoreManager.Instance.IsRunning &&
+            if (AppSession.Instance.EnableUrlTestLatency &&
+                CoreManager.Instance.IsRunning &&
                 string.Equals(AppSession.Instance.ActiveCoreEngine, ShoesConfigBuilder.EngineSingBox, StringComparison.OrdinalIgnoreCase) &&
                 !AppSession.Instance.IsActiveNodeCustom &&
                 AppSession.Instance.CanHotSwitchTo(item.Id))
             {
                 trueUrlTestDelay = await SingboxApiClient.Instance.ProbeOutboundDelayAsync(item.Id, 3500);
+                if (trueUrlTestDelay.HasValue)
+                {
+                    usedUrlTest = true;
+                }
             }
 
             LatencyProbeResult result;
-            if (trueUrlTestDelay is > 0)
+            if (usedUrlTest)
             {
-                result = new LatencyProbeResult { Status = LatencyProbeStatus.Success, Milliseconds = trueUrlTestDelay.Value };
+                result = trueUrlTestDelay is > 0
+                    ? new LatencyProbeResult { Status = LatencyProbeStatus.Success, Milliseconds = trueUrlTestDelay.Value }
+                    : new LatencyProbeResult { Status = LatencyProbeStatus.Timeout };
             }
             else
             {
-                // Seamless fallback to direct TCP/ICMP entry-server probe (crucial for domestic IPv6 relays & non-gstatic exits)
                 result = await _latencyProbeService.ProbeAsync(item.Protocol, item.Host, item.Port, TimeSpan.FromSeconds(3));
             }
 
@@ -516,9 +524,11 @@ namespace AnywhereWinUI.ViewModels
                     item.LatencyMs = delay;
                     item.PingText = $"{delay} ms";
 
+                    int greenMax = usedUrlTest ? 220 : 120;
+                    int cautionMax = usedUrlTest ? 450 : 300;
                     Brush colorBrush;
-                    if (delay < 150) colorBrush = ResolveSemanticPingBrush("SystemFillColorSuccessBrush", Colors.Green);
-                    else if (delay < 350) colorBrush = ResolveSemanticPingBrush("SystemFillColorCautionBrush", Colors.Orange);
+                    if (delay < greenMax) colorBrush = ResolveSemanticPingBrush("SystemFillColorSuccessBrush", Colors.Green);
+                    else if (delay < cautionMax) colorBrush = ResolveSemanticPingBrush("SystemFillColorCautionBrush", Colors.Orange);
                     else colorBrush = ResolveSemanticPingBrush("SystemFillColorCriticalBrush", Colors.Red);
 
                     item.PingColor = colorBrush;

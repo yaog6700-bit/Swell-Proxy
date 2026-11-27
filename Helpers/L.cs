@@ -494,6 +494,15 @@ namespace AnywhereWinUI.Helpers
         public static string TrayPanel_UpdateReadyFmt       => Loc.GetString("TrayPanel_UpdateReadyFmt");
         public static string TrayPanel_UpdateAvailFmt       => Loc.GetString("TrayPanel_UpdateAvailFmt");
         public static string TrayPanel_UpdateViewBtn        => Loc.GetString("TrayPanel_UpdateViewBtn");
+        public static string TrayPanel_UpdateStartBtn       => Loc.GetString("TrayPanel_UpdateStartBtn");
+        public static string TrayPanel_UpdateDownloadingFmt => Loc.GetString("TrayPanel_UpdateDownloadingFmt");
+        public static string TrayPanel_UpdateInstalling     => Loc.GetString("TrayPanel_UpdateInstalling");
+        public static string TrayPanel_UpdateRestarting     => Loc.GetString("TrayPanel_UpdateRestarting");
+        public static string TrayPanel_UpdateFailed         => Loc.GetString("TrayPanel_UpdateFailed");
+        public static string TrayPanel_UpdateRetryBtn       => Loc.GetString("TrayPanel_UpdateRetryBtn");
+        public static string TrayPanel_UpdateInstallTip     => Loc.GetString("TrayPanel_UpdateInstallTip");
+        public static string TrayPanel_UpdateRestartTip     => Loc.GetString("TrayPanel_UpdateRestartTip");
+        public static string TrayPanel_UpdateNotesTip       => Loc.GetString("TrayPanel_UpdateNotesTip");
         public static string TrayPanel_TodayFmt             => Loc.GetString("TrayPanel_TodayFmt");
         public static string TrayPanel_NodesHeader          => Loc.GetString("TrayPanel_NodesHeader");
         public static string TrayPanel_PingBtn              => Loc.GetString("TrayPanel_PingBtn");

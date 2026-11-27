@@ -67,6 +67,7 @@ namespace AnywhereWinUI.Services
         public bool FlushDNS { get; set; } = true;
         public string RoutingMode { get; set; } = "smart";
         public bool EnableAdvancedRouting { get; set; } = false;
+        public bool EnableUrlTestLatency { get; set; } = false;
 
         // UI Preferences
         public bool EnableClassicDashboard { get; set; } = false;
@@ -174,6 +175,7 @@ namespace AnywhereWinUI.Services
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("allowIPv6Dns", out var ai6)) AllowIPv6Dns = ai6;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("flushDNS", out var fd)) FlushDNS = fd;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableAdvancedRouting", out var ear)) EnableAdvancedRouting = ear;
+            if (Helpers.LocalSettingsHelper.TryGetValue<bool>("enableUrlTestLatency", out var eutl)) EnableUrlTestLatency = eutl;
             if (Helpers.LocalSettingsHelper.TryGetValue<string>("routingMode", out var rm) && !string.IsNullOrEmpty(rm)) RoutingMode = rm;
             if (Helpers.LocalSettingsHelper.TryGetValue<bool>("isAutoNodeSelect", out var autoSel)) IsAutoNodeSelect = autoSel;
 

@@ -249,7 +249,8 @@ namespace AnywhereWinUI.Services
 
         /// <summary>
         /// Performs a true end-to-end protocol URL-Test via sing-box Clash API:
-        /// GET /proxies/{outboundTag}/delay?url=https://www.gstatic.com/generate_204&amp;timeout={timeoutMs}.
+        /// GET /proxies/{outboundTag}/delay?url=http://www.gstatic.com/generate_204&amp;timeout={timeoutMs}.
+        /// Uses plain HTTP 204 (avoiding an extra 2-RTT end-to-end target TLS handshake on top of the proxy handshake).
         /// Returns &gt;0 ms on HTTP 204 round-trip success, -1 on proxy/handshake/timeout failure (503/504),
         /// or null if the local Clash API controller itself was unreachable (allowing fallback to socket probe).
         /// </summary>
@@ -260,7 +261,7 @@ namespace AnywhereWinUI.Services
 
             try
             {
-                string url = $"{_controllerBaseUrl}/proxies/{Uri.EscapeDataString(outboundTag)}/delay?url=https%3A%2F%2Fwww.gstatic.com%2Fgenerate_204&timeout={timeoutMs}";
+                string url = $"{_controllerBaseUrl}/proxies/{Uri.EscapeDataString(outboundTag)}/delay?url=http%3A%2F%2Fwww.gstatic.com%2Fgenerate_204&timeout={timeoutMs}";
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
                 ApplyAuth(request);
 

@@ -34,19 +34,44 @@ namespace AnywhereWinUI.Services
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
                 cancellationToken,
                 timeoutCts.Token);
-            using var client = new TcpClient();
-            var stopwatch = Stopwatch.StartNew();
 
             try
             {
-                await client.ConnectAsync(host, port, linkedCts.Token);
+                // Pre-resolve domain BEFORE starting the stopwatch so DNS lookup latency (especially on
+                // TTL=1s / multi-CNAME airport domains) is never conflated with actual TCP RTT!
+                System.Net.IPAddress? targetIp = null;
+                if (System.Net.IPAddress.TryParse(host, out var parsedIp))
+                {
+                    targetIp = parsedIp;
+                }
+                else
+                {
+                    var addrs = await System.Net.Dns.GetHostAddressesAsync(host, linkedCts.Token).ConfigureAwait(false);
+                    foreach (var a in addrs)
+                    {
+                        if (a.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            targetIp = a;
+                            break;
+                        }
+                        targetIp ??= a;
+                    }
+                    if (targetIp == null)
+                    {
+                        return new LatencyProbeResult { Status = LatencyProbeStatus.Failed };
+                    }
+                }
+
+                using var client = new TcpClient(targetIp.AddressFamily);
+                var stopwatch = Stopwatch.StartNew();
+                await client.ConnectAsync(targetIp, port, linkedCts.Token).ConfigureAwait(false);
                 stopwatch.Stop();
                 try { client.LingerState = new LingerOption(true, 0); } catch { }
 
                 return new LatencyProbeResult
                 {
                     Status = LatencyProbeStatus.Success,
-                    Milliseconds = (int)Math.Round(stopwatch.Elapsed.TotalMilliseconds)
+                    Milliseconds = Math.Max(1, (int)Math.Round(stopwatch.Elapsed.TotalMilliseconds))
                 };
             }
             catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
