@@ -9,7 +9,7 @@
 [![Release](https://img.shields.io/github/v/release/yaog6700-bit/Swell-Proxy?style=flat-square&logo=github&label=最新版本)](https://github.com/yaog6700-bit/Swell-Proxy/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/yaog6700-bit/Swell-Proxy/total?style=flat-square&label=总下载量)](https://github.com/yaog6700-bit/Swell-Proxy/releases)
 [![Platform](https://img.shields.io/badge/平台-Windows%2010%2B-0078D4?style=flat-square&logo=windows11)](https://github.com/yaog6700-bit/Swell-Proxy/releases/latest)
-[![Core](https://img.shields.io/badge/Core-sing--box-00A98F?style=flat-square)](https://github.com/SagerNet/sing-box)
+[![Core](https://img.shields.io/badge/Core-sing--box%20%7C%20Shoes-00A98F?style=flat-square)](https://github.com/SagerNet/sing-box)
 
 </div>
 
@@ -25,16 +25,17 @@ Swell Proxy 是一款使用 **WinUI 3** 构建的 Windows 原生代理管理客�
 
 | 功能 | 说明 |
 | --- | --- |
-| 多协议节点 | 支持 VLESS、VMess、Shadowsocks、Trojan、Hysteria 2、TUIC、WireGuard、SOCKS5、HTTP、NaiveProxy、AnyTLS、Snell、Nowhere 等常见协议 |
-| 多种代理模式 | 支持系统代理、TUN 虚拟网卡和仅手动代理，适配不同使用习惯 |
-| 路由分流 | 支持规则分流、全局代理、直连模式，并内置中国域名 / 中国 IP / 广告拦截规则集 |
-| 订阅与节点管理 | 支持订阅链接、节点分享链接、多行批量导入、延迟测试、节点编辑和协议颜色自定义；订阅格式支持 Base64 / sing-box JSON / Clash YAML（Clash 格式仅导入节点，不导入分组和规则） |
-| 实时观测 | 提供仪表盘、连接列表、流量图表、日志面板和网络拓扑视图 |
-| AI 解锁检测 | 内置 OpenAI、Claude、Gemini 等服务的可用性检测能力 |
+| 双核引擎驱动 | 默认搭载官方 `sing-box` 内核，支持一键切换实验性 `Shoes`（Rust）轻量内核，不兼容协议/场景自动无缝借用 `sing-box` |
+| 零断流秒切与自动选点 | 基于预加载 Selector 与 `urltest` 实现 `<5ms` 零重启节点热切换、最快节点自动选点与故障转移，同时兼容原生自定义 `sing-box` JSON 配置 |
+| 多协议节点 | 支持 VLESS（Reality / Vision / XUDP）、VMess、Shadowsocks（含 SS-2022 + ShadowTLS）、Trojan、Hysteria 2、TUIC、WireGuard、SOCKS5、HTTP、NaiveProxy、AnyTLS、Snell 等常见协议 |
+| 多种代理模式 | 支持系统代理、TUN 虚拟网卡（自动绑定物理出站网卡与企业内网 NRPT 分流）、TUN + 系统代理双开及仅本地代理，内置系统代理防篡改监测与免 UAC 弹窗开机静默自启 |
+| 路由分流与命中模拟 | 支持智能规则分流、全局代理、直连模式，内置路由规则命中模拟器、运行中进程快捷加规则及中国域名 / 中国 IP / 广告拦截规则集 |
+| 订阅与节点管理 | 支持订阅链接、节点分享链接、多行批量导入、真实 HTTP 204 端到端延迟测试、分组拖拽排序；支持 Base64 / sing-box JSON / Clash YAML 订阅解析 |
+| 托盘快捷面板与实时观测 | 提供全新 Fluent 2 左键托盘快捷面板、仪表盘、应用流量排行、连接列表、矢量流量热力图、日志面板及网络拓扑视图，支持中英双语切换 |
+| AI 解锁检测 | 内置 OpenAI、Claude、Gemini 等主流 AI 服务的出口可用性检测 |
 | Tailscale Endpoint | 可将 sing-box 作为 Tailscale 节点接入私有网络，支持官方 Tailscale 或 Headscale 控制端 |
-| 插件系统 | 支持 JavaScript 插件监听启动、订阅更新、内核启动前后、手动运行等生命周期事件 |
-| 自动更新 | 支持客户端更新检查，并可拉取最新 sing-box 内核版本 |
-| 原生架构 | 原生架构，系统内存占用低，关闭至托盘后内存可降至10MB左右（注：后续稳定上升到逐步稳定）
+| 可视化插件系统 | 支持 JavaScript 插件参数可视化配置，监听启动、订阅更新、内核启停前后、手动运行等完整生命周期 |
+| 自动更新与超低占用 | 支持后台静默预下载客户端更新及拉取最新内核；原生编译裁剪 + 后台 EcoQoS 休眠回收，收起至托盘后内存占用可降至约 5–10MB |
 
 ## 预览
 
